@@ -1,0 +1,12 @@
+# İmza anahtarı ayarları.
+#
+# Bu dosyayı `key.properties` adıyla kopyalayın ve kendi değerlerinizi
+# yazın. `key.properties` .gitignore içindedir; parolanız depoya girmez.
+#
+# storeFile: .jks dosyasının tam yolu. Ters bölü yerine düz bölü kullanın
+#            ya da \ ile kaçırın.
+
+storePassword=BURAYA_PAROLANIZ
+keyPassword=BURAYA_PAROLANIZ
+keyAlias=chesslibrary
+storeFile=C:/Users/kubil/chess-library.jks

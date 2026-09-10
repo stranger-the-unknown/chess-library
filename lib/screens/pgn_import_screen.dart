@@ -1,0 +1,313 @@
+import 'package:flutter/material.dart';
+
+import '../widgets/responsive.dart';
+
+import '../l10n/app_strings.dart';
+import '../models/pgn_parser.dart';
+import '../models/playlist.dart';
+import '../services/pgn_import_service.dart';
+import '../services/storage_service.dart';
+import '../widgets/app_dialogs.dart';
+import 'game_screen.dart';
+import '../widgets/cursors.dart';
+
+/// Bir PGN dosyasındaki oyunları listeler; seçilenleri kaydeder ya da açar.
+class PgnImportScreen extends StatefulWidget {
+  final List<PgnGame> games;
+
+  /// Yeni liste adı önerisi (dosya adından üretilir).
+  final String suggestedName;
+
+  const PgnImportScreen({
+    super.key,
+    required this.games,
+    required this.suggestedName,
+  });
+
+  @override
+  State<PgnImportScreen> createState() => _PgnImportScreenState();
+}
+
+class _PgnImportScreenState extends State<PgnImportScreen> {
+  late final Set<int> _selected = Set<int>.from(
+    List<int>.generate(widget.games.length, (i) => i),
+  );
+  bool _saving = false;
+
+  List<PgnGame> get _selectedGames => [
+        for (int i = 0; i < widget.games.length; i++)
+          if (_selected.contains(i)) widget.games[i],
+      ];
+
+  void _toggleAll() {
+    setState(() {
+      if (_selected.length == widget.games.length) {
+        _selected.clear();
+      } else {
+        _selected
+          ..clear()
+          ..addAll(List<int>.generate(widget.games.length, (i) => i));
+      }
+    });
+  }
+
+  Future<void> _openGame(PgnGame game) async {
+    await Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (_) => GameScreen(
+          uciMoves: game.uciMoves,
+          startFen: game.startFen,
+          title: game.title,
+          initialResult: game.result,
+        ),
+      ),
+    );
+  }
+
+  Future<void> _saveAsNewList() async {
+    final games = _selectedGames;
+    if (games.isEmpty) return;
+
+    final name = await AppDialogs.prompt(
+      context,
+      title: t('pgn.saveAsNewList'),
+      label: t('game.listName'),
+      initialValue: widget.suggestedName,
+    );
+    if (name == null || !mounted) return;
+
+    setState(() => _saving = true);
+    await PgnImportService.saveAsNewList(name, games);
+    if (!mounted) return;
+    setState(() => _saving = false);
+    AppDialogs.snack(context, t('pgn.saved', {'count': games.length}));
+    Navigator.pop(context, true);
+  }
+
+  Future<void> _addToExisting() async {
+    final games = _selectedGames;
+    if (games.isEmpty) return;
+
+    final playlists = await StorageService.instance.loadPlaylists();
+    if (!mounted) return;
+    if (playlists.isEmpty) {
+      AppDialogs.snack(context, t('pgn.noListYet'));
+      return;
+    }
+
+    final target = await showDialog<Playlist>(
+      context: context,
+      builder: (dialogContext) => SimpleDialog(
+        title: Text(t('pgn.chooseList')),
+        children: [
+          for (final playlist in playlists)
+            SimpleDialogOption(
+              onPressed: () => Navigator.pop(dialogContext, playlist),
+              child: Text(
+                '${playlist.name}  ·  '
+                '${t('lists.gameCount', {'count': playlist.games.length})}',
+              ),
+            ),
+        ],
+      ),
+    );
+    if (target == null || !mounted) return;
+
+    setState(() => _saving = true);
+    final added = await PgnImportService.addToList(target.id, games);
+    if (!mounted) return;
+    setState(() => _saving = false);
+    AppDialogs.snack(context, t('pgn.saved', {'count': added}));
+    Navigator.pop(context, true);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    final allSelected = _selected.length == widget.games.length;
+
+    return Scaffold(
+      appBar: AppBar(
+        title: Text(t('pgn.importTitle')),
+        actions: [
+          TextButton(
+            onPressed: _toggleAll,
+            child: Text(
+              allSelected ? t('pgn.clearSelection') : t('pgn.selectAll'),
+            ),
+          ),
+        ],
+      ),
+      body: ContentWidth(
+        child: Column(
+          children: [
+            Container(
+              width: double.infinity,
+              margin: const EdgeInsets.fromLTRB(16, 8, 16, 4),
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: scheme.secondaryContainer,
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: Text(
+                t('pgn.foundGames', {
+                  'count': widget.games.length,
+                  'selected': _selected.length,
+                }),
+                style: TextStyle(
+                  fontSize: 12.5,
+                  color: scheme.onSecondaryContainer,
+                ),
+              ),
+            ),
+            Expanded(
+              child: ListView.builder(
+                padding: const EdgeInsets.fromLTRB(12, 4, 12, 12),
+                itemCount: widget.games.length,
+                itemBuilder: (context, index) =>
+                    _gameTile(index, widget.games[index], scheme),
+              ),
+            ),
+            SafeArea(
+              top: false,
+              child: Padding(
+                padding: const EdgeInsets.fromLTRB(16, 4, 16, 12),
+                child: Row(
+                  children: [
+                    Expanded(
+                      child: OutlinedButton.icon(
+                        onPressed: _saving || _selected.isEmpty
+                            ? null
+                            : _addToExisting,
+                        icon: const Icon(Icons.playlist_add_rounded, size: 20),
+                        label: Text(t('pgn.addToList')),
+                      ),
+                    ),
+                    const SizedBox(width: 10),
+                    Expanded(
+                      child: ElevatedButton.icon(
+                        onPressed: _saving || _selected.isEmpty
+                            ? null
+                            : _saveAsNewList,
+                        icon: const Icon(
+                          Icons.create_new_folder_outlined,
+                          size: 20,
+                        ),
+                        label: Text(t('pgn.newList')),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _gameTile(int index, PgnGame game, ColorScheme scheme) {
+    final selected = _selected.contains(index);
+
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 6),
+      child: Material(
+        color: selected
+            ? scheme.primary.withValues(alpha: 0.12)
+            : scheme.surfaceContainer,
+        borderRadius: BorderRadius.circular(12),
+        child: InkWell(
+          mouseCursor: kClickable,
+          borderRadius: BorderRadius.circular(12),
+          onTap: () => setState(() {
+            if (selected) {
+              _selected.remove(index);
+            } else {
+              _selected.add(index);
+            }
+          }),
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
+            child: Row(
+              children: [
+                Icon(
+                  selected ? Icons.check_circle_rounded : Icons.circle_outlined,
+                  size: 22,
+                  color: selected ? scheme.primary : scheme.onSurfaceVariant,
+                ),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        game.title,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: const TextStyle(
+                          fontSize: 14.5,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                      const SizedBox(height: 2),
+                      Row(
+                        children: [
+                          Text(
+                            t('lists.moveCount', {'count': game.moveCount}),
+                            style: TextStyle(
+                              fontSize: 11.5,
+                              color: scheme.onSurfaceVariant,
+                            ),
+                          ),
+                          if (game.result != null) ...[
+                            const SizedBox(width: 8),
+                            Text(
+                              game.result == '1/2-1/2' ? '½-½' : game.result!,
+                              style: TextStyle(
+                                fontSize: 11.5,
+                                fontWeight: FontWeight.w700,
+                                color: scheme.onSurfaceVariant,
+                              ),
+                            ),
+                          ],
+                          if (game.subtitle.isNotEmpty) ...[
+                            const SizedBox(width: 8),
+                            Expanded(
+                              child: Text(
+                                game.subtitle,
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                                style: TextStyle(
+                                  fontSize: 11.5,
+                                  color: scheme.onSurfaceVariant,
+                                ),
+                              ),
+                            ),
+                          ],
+                        ],
+                      ),
+                      if (game.skippedCount > 0)
+                        Padding(
+                          padding: const EdgeInsets.only(top: 3),
+                          child: Text(
+                            t('pgn.partial', {'count': game.skippedCount}),
+                            style: TextStyle(fontSize: 11, color: scheme.error),
+                          ),
+                        ),
+                    ],
+                  ),
+                ),
+                IconButton(
+                  tooltip: t('pgn.preview'),
+                  icon: const Icon(Icons.play_circle_outline_rounded),
+                  onPressed: () => _openGame(game),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}

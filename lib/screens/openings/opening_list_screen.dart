@@ -1,0 +1,415 @@
+import 'package:flutter/material.dart';
+
+import '../../widgets/responsive.dart';
+
+import '../../l10n/app_strings.dart';
+import '../../models/opening.dart';
+import '../../services/opening_service.dart';
+import '../../theme/app_theme.dart';
+import '../../widgets/app_dialogs.dart';
+import 'opening_study_screen.dart';
+
+/// Açılış kütüphanesi: aileye göre gruplanmış varyantlar.
+class OpeningListScreen extends StatefulWidget {
+  const OpeningListScreen({super.key});
+
+  @override
+  State<OpeningListScreen> createState() => _OpeningListScreenState();
+}
+
+class _OpeningListScreenState extends State<OpeningListScreen> {
+  final OpeningService _service = OpeningService.instance;
+  final TextEditingController _searchController = TextEditingController();
+
+  List<Opening> _all = [];
+  Map<String, OpeningProgress> _progress = {};
+  String _query = '';
+  bool _onlyFavorites = false;
+  bool _loading = true;
+
+  @override
+  void initState() {
+    super.initState();
+    _load();
+  }
+
+  @override
+  void dispose() {
+    _searchController.dispose();
+    super.dispose();
+  }
+
+  Future<void> _load() async {
+    final all = await _service.all();
+    final progress = await _service.progressMap();
+    if (!mounted) return;
+    setState(() {
+      _all = all;
+      _progress = progress;
+      _loading = false;
+    });
+  }
+
+  List<Opening> get _visible {
+    final query = _query.trim().toLowerCase();
+    return _all.where((opening) {
+      if (_onlyFavorites && _progress[opening.id]?.favorite != true) {
+        return false;
+      }
+      if (query.isEmpty) return true;
+      return opening.family.toLowerCase().contains(query) ||
+          opening.variation.toLowerCase().contains(query) ||
+          opening.eco.toLowerCase().contains(query) ||
+          opening.sanMoves.join(' ').toLowerCase().contains(query);
+    }).toList();
+  }
+
+  Map<String, List<Opening>> get _grouped {
+    final grouped = <String, List<Opening>>{};
+    for (final opening in _visible) {
+      grouped.putIfAbsent(opening.family, () => <Opening>[]).add(opening);
+    }
+    return grouped;
+  }
+
+  Future<void> _open(Opening opening) async {
+    await Navigator.push(
+      context,
+      MaterialPageRoute(builder: (_) => OpeningStudyScreen(opening: opening)),
+    );
+    await _load();
+  }
+
+  Future<void> _addOwn() async {
+    final familyController = TextEditingController();
+    final nameController = TextEditingController();
+    final movesController = TextEditingController();
+
+    final saved = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: Text(t('openings.addOwn')),
+        content: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              TextField(
+                controller: familyController,
+                decoration: InputDecoration(
+                  labelText: t('openings.family'),
+                  hintText: t('openings.familyHint'),
+                ),
+              ),
+              const SizedBox(height: 10),
+              TextField(
+                controller: nameController,
+                decoration: InputDecoration(
+                  labelText: t('openings.variationName'),
+                  hintText: t('openings.variationHint'),
+                ),
+              ),
+              const SizedBox(height: 10),
+              TextField(
+                controller: movesController,
+                maxLines: 5,
+                minLines: 3,
+                style: const TextStyle(fontSize: 13, fontFamily: 'monospace'),
+                decoration: InputDecoration(
+                  labelText: t('openings.moves'),
+                  hintText: t('openings.movesHint'),
+                ),
+              ),
+              const SizedBox(height: 8),
+              Text(
+                t('openings.addOwnHint'),
+                style: const TextStyle(fontSize: 11.5),
+              ),
+            ],
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(dialogContext, false),
+            child: Text(t('common.cancel')),
+          ),
+          ElevatedButton(
+            onPressed: () => Navigator.pop(dialogContext, true),
+            child: Text(t('common.add')),
+          ),
+        ],
+      ),
+    );
+
+    if (saved != true || !mounted) return;
+
+    final opening = await _service.addFromSan(
+      family: familyController.text.trim(),
+      variation: nameController.text.trim(),
+      moveText: movesController.text,
+    );
+    if (!mounted) return;
+    if (opening == null) {
+      AppDialogs.snack(context, t('openings.noValidMove'));
+      return;
+    }
+    await _load();
+    if (mounted) {
+      AppDialogs.snack(
+        context,
+        t('openings.added', {'count': opening.sanMoves.length}),
+      );
+    }
+  }
+
+  Future<void> _deleteCustom(Opening opening) async {
+    final confirmed = await AppDialogs.confirm(
+      context,
+      title: t('openings.deleteVariation'),
+      message: t('openings.deleteMessage', {'name': opening.title}),
+      confirmLabel: t('common.delete'),
+      destructive: true,
+    );
+    if (!confirmed) return;
+    await _service.deleteCustom(opening.id);
+    await _load();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    final grouped = _grouped;
+    final families = grouped.keys.toList();
+
+    final learned = _all.where((o) => _progress[o.id]?.learned == true).length;
+
+    return Scaffold(
+      appBar: AppBar(
+        title: Text(t('openings.title')),
+        actions: [
+          IconButton(
+            tooltip: _onlyFavorites
+                ? t('common.showAll')
+                : t('common.onlyFavorites'),
+            icon: Icon(
+              _onlyFavorites ? Icons.star_rounded : Icons.star_border_rounded,
+              color: _onlyFavorites ? scheme.warning : null,
+            ),
+            onPressed: () => setState(() => _onlyFavorites = !_onlyFavorites),
+          ),
+          IconButton(
+            tooltip: t('openings.addOwn'),
+            icon: const Icon(Icons.add_rounded),
+            onPressed: _addOwn,
+          ),
+        ],
+        bottom: PreferredSize(
+          preferredSize: const Size.fromHeight(60),
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(16, 0, 16, 10),
+            child: TextField(
+              controller: _searchController,
+              onChanged: (value) => setState(() => _query = value),
+              decoration: InputDecoration(
+                hintText: t('openings.search'),
+                prefixIcon: const Icon(Icons.search_rounded, size: 20),
+                isDense: true,
+                suffixIcon: _query.isEmpty
+                    ? null
+                    : IconButton(
+                        icon: const Icon(Icons.clear_rounded, size: 18),
+                        onPressed: () {
+                          _searchController.clear();
+                          setState(() => _query = '');
+                        },
+                      ),
+              ),
+            ),
+          ),
+        ),
+      ),
+      body: _loading
+          ? const Center(child: CircularProgressIndicator())
+          : ContentWidth(
+              child: ListView(
+                padding: const EdgeInsets.fromLTRB(16, 8, 16, 28),
+                children: [
+                  if (_all.isNotEmpty)
+                    Container(
+                      padding: const EdgeInsets.all(14),
+                      decoration: BoxDecoration(
+                        color: scheme.secondaryContainer,
+                        borderRadius: BorderRadius.circular(14),
+                      ),
+                      child: Row(
+                        children: [
+                          Icon(
+                            Icons.menu_book_rounded,
+                            size: 20,
+                            color: scheme.onSecondaryContainer,
+                          ),
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: Text(
+                              t('openings.summary', {
+                                'total': _all.length,
+                                'learned': learned,
+                              }),
+                              style: TextStyle(
+                                fontSize: 12.5,
+                                color: scheme.onSecondaryContainer,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  if (_all.isNotEmpty) const SizedBox(height: 12),
+                  if (_all.isEmpty)
+                    _emptyState(scheme)
+                  else if (families.isEmpty)
+                    Padding(
+                      padding: const EdgeInsets.only(top: 60),
+                      child: Center(
+                        child: Text(
+                          t('openings.noMatch'),
+                          style: TextStyle(color: scheme.onSurfaceVariant),
+                        ),
+                      ),
+                    ),
+                  for (final family in families)
+                    _familyTile(family, grouped[family]!, scheme),
+                ],
+              ),
+            ),
+    );
+  }
+
+  Widget _emptyState(ColorScheme scheme) {
+    return Padding(
+      padding: const EdgeInsets.only(top: 48),
+      child: Column(
+        children: [
+          Icon(
+            Icons.menu_book_outlined,
+            size: 48,
+            color: scheme.onSurfaceVariant,
+          ),
+          const SizedBox(height: 16),
+          Text(
+            t('openings.emptyTitle'),
+            style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
+          ),
+          const SizedBox(height: 8),
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 24),
+            child: Text(
+              t('openings.emptyHint'),
+              textAlign: TextAlign.center,
+              style: TextStyle(color: scheme.onSurfaceVariant, height: 1.45),
+            ),
+          ),
+          const SizedBox(height: 22),
+          ElevatedButton.icon(
+            onPressed: _addOwn,
+            icon: const Icon(Icons.add_rounded),
+            label: Text(t('openings.addOwn')),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _familyTile(
+    String family,
+    List<Opening> openings,
+    ColorScheme scheme,
+  ) {
+    final learned =
+        openings.where((o) => _progress[o.id]?.learned == true).length;
+
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 8),
+      child: Container(
+        decoration: BoxDecoration(
+          color: scheme.surfaceContainer,
+          borderRadius: BorderRadius.circular(16),
+        ),
+        clipBehavior: Clip.antiAlias,
+        child: Theme(
+          data: Theme.of(context).copyWith(dividerColor: Colors.transparent),
+          child: ExpansionTile(
+            initiallyExpanded: _query.isNotEmpty,
+            title: Text(
+              family,
+              style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w700),
+            ),
+            subtitle: Text(
+              t('openings.familySummary', {
+                'count': openings.length,
+                'learned': learned,
+              }),
+              style: TextStyle(fontSize: 12, color: scheme.onSurfaceVariant),
+            ),
+            children: [
+              for (final opening in openings)
+                ListTile(
+                  dense: true,
+                  onTap: () => _open(opening),
+                  onLongPress:
+                      opening.custom ? () => _deleteCustom(opening) : null,
+                  leading: Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 7,
+                      vertical: 3,
+                    ),
+                    decoration: BoxDecoration(
+                      color: scheme.surfaceContainerHighest,
+                      borderRadius: BorderRadius.circular(6),
+                    ),
+                    child: Text(
+                      opening.eco,
+                      style: TextStyle(
+                        fontSize: 11,
+                        fontWeight: FontWeight.w700,
+                        color: scheme.onSurfaceVariant,
+                      ),
+                    ),
+                  ),
+                  title: Text(
+                    opening.variation,
+                    style: const TextStyle(fontSize: 14),
+                  ),
+                  subtitle: Text(
+                    opening.sanMoves.take(8).join(' '),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: TextStyle(
+                      fontSize: 11.5,
+                      color: scheme.onSurfaceVariant,
+                    ),
+                  ),
+                  trailing: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      if (_progress[opening.id]?.favorite == true)
+                        Icon(
+                          Icons.star_rounded,
+                          size: 16,
+                          color: scheme.warning,
+                        ),
+                      if (_progress[opening.id]?.learned == true)
+                        Icon(
+                          Icons.check_circle_rounded,
+                          size: 16,
+                          color: scheme.success,
+                        ),
+                    ],
+                  ),
+                ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}

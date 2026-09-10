@@ -1,0 +1,647 @@
+import 'package:flutter/material.dart';
+
+import '../l10n/app_strings.dart';
+import '../models/chess_engine.dart' as engine;
+import '../services/settings_service.dart';
+import '../services/sound_service.dart';
+import '../theme/app_theme.dart';
+import 'piece_widget.dart';
+import 'cursors.dart';
+import 'board_background.dart';
+
+/// Tahtaya çizilen ok (motor ipucu, çözüm gösterimi).
+class BoardArrow {
+  final engine.Position from;
+  final engine.Position to;
+  final Color color;
+
+  const BoardArrow(this.from, this.to, this.color);
+}
+
+/// Etkileşimli satranç tahtası.
+///
+/// Tahta oyunu **değiştirmez**; seçilen hamleyi [onMove] ile üst widget'a
+/// bildirir. Pozisyonun tek bir sahibi olması, PGN gezinme / geri alma /
+/// motorla oynama gibi akışlarda tutarsızlığı önler.
+class ChessBoardWidget extends StatefulWidget {
+  final engine.ChessGame game;
+
+  /// Tahta siyahın bakış açısıyla mı gösterilsin?
+  final bool flipped;
+
+  /// Kullanıcı hamle yapabilir mi?
+  final bool interactive;
+
+  /// Yalnızca bu renk oynatılabilir (motora karşı oyun, bulmaca).
+  final engine.Color? movableSide;
+
+  /// Vurgulanacak son hamle.
+  final engine.ChessMove? lastMove;
+
+  /// Kullanıcı geçerli bir hamle seçtiğinde çağrılır.
+  final void Function(engine.ChessMove move)? onMove;
+
+  /// Tahtaya çizilecek oklar.
+  final List<BoardArrow> arrows;
+
+  /// Ek kare renklendirmeleri (bulmaca geri bildirimi vb.).
+  final Map<int, Color> squareTints;
+
+  const ChessBoardWidget({
+    super.key,
+    required this.game,
+    this.flipped = false,
+    this.interactive = true,
+    this.movableSide,
+    this.lastMove,
+    this.onMove,
+    this.arrows = const [],
+    this.squareTints = const {},
+  });
+
+  @override
+  State<ChessBoardWidget> createState() => _ChessBoardWidgetState();
+}
+
+class _ChessBoardWidgetState extends State<ChessBoardWidget>
+    with SingleTickerProviderStateMixin {
+  engine.Position? _selected;
+  List<engine.ChessMove> _legalFromSelected = const [];
+
+  // Sürükleme durumu
+  engine.Position? _dragFrom;
+  Offset? _dragPosition;
+
+  // Hamle animasyonu
+  late final AnimationController _animation = AnimationController(
+    vsync: this,
+    duration: const Duration(milliseconds: 170),
+  );
+  engine.ChessMove? _animatingMove;
+  engine.Piece? _animatingPiece;
+
+  @override
+  void didUpdateWidget(covariant ChessBoardWidget oldWidget) {
+    super.didUpdateWidget(oldWidget);
+
+    if (!identical(oldWidget.game, widget.game)) {
+      _selected = null;
+      _legalFromSelected = const [];
+    }
+
+    final previous = oldWidget.lastMove;
+    final current = widget.lastMove;
+    if (SettingsService.instance.animateMoves &&
+        current != null &&
+        current.uci != previous?.uci) {
+      final piece = widget.game.pieceAt(current.to);
+      if (piece != null) {
+        _animatingMove = current;
+        _animatingPiece = piece;
+        _animation.forward(from: 0).whenComplete(() {
+          if (!mounted) return;
+          setState(() {
+            _animatingMove = null;
+            _animatingPiece = null;
+          });
+        });
+      }
+    }
+  }
+
+  @override
+  void dispose() {
+    _animation.dispose();
+    super.dispose();
+  }
+
+  // -------------------------------------------------------------------------
+  // Yerleşim yardımcıları
+  // -------------------------------------------------------------------------
+
+  Offset _offsetFor(engine.Position position, double square) {
+    final row = widget.flipped ? 7 - position.row : position.row;
+    final col = widget.flipped ? 7 - position.col : position.col;
+    return Offset(col * square, row * square);
+  }
+
+  engine.Position? _positionAt(Offset local, double square) {
+    if (square <= 0) return null;
+    int col = (local.dx / square).floor();
+    int row = (local.dy / square).floor();
+    if (row < 0 || row > 7 || col < 0 || col > 7) return null;
+    if (widget.flipped) {
+      row = 7 - row;
+      col = 7 - col;
+    }
+    return engine.Position(row, col);
+  }
+
+  bool get _canPlay =>
+      widget.interactive &&
+      widget.onMove != null &&
+      (widget.movableSide == null ||
+          widget.movableSide == widget.game.sideToMove);
+
+  bool _isOwnPiece(engine.Position position) {
+    final piece = widget.game.pieceAt(position);
+    return piece != null && piece.color == widget.game.sideToMove;
+  }
+
+  void _select(engine.Position position) {
+    setState(() {
+      _selected = position;
+      _legalFromSelected = widget.game.legalMovesFrom(position);
+    });
+  }
+
+  void _clearSelection() {
+    setState(() {
+      _selected = null;
+      _legalFromSelected = const [];
+    });
+  }
+
+  // -------------------------------------------------------------------------
+  // Etkileşim
+  // -------------------------------------------------------------------------
+
+  Future<void> _tryMoveTo(engine.Position target) async {
+    final from = _selected;
+    if (from == null) return;
+
+    final candidates = _legalFromSelected.where((m) => m.to == target).toList();
+    if (candidates.isEmpty) {
+      if (_isOwnPiece(target)) {
+        // Başka bir kendi taşına geçiş; kural dışı bir deneme değil.
+        _select(target);
+      } else {
+        // Boş ya da rakip bir kareye kural dışı hamle denemesi.
+        SoundService.instance.playIllegalMove(inCheck: widget.game.isCheck);
+        _clearSelection();
+      }
+      return;
+    }
+
+    engine.ChessMove move = candidates.first;
+    if (candidates.length > 1 && candidates.any((m) => m.promotion != null)) {
+      final piece = widget.game.pieceAt(from);
+      final chosen = await _askPromotion(piece!.color, candidates);
+      if (chosen == null) {
+        _clearSelection();
+        return;
+      }
+      move = chosen;
+    }
+
+    _clearSelection();
+    widget.onMove?.call(move);
+  }
+
+  void _onTapUp(TapUpDetails details, double square) {
+    if (!_canPlay) return;
+    final position = _positionAt(details.localPosition, square);
+    if (position == null) return;
+
+    if (_selected == null) {
+      // Seçim yokken herhangi bir kareye dokunmak bir hamle denemesi
+      // değildir; uyarı sesi çalmaz.
+      if (_isOwnPiece(position)) _select(position);
+      return;
+    }
+    if (position == _selected) {
+      _clearSelection();
+      return;
+    }
+    _tryMoveTo(position);
+  }
+
+  void _onPanStart(DragStartDetails details, double square) {
+    if (!_canPlay) return;
+    final position = _positionAt(details.localPosition, square);
+    if (position == null || !_isOwnPiece(position)) return;
+    setState(() {
+      _dragFrom = position;
+      _dragPosition = details.localPosition;
+      _selected = position;
+      _legalFromSelected = widget.game.legalMovesFrom(position);
+    });
+  }
+
+  void _onPanUpdate(DragUpdateDetails details) {
+    if (_dragFrom == null) return;
+    setState(() => _dragPosition = details.localPosition);
+  }
+
+  void _onPanEnd(double square) {
+    final from = _dragFrom;
+    final at = _dragPosition;
+    setState(() {
+      _dragFrom = null;
+      _dragPosition = null;
+    });
+    if (from == null || at == null) return;
+    final target = _positionAt(at, square);
+    if (target == null || target == from) {
+      // Kısa sürükleme: seçim açık kalsın, kullanıcı hedefe dokunabilsin.
+      return;
+    }
+    _tryMoveTo(target);
+  }
+
+  Future<engine.ChessMove?> _askPromotion(
+    engine.Color color,
+    List<engine.ChessMove> candidates,
+  ) {
+    final scheme = Theme.of(context).colorScheme;
+    return showDialog<engine.ChessMove>(
+      context: context,
+      barrierDismissible: true,
+      builder: (dialogContext) => AlertDialog(
+        title: Text(t('game.promotion')),
+        content: Row(
+          mainAxisSize: MainAxisSize.min,
+          mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+          children: [
+            for (final type in const [
+              engine.PieceType.queen,
+              engine.PieceType.rook,
+              engine.PieceType.bishop,
+              engine.PieceType.knight,
+            ])
+              if (candidates.any((m) => m.promotion == type))
+                InkWell(
+                  mouseCursor: kClickable,
+                  borderRadius: BorderRadius.circular(12),
+                  onTap: () => Navigator.pop(
+                    dialogContext,
+                    candidates.firstWhere((m) => m.promotion == type),
+                  ),
+                  child: Container(
+                    padding: const EdgeInsets.all(8),
+                    decoration: BoxDecoration(
+                      color: scheme.surfaceContainerHighest,
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: PieceWidget(
+                      piece: engine.Piece(type, color),
+                      size: 46,
+                    ),
+                  ),
+                ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  // -------------------------------------------------------------------------
+  // Çizim
+  // -------------------------------------------------------------------------
+
+  @override
+  Widget build(BuildContext context) {
+    final settings = SettingsService.instance;
+    final scheme = Theme.of(context).colorScheme;
+
+    return AspectRatio(
+      aspectRatio: 1,
+      child: LayoutBuilder(
+        builder: (context, constraints) {
+          final size = constraints.biggest.shortestSide;
+          final square = size / 8;
+
+          return MouseRegion(
+            // Masaüstünde tahta oynanabilir olduğunda imleç el şeklini alır.
+            cursor: _canPlay ? SystemMouseCursors.click : MouseCursor.defer,
+            child: GestureDetector(
+              behavior: HitTestBehavior.opaque,
+              onTapUp: (details) => _onTapUp(details, square),
+              onPanStart: (details) => _onPanStart(details, square),
+              onPanUpdate: _onPanUpdate,
+              onPanEnd: (_) => _onPanEnd(square),
+              child: SizedBox(
+                width: size,
+                height: size,
+                child: Stack(
+                  clipBehavior: Clip.none,
+                  children: [
+                    _buildBoardBackground(settings, size),
+                    ..._buildHighlights(square, scheme),
+                    if (settings.showCoordinates)
+                      _buildCoordinates(square, scheme, settings),
+                    ..._buildPieces(square),
+                    if (settings.showLegalMoves) ..._buildLegalHints(square),
+                    if (widget.arrows.isNotEmpty)
+                      Positioned.fill(
+                        child: IgnorePointer(
+                          child: CustomPaint(
+                            painter: _ArrowPainter(
+                              arrows: widget.arrows,
+                              flipped: widget.flipped,
+                            ),
+                          ),
+                        ),
+                      ),
+                    if (_animatingMove != null) _buildAnimatedPiece(square),
+                    if (_dragFrom != null && _dragPosition != null)
+                      _buildDraggedPiece(square),
+                  ],
+                ),
+              ),
+            ),
+          );
+        },
+      ),
+    );
+  }
+
+  Widget _buildBoardBackground(SettingsService settings, double size) {
+    return Positioned.fill(
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(6),
+        child: BoardBackground(board: settings.boardTheme),
+      ),
+    );
+  }
+
+  List<Widget> _buildHighlights(double square, ColorScheme scheme) {
+    final widgets = <Widget>[];
+
+    void add(engine.Position position, Color color) {
+      final offset = _offsetFor(position, square);
+      widgets.add(
+        Positioned(
+          left: offset.dx,
+          top: offset.dy,
+          width: square,
+          height: square,
+          child: IgnorePointer(child: ColoredBox(color: color)),
+        ),
+      );
+    }
+
+    final last = widget.lastMove;
+    if (last != null && SettingsService.instance.highlightLastMove) {
+      add(last.from, scheme.lastMove);
+      add(last.to, scheme.lastMove);
+    }
+
+    if (widget.game.isCheck) {
+      for (int i = 0; i < 64; i++) {
+        final piece = widget.game.board[i];
+        if (piece != null &&
+            piece.type == engine.PieceType.king &&
+            piece.color == widget.game.sideToMove) {
+          widgets.add(_checkGlow(engine.Position.fromIndex(i), square, scheme));
+          break;
+        }
+      }
+    }
+
+    widget.squareTints.forEach((index, color) {
+      add(engine.Position.fromIndex(index), color);
+    });
+
+    final selected = _selected;
+    if (selected != null) add(selected, scheme.selectedSquare);
+
+    return widgets;
+  }
+
+  Widget _checkGlow(engine.Position position, double square, ColorScheme s) {
+    final offset = _offsetFor(position, square);
+    return Positioned(
+      left: offset.dx,
+      top: offset.dy,
+      width: square,
+      height: square,
+      child: IgnorePointer(
+        child: DecoratedBox(
+          decoration: BoxDecoration(
+            shape: BoxShape.circle,
+            gradient: RadialGradient(
+              colors: [s.checkSquare, s.checkSquare.withValues(alpha: 0)],
+              stops: const [0.35, 1],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildCoordinates(
+    double square,
+    ColorScheme scheme,
+    SettingsService settings,
+  ) {
+    const files = 'abcdefgh';
+
+    // Tahta görseli çevrilmez; bu yüzden bir hücrenin açık mı koyu mu
+    // olduğu her zaman ekrandaki satır/sütun toplamından gelir. Yazı,
+    // üzerinde durduğu karenin karşıt rengini alır (chess.com'daki gibi):
+    // böylece hangi tahta seçilirse seçilsin okunur kalır.
+    TextStyle styleFor(bool onLightSquare) => TextStyle(
+          fontSize: square * 0.20,
+          fontWeight: FontWeight.w700,
+          color: Color(
+            BoardAssets.coordinateColor(
+              settings.boardTheme,
+              onLightSquare: onLightSquare,
+            ),
+          ),
+        );
+
+    return Positioned.fill(
+      child: IgnorePointer(
+        child: Stack(
+          children: [
+            for (int i = 0; i < 8; i++) ...[
+              () {
+                final column = widget.flipped ? 7 - i : i;
+                // Alt satır 7; (sütun + 7) çift ise kare açıktır.
+                return Positioned(
+                  left: column * square + square * 0.06,
+                  top: 7 * square + square * 0.72,
+                  child: Text(files[i], style: styleFor((column + 7).isEven)),
+                );
+              }(),
+              () {
+                final row = widget.flipped ? 7 - i : i;
+                return Positioned(
+                  left: 7 * square + square * 0.80,
+                  top: row * square + square * 0.05,
+                  child: Text('${8 - i}', style: styleFor((7 + row).isEven)),
+                );
+              }(),
+            ],
+          ],
+        ),
+      ),
+    );
+  }
+
+  List<Widget> _buildPieces(double square) {
+    final widgets = <Widget>[];
+    for (int i = 0; i < 64; i++) {
+      final piece = widget.game.board[i];
+      if (piece == null) continue;
+      final position = engine.Position.fromIndex(i);
+
+      // Sürüklenen ya da animasyonu süren taş ayrı katmanda çizilir.
+      if (_dragFrom == position) continue;
+      if (_animatingMove?.to == position && _animatingPiece != null) continue;
+
+      final offset = _offsetFor(position, square);
+      widgets.add(
+        Positioned(
+          left: offset.dx,
+          top: offset.dy,
+          width: square,
+          height: square,
+          child: IgnorePointer(
+            child: Center(
+              child: PieceWidget(piece: piece, size: square * 0.92),
+            ),
+          ),
+        ),
+      );
+    }
+    return widgets;
+  }
+
+  List<Widget> _buildLegalHints(double square) {
+    if (_selected == null) return const [];
+    return _legalFromSelected.map((move) => move.to).toSet().map((target) {
+      final offset = _offsetFor(target, square);
+      final occupied = widget.game.pieceAt(target) != null;
+      return Positioned(
+        left: offset.dx,
+        top: offset.dy,
+        width: square,
+        height: square,
+        child: IgnorePointer(
+          child: Center(
+            child: occupied
+                ? Container(
+                    width: square * 0.92,
+                    height: square * 0.92,
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      border: Border.all(
+                        color: Colors.black.withValues(alpha: 0.32),
+                        width: square * 0.075,
+                      ),
+                    ),
+                  )
+                : Container(
+                    width: square * 0.28,
+                    height: square * 0.28,
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      color: Colors.black.withValues(alpha: 0.28),
+                    ),
+                  ),
+          ),
+        ),
+      );
+    }).toList();
+  }
+
+  Widget _buildAnimatedPiece(double square) {
+    final move = _animatingMove!;
+    final start = _offsetFor(move.from, square);
+    final end = _offsetFor(move.to, square);
+    return AnimatedBuilder(
+      animation: _animation,
+      builder: (context, child) {
+        final t = Curves.easeOutCubic.transform(_animation.value);
+        final position = Offset.lerp(start, end, t)!;
+        return Positioned(
+          left: position.dx,
+          top: position.dy,
+          width: square,
+          height: square,
+          child: IgnorePointer(child: child),
+        );
+      },
+      child: Center(
+        child: PieceWidget(piece: _animatingPiece!, size: square * 0.92),
+      ),
+    );
+  }
+
+  Widget _buildDraggedPiece(double square) {
+    final piece = widget.game.pieceAt(_dragFrom!);
+    if (piece == null) return const SizedBox.shrink();
+    final scale = 1.15;
+    return Positioned(
+      left: _dragPosition!.dx - square * scale / 2,
+      top: _dragPosition!.dy - square * scale / 2,
+      width: square * scale,
+      height: square * scale,
+      child: IgnorePointer(
+        child: Center(
+          child: PieceWidget(piece: piece, size: square * 0.92 * scale),
+        ),
+      ),
+    );
+  }
+}
+
+class _ArrowPainter extends CustomPainter {
+  final List<BoardArrow> arrows;
+  final bool flipped;
+
+  _ArrowPainter({required this.arrows, required this.flipped});
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final square = size.width / 8;
+
+    Offset center(engine.Position position) {
+      final row = flipped ? 7 - position.row : position.row;
+      final col = flipped ? 7 - position.col : position.col;
+      return Offset((col + 0.5) * square, (row + 0.5) * square);
+    }
+
+    for (final arrow in arrows) {
+      final from = center(arrow.from);
+      final to = center(arrow.to);
+      final direction = (to - from);
+      final length = direction.distance;
+      if (length == 0) continue;
+      final unit = direction / length;
+
+      final headLength = square * 0.42;
+      final shaftEnd = to - unit * headLength * 0.85;
+
+      final paint = Paint()
+        ..color = arrow.color
+        ..strokeWidth = square * 0.17
+        ..strokeCap = StrokeCap.round
+        ..style = PaintingStyle.stroke;
+      canvas.drawLine(from + unit * square * 0.28, shaftEnd, paint);
+
+      final normal = Offset(-unit.dy, unit.dx);
+      final head = Path()
+        ..moveTo(to.dx, to.dy)
+        ..lineTo(
+          shaftEnd.dx + normal.dx * headLength * 0.42,
+          shaftEnd.dy + normal.dy * headLength * 0.42,
+        )
+        ..lineTo(
+          shaftEnd.dx - normal.dx * headLength * 0.42,
+          shaftEnd.dy - normal.dy * headLength * 0.42,
+        )
+        ..close();
+      canvas.drawPath(head, Paint()..color = arrow.color);
+    }
+  }
+
+  @override
+  bool shouldRepaint(covariant _ArrowPainter old) =>
+      old.arrows != arrows || old.flipped != flipped;
+}
+
+/// Tahta görseli yüklenemezse kullanılan yedek çizim.
