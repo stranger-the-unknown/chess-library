@@ -1,0 +1,5 @@
+- Windows uygulama simgesi düzeltildi: pencere başlığında, görev
+  çubuğunda ve kurulum dosyasında uygulamanın kendi simgesi yerine
+  varsayılan Flutter logosu görünüyordu.
+
+Android tarafında değişiklik yok.

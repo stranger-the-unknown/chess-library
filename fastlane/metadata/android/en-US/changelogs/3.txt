@@ -1,0 +1,4 @@
+- Fixed the Windows app icon: it showed the default Flutter logo instead
+  of the app's own icon in the title bar, taskbar and installer.
+
+No changes on Android.

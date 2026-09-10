@@ -5,6 +5,7 @@ Koyu yeşil bir zemin üzerinde altın rengi bir at silueti; kenarda ince bir
 satranç tahtası şeridi. Çıktılar:
   assets/icon/icon.png            1024x1024, tam simge (mağaza / iOS)
   assets/icon/icon_foreground.png 1024x1024, saydam zeminli ön plan (Android)
+  windows/runner/resources/app_icon.ico  çok çözünürlüklü (Windows)
 """
 from PIL import Image, ImageDraw, ImageFilter
 
@@ -108,6 +109,18 @@ def build():
     scaled = art.resize((int(S * k), int(S * k)), Image.LANCZOS)
     fg.alpha_composite(scaled, (int(S * (1 - k) / 2), int(S * 0.20)))
     fg.save('assets/icon/icon_foreground.png')
+
+    # Windows uygulama simgesi.
+    #
+    # Flutter'in Windows sablonu varsayilan olarak kendi logosunu koyar;
+    # degistirilmezse pencere basliginda, gorev cubugunda ve kurulum
+    # dosyasinda Flutter logosu gorunur. Cok cozunurluklu ICO uretiyoruz:
+    # Windows duruma gore 16'dan 256'ya kadar uygun boyutu secer.
+    sizes = [(16, 16), (24, 24), (32, 32), (48, 48), (64, 64),
+             (128, 128), (256, 256)]
+    base.save('windows/runner/resources/app_icon.ico', sizes=sizes)
+    print('windows/runner/resources/app_icon.ico  (%s)' %
+          ', '.join('%dx%d' % s for s in sizes))
     print('simge üretildi')
 
 
