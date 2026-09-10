@@ -1,0 +1,9 @@
+First release for Android and Windows.
+
+- Offline chess engine with six difficulty levels
+- PGN import and export, numbered and searchable game lists
+- Game review with accuracy, move quality and an evaluation graph
+- Your own puzzle lists: paste FENs or import a text file
+- Opening lines you add yourself, checked against the rules
+- Six piece sets, twelve board styles
+- Turkish, English, Spanish, German and French

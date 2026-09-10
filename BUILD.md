@@ -94,3 +94,71 @@ ilgili paket güncellenirse kaldırılabilirler.
 - Masaüstü yerleşim sınırları tek yerde toplanmıştır:
   `lib/widgets/responsive.dart` (tahta en fazla 520, içerik en fazla 760,
   geniş pencere eşiği 900).
+
+---
+
+## F-Droid
+
+Uygulama F-Droid ölçütlerine uygundur: tüm bağımlılıklar özgür lisanslı
+(MIT / BSD), Google Play hizmetleri kullanılmaz, ağ erişimi yoktur.
+
+F-Droid **sizin APK'nızı kabul etmez**; kaynaktan kendisi derler ve kendi
+anahtarıyla imzalar. Bu yüzden F-Droid'den kurulan sürümle buradaki
+sürüm farklı imzalara sahiptir: kullanıcı birinden diğerine geçmek
+isterse uygulamayı silip yeniden kurmak zorundadır.
+
+Mağaza sayfasında görünen metinler `fastlane/metadata/android/` altındadır
+(başlık, kısa/uzun açıklama, sürüm notu, simge). Yeni sürümde
+`changelogs/<versionCode>.txt` dosyası eklenmelidir.
+
+### Gönderim
+
+[fdroiddata](https://gitlab.com/fdroid/fdroiddata) deposunu GitLab'de
+çatallayıp `metadata/io.github.strangertheunknown.chesslibrary.yml`
+dosyasını ekleyin ve birleştirme isteği açın:
+
+```yaml
+Categories:
+  - Games
+License: MIT
+AuthorName: stranger-the-unknown
+SourceCode: https://github.com/stranger-the-unknown/chess-library
+IssueTracker: https://github.com/stranger-the-unknown/chess-library/issues
+Changelog: https://github.com/stranger-the-unknown/chess-library/releases
+
+AutoName: Chess Library
+
+RepoType: git
+Repo: https://github.com/stranger-the-unknown/chess-library.git
+
+Builds:
+  - versionName: 2.0.0
+    versionCode: 2
+    commit: v2.0.0
+    output: build/app/outputs/flutter-apk/app-release.apk
+    srclibs:
+      - flutter@3.47.2
+    rm:
+      - ios
+      - linux
+      - macos
+      - web
+    build:
+      - $$flutter$$/bin/flutter config --no-analytics
+      - $$flutter$$/bin/flutter pub get
+      - $$flutter$$/bin/flutter build apk
+
+AutoUpdateMode: Version
+UpdateCheckMode: Tags
+UpdateCheckData: pubspec.yaml|version:\s.+\+(\d+)|.|version:\s(.+)\+
+CurrentVersion: 2.0.0
+CurrentVersionCode: 2
+```
+
+`key.properties` derleme sunucusunda bulunmadığı için imzalama hata
+ayıklama anahtarına düşer; F-Droid bu imzayı zaten atıp kendi anahtarıyla
+imzaladığı için sorun olmaz.
+
+Ekran görüntüleri isteğe bağlıdır ama sayfayı belirgin biçimde
+iyileştirir: `fastlane/metadata/android/<dil>/images/phoneScreenshots/`
+altına telefondan alınmış PNG'ler koyun.

@@ -1,0 +1,41 @@
+Chess Library is a chess app that works entirely on your device. There is no
+account, no network access and no tracking — nothing ever leaves your phone.
+
+<b>Play</b>
+Play against a built-in engine with six difficulty levels (roughly 600–2300
+Elo). Pick your colour, or let it be random, and start from the normal setup
+or from a position you build yourself. The engine runs in a separate thread,
+so the board stays smooth.
+
+<b>Read your games</b>
+Load PGN files or paste text. A single file may hold any number of games;
+pick the ones you want and save them as a new list or add them to an existing
+one. Headers, comments, variations, NAG marks and games starting from a FEN
+are all read. Lists are numbered and searchable, and you can mark games as
+read.
+
+<b>Review</b>
+When a game ends the engine evaluates every move: accuracy per side, move
+quality (best, excellent, good, inaccuracy, mistake, blunder), an evaluation
+graph and the turning points of the game. While looking at a saved game you
+can also try a different move and watch how the evaluation changes — those
+trial moves are never written into the game.
+
+<b>Puzzles</b>
+The app ships with no puzzles; you build the lists yourself. Paste FENs, add
+positions one by one, or import a text file with thousands of them. Lists can
+be exported back to a text file for backup. Where a solution is known the
+recorded line is used; otherwise the engine judges your move, so any move
+that keeps the advantage counts as correct.
+
+<b>Openings</b>
+Add the lines you want to study by name and moves; every move is checked
+against the rules. Watch a line step by step, or practise it and get told
+when you go wrong.
+
+<b>Made to look right</b>
+Six piece sets and twelve board styles. Square coordinates take their colour
+from the board you choose, so they stay readable everywhere. Boards can be
+saved as PNG images.
+
+Interface languages: Turkish, English, Spanish, German, French.

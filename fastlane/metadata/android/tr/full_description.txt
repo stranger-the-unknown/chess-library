@@ -1,0 +1,41 @@
+Chess Library, tamamen cihazınızda çalışan bir satranç uygulamasıdır. Hesap
+yok, ağ erişimi yok, takip yok — hiçbir veri telefonunuzdan çıkmaz.
+
+<b>Oyna</b>
+Yerleşik motora karşı altı zorluk kademesinde oynayın (yaklaşık 600–2300
+Elo). Rengi siz seçin ya da rastgele bırakın; normal dizilişten veya kendi
+kurduğunuz pozisyondan başlayın. Motor ayrı bir iş parçacığında çalışır,
+tahta akıcı kalır.
+
+<b>Oyunlarını oku</b>
+PGN dosyası yükleyin ya da metin yapıştırın. Bir dosyada istediğiniz kadar
+oyun olabilir; seçtiklerinizi yeni bir liste olarak kaydedin veya var olan
+bir listeye ekleyin. Başlıklar, yorumlar, varyantlar, NAG işaretleri ve FEN
+ile başlayan oyunlar okunur. Listeler numaralandırılır, aranabilir ve
+okunan oyunları işaretleyebilirsiniz.
+
+<b>İnceleme</b>
+Oyun bitince motor bütün hamleleri değerlendirir: taraf başına doğruluk
+yüzdesi, hamle nitelikleri (en iyi, çok iyi, iyi, yanlışlık, hata, ciddi
+hata), değerlendirme grafiği ve oyunun dönüm noktaları. Kayıtlı bir oyuna
+bakarken başka bir hamle deneyip değerlendirmenin nasıl değiştiğini de
+görebilirsiniz; bu deneme hamleleri oyuna hiç yazılmaz.
+
+<b>Bulmacalar</b>
+Uygulama hazır bulmaca ile gelmez; listeleri kendiniz oluşturursunuz. FEN
+yapıştırın, tek tek ekleyin ya da binlercesini içeren bir metin dosyası
+alın. Listeler yedeklemek için metin dosyası olarak dışa aktarılabilir.
+Çözümü bilinen bulmacalarda kayıtlı varyant kullanılır; bilinmeyenlerde
+hamlenizi motor değerlendirir, üstünlüğü koruyan her hamle doğru sayılır.
+
+<b>Açılışlar</b>
+Çalışmak istediğiniz varyantları adı ve hamleleriyle ekleyin; her hamle
+kurallara göre denetlenir. Varyantı adım adım izleyin ya da alıştırma
+yapın, yanlışta uyarı alın.
+
+<b>Görünüm</b>
+Altı taş takımı, on iki tahta görünümü. Kare adlarının rengi seçtiğiniz
+tahtadan gelir, böylece her yerde okunur kalır. Tahtalar PNG olarak
+kaydedilebilir.
+
+Arayüz dilleri: Türkçe, İngilizce, İspanyolca, Almanca, Fransızca.
