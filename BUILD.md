@@ -132,9 +132,9 @@ RepoType: git
 Repo: https://github.com/stranger-the-unknown/chess-library.git
 
 Builds:
-  - versionName: 2.0.0
-    versionCode: 2
-    commit: v2.0.0
+  - versionName: 2.0.1
+    versionCode: 3
+    commit: v2.0.1
     output: build/app/outputs/flutter-apk/app-release.apk
     srclibs:
       - flutter@3.47.2
@@ -143,16 +143,17 @@ Builds:
       - linux
       - macos
       - web
+      - windows
     build:
       - $$flutter$$/bin/flutter config --no-analytics
       - $$flutter$$/bin/flutter pub get
-      - $$flutter$$/bin/flutter build apk
+      - $$flutter$$/bin/flutter build apk --release
 
-AutoUpdateMode: Version
+AutoUpdateMode: Version v%v
 UpdateCheckMode: Tags
 UpdateCheckData: pubspec.yaml|version:\s.+\+(\d+)|.|version:\s(.+)\+
-CurrentVersion: 2.0.0
-CurrentVersionCode: 2
+CurrentVersion: 2.0.1
+CurrentVersionCode: 3
 ```
 
 `key.properties` derleme sunucusunda bulunmadığı için imzalama hata
