@@ -282,6 +282,37 @@ class BoardAssets {
     return 0xFF000000 | value;
   }
 
+  /// İşaretleme rengi (0xAARRGGBB).
+  ///
+  /// Sağ tıkla konan işaretler ve çizilen oklar her tahtada seçilebilsin
+  /// diye renk tahtadan türetilir: koyu karenin renk tonundan en uzak
+  /// ton seçilir. Böylece yeşil tahtada yeşil, mavi tahtada mavi
+  /// işaret konmaz ve tek bir sabit renk aramak gerekmez.
+  static int markColor(String board) {
+    const palette = <int>[
+      0xFFE2571E, // turuncu
+      0xFF2E9E3F, // yeşil
+      0xFF1E6FD9, // mavi
+      0xFF9B27B0, // mor
+    ];
+    final (_, dark) = squareColors(board);
+    final boardHue = HSVColor.fromColor(Color(dark)).hue;
+
+    int best = palette.first;
+    double bestDistance = -1;
+    for (final candidate in palette) {
+      final hue = HSVColor.fromColor(Color(candidate)).hue;
+      // Renk çemberi üzerinde kısa yoldan uzaklık.
+      final raw = (hue - boardHue).abs();
+      final distance = raw > 180 ? 360 - raw : raw;
+      if (distance > bestDistance) {
+        bestDistance = distance;
+        best = candidate;
+      }
+    }
+    return best;
+  }
+
   static const Map<String, String> _labels = {
     'purple': 'Mor',
     'ivory': 'Fildişi',

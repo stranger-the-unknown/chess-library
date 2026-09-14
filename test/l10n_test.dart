@@ -1,3 +1,5 @@
+import 'dart:io';
+
 import 'package:flutter_test/flutter_test.dart';
 
 import 'package:chess_pgn_reader/l10n/app_strings.dart';
@@ -66,6 +68,40 @@ void main() {
         reason: '$key yer tutucuları farklı',
       );
     }
+  });
+
+  test('kodda geçen her anahtar tablolarda var', () {
+    // Kaynakta `t('bir.anahtar')` yazıp tabloya eklemeyi unutmak,
+    // ekranda ham anahtarın görünmesine yol açıyor ve derleme
+    // aşamasında yakalanmıyor. Bu yüzden kaynak taranır.
+    final used = <String, String>{};
+    // `_set('themeMode', ...)` gibi çağrılar da "t(" ile bitiyor;
+    // önündeki harf/alt çizgi dışlanmazsa ayar anahtarları metin
+    // anahtarı sanılıyor.
+    final pattern = RegExp(r"""(?<![\w$])t\(\s*'([a-zA-Z][\w.]*)'""");
+    for (final entity in Directory('lib').listSync(recursive: true)) {
+      if (entity is! File || !entity.path.endsWith('.dart')) continue;
+      // Tabloların kendisinde örnek anahtarlar geçiyor.
+      if (entity.path.endsWith('app_strings.dart')) continue;
+      final source = entity.readAsStringSync();
+      for (final match in pattern.allMatches(source)) {
+        used[match.group(1)!] = entity.path;
+      }
+    }
+
+    expect(used, isNotEmpty, reason: 'kaynak taranamadı');
+
+    final keys = Strings.debugKeys('tr');
+    final missing = <String>[];
+    used.forEach((key, path) {
+      // Değişkenden gelen anahtarlar (ör. 'board.saveResult.$result')
+      // doğrudan aranamaz; onlar ön ek olarak eşleşiyorsa yeterli.
+      if (keys.contains(key)) return;
+      if (keys.any((known) => known.startsWith('$key.'))) return;
+      missing.add('$key ($path)');
+    });
+
+    expect(missing, isEmpty, reason: 'tabloda karşılığı olmayan anahtarlar');
   });
 
   test('dil seçimi metinleri değiştiriyor', () {

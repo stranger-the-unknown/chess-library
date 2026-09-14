@@ -3,11 +3,13 @@ import 'dart:ui' as ui;
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 import 'package:chess_pgn_reader/models/chess_engine.dart' as engine;
 import 'package:chess_pgn_reader/services/board_image_service.dart';
 import 'package:chess_pgn_reader/services/settings_service.dart';
 import 'package:chess_pgn_reader/widgets/board_background.dart';
+import 'package:chess_pgn_reader/widgets/mini_board.dart';
 import 'package:chess_pgn_reader/widgets/piece_widget.dart';
 
 /// Taşların gerçekten çizildiğini ve PNG'ye yakalandığını denetler.
@@ -201,5 +203,62 @@ void main() {
       isNot(equals(empty)),
       reason: 'taş çizilmemiş: iki görüntü birebir aynı',
     );
+  });
+
+  group('Bulmaca önizlemesi', () {
+    // Listelerdeki küçük tahtalar ayrı bir çizim yolundan geçiyor;
+    // seçilen tahta ya da taş takımı değiştiğinde önizlemenin de
+    // değişmesi gerekiyor, yoksa liste oyun tahtasından başka görünür.
+    const fen = 'r1bqkbnr/pppp1ppp/2n5/4p3/2B1P3/5N2/PPPP1PPP/RNBQK2R w KQkq - 0 1';
+
+    Future<List<int>> capture(WidgetTester tester) async {
+      final key = GlobalKey();
+      await tester.pumpWidget(
+        _wrap(
+          RepaintBoundary(
+            key: key,
+            child: const MiniBoard(fen: fen, size: 96),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+      List<int> bytes = const [];
+      await tester.runAsync(() async {
+        bytes = (await BoardImageService.capture(key, pixelRatio: 1))!;
+      });
+      return bytes;
+    }
+
+    testWidgets('tahta değişince önizleme de değişir', (tester) async {
+      SharedPreferences.setMockInitialValues({});
+      await SettingsService.instance.load();
+
+      SettingsService.instance.boardTheme = 'brown';
+      final brown = await capture(tester);
+      SettingsService.instance.boardTheme = 'midnight';
+      final midnight = await capture(tester);
+
+      expect(
+        brown,
+        isNot(equals(midnight)),
+        reason: 'küçük tahta seçili tahtayı kullanmıyor',
+      );
+    });
+
+    testWidgets('taş takımı değişince önizleme de değişir', (tester) async {
+      SharedPreferences.setMockInitialValues({});
+      await SettingsService.instance.load();
+
+      SettingsService.instance.pieceSet = 'chessnut';
+      final chessnut = await capture(tester);
+      SettingsService.instance.pieceSet = 'papercut';
+      final papercut = await capture(tester);
+
+      expect(
+        chessnut,
+        isNot(equals(papercut)),
+        reason: 'küçük tahta seçili taş takımını kullanmıyor',
+      );
+    });
   });
 }

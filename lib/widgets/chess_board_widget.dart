@@ -1,3 +1,5 @@
+import 'package:flutter/foundation.dart';
+import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 
 import '../l10n/app_strings.dart';
@@ -67,6 +69,16 @@ class _ChessBoardWidgetState extends State<ChessBoardWidget>
     with SingleTickerProviderStateMixin {
   engine.Position? _selected;
   List<engine.ChessMove> _legalFromSelected = const [];
+
+  /// Sağ tıkla işaretlenen kareler (kare dizini).
+  final Set<int> _marked = {};
+
+  /// Sağ tuşla sürüklenerek çizilen oklar.
+  final List<(engine.Position, engine.Position)> _userArrows = [];
+
+  /// Sürüklenmekte olan işaretin başlangıcı ve o anki ucu.
+  engine.Position? _markFrom;
+  engine.Position? _markTo;
 
   // Sürükleme durumu
   engine.Position? _dragFrom;
@@ -199,6 +211,9 @@ class _ChessBoardWidgetState extends State<ChessBoardWidget>
   }
 
   void _onTapUp(TapUpDetails details, double square) {
+    // Sol tık tahtayı temizler: işaretler geçicidir, bir sonraki
+    // hamleye kadar bile durmaları gerekmez.
+    _clearMarks();
     if (!_canPlay) return;
     final position = _positionAt(details.localPosition, square);
     if (position == null) return;
@@ -214,6 +229,62 @@ class _ChessBoardWidgetState extends State<ChessBoardWidget>
       return;
     }
     _tryMoveTo(position);
+  }
+
+  // -------------------------------------------------------------- işaretler
+
+  /// Sağ tuşla basıldı: işaretin başlangıcı belirlenir.
+  void _onMarkStart(Offset local, double square) {
+    final position = _positionAt(local, square);
+    if (position == null) return;
+    setState(() {
+      _markFrom = position;
+      _markTo = position;
+    });
+  }
+
+  /// Sağ tuş basılıyken sürüklendi: okun ucu izlenir.
+  void _onMarkUpdate(Offset local, double square) {
+    if (_markFrom == null) return;
+    final position = _positionAt(local, square);
+    if (position == _markTo) return;
+    setState(() => _markTo = position);
+  }
+
+  /// Sağ tuş bırakıldı.
+  ///
+  /// Aynı karede bırakıldıysa kare işareti açılıp kapanır; başka bir
+  /// karede bırakıldıysa aradaki ok eklenir ya da varsa kaldırılır.
+  void _onMarkEnd() {
+    final from = _markFrom;
+    final to = _markTo;
+    setState(() {
+      _markFrom = null;
+      _markTo = null;
+      if (from == null) return;
+      if (to == null || to == from) {
+        final index = from.index;
+        if (!_marked.remove(index)) _marked.add(index);
+        return;
+      }
+      final existing = _userArrows.indexWhere(
+        (arrow) => arrow.$1 == from && arrow.$2 == to,
+      );
+      if (existing == -1) {
+        _userArrows.add((from, to));
+      } else {
+        _userArrows.removeAt(existing);
+      }
+    });
+  }
+
+  /// Bütün işaretleri siler.
+  void _clearMarks() {
+    if (_marked.isEmpty && _userArrows.isEmpty) return;
+    setState(() {
+      _marked.clear();
+      _userArrows.clear();
+    });
   }
 
   void _onPanStart(DragStartDetails details, double square) {
@@ -314,16 +385,30 @@ class _ChessBoardWidgetState extends State<ChessBoardWidget>
           return MouseRegion(
             // Masaüstünde tahta oynanabilir olduğunda imleç el şeklini alır.
             cursor: _canPlay ? SystemMouseCursors.click : MouseCursor.defer,
-            child: GestureDetector(
-              behavior: HitTestBehavior.opaque,
-              onTapUp: (details) => _onTapUp(details, square),
-              onPanStart: (details) => _onPanStart(details, square),
-              onPanUpdate: _onPanUpdate,
-              onPanEnd: (_) => _onPanEnd(square),
-              child: SizedBox(
-                width: size,
-                height: size,
-                child: Stack(
+            // Sağ tuş ayrı bir katmanda dinlenir: hamle tanıyıcıları
+            // yalnızca sol tuşu kabul ettiği için ikisi çakışmaz ve
+            // işaretleme tahta oynanamaz durumdayken de çalışır.
+            child: Listener(
+              onPointerDown: (event) {
+                if (event.buttons & kSecondaryButton == 0) return;
+                _onMarkStart(event.localPosition, square);
+              },
+              onPointerMove: (event) {
+                if (event.buttons & kSecondaryButton == 0) return;
+                _onMarkUpdate(event.localPosition, square);
+              },
+              onPointerUp: (_) => _onMarkEnd(),
+              onPointerCancel: (_) => _onMarkEnd(),
+              child: GestureDetector(
+                behavior: HitTestBehavior.opaque,
+                onTapUp: (details) => _onTapUp(details, square),
+                onPanStart: (details) => _onPanStart(details, square),
+                onPanUpdate: _onPanUpdate,
+                onPanEnd: (_) => _onPanEnd(square),
+                child: SizedBox(
+                  width: size,
+                  height: size,
+                  child: Stack(
                   clipBehavior: Clip.none,
                   children: [
                     _buildBoardBackground(settings, size),
@@ -346,7 +431,25 @@ class _ChessBoardWidgetState extends State<ChessBoardWidget>
                     if (_animatingMove != null) _buildAnimatedPiece(square),
                     if (_dragFrom != null && _dragPosition != null)
                       _buildDraggedPiece(square),
+                    if (_marked.isNotEmpty ||
+                        _userArrows.isNotEmpty ||
+                        _markFrom != null)
+                      Positioned.fill(
+                        child: IgnorePointer(
+                          child: CustomPaint(
+                            painter: _MarkPainter(
+                              squares: _marked,
+                              arrows: _pendingArrows,
+                              flipped: widget.flipped,
+                              color: Color(
+                                BoardAssets.markColor(settings.boardTheme),
+                              ),
+                            ),
+                          ),
+                        ),
+                      ),
                   ],
+                  ),
                 ),
               ),
             ),
@@ -354,6 +457,14 @@ class _ChessBoardWidgetState extends State<ChessBoardWidget>
         },
       ),
     );
+  }
+
+  /// Çizilecek oklar: bitmişler ve sürüklenmekte olan.
+  List<(engine.Position, engine.Position)> get _pendingArrows {
+    final from = _markFrom;
+    final to = _markTo;
+    if (from == null || to == null || from == to) return _userArrows;
+    return [..._userArrows, (from, to)];
   }
 
   Widget _buildBoardBackground(SettingsService settings, double size) {
@@ -645,3 +756,72 @@ class _ArrowPainter extends CustomPainter {
 }
 
 /// Tahta görseli yüklenemezse kullanılan yedek çizim.
+
+/// Sağ tıkla konan kare işaretleri ve kullanıcı okları.
+///
+/// Oklar ipucu oklarıyla aynı biçimde çizilir ama rengi tahtadan
+/// türetilir; kare işaretleri hem dolgu hem çerçeveyle çizilir, böylece
+/// açık ve koyu karede de, doku üstünde de seçilir.
+class _MarkPainter extends CustomPainter {
+  final Set<int> squares;
+  final List<(engine.Position, engine.Position)> arrows;
+  final bool flipped;
+  final Color color;
+
+  _MarkPainter({
+    required this.squares,
+    required this.arrows,
+    required this.flipped,
+    required this.color,
+  });
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final square = size.width / 8;
+
+    Offset topLeft(engine.Position position) {
+      final row = flipped ? 7 - position.row : position.row;
+      final col = flipped ? 7 - position.col : position.col;
+      return Offset(col * square, row * square);
+    }
+
+    final inset = square * 0.06;
+    final fill = Paint()..color = color.withValues(alpha: 0.30);
+    final border = Paint()
+      ..color = color.withValues(alpha: 0.95)
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = square * 0.075;
+
+    for (final index in squares) {
+      final offset = topLeft(engine.Position.fromIndex(index));
+      final rect = RRect.fromRectAndRadius(
+        Rect.fromLTWH(
+          offset.dx + inset,
+          offset.dy + inset,
+          square - inset * 2,
+          square - inset * 2,
+        ),
+        Radius.circular(square * 0.14),
+      );
+      canvas.drawRRect(rect, fill);
+      canvas.drawRRect(rect, border);
+    }
+
+    if (arrows.isEmpty) return;
+    _ArrowPainter(
+      arrows: [
+        for (final arrow in arrows)
+          BoardArrow(arrow.$1, arrow.$2, color.withValues(alpha: 0.85)),
+      ],
+      flipped: flipped,
+    ).paint(canvas, size);
+  }
+
+  @override
+  bool shouldRepaint(covariant _MarkPainter old) =>
+      old.flipped != flipped ||
+      old.color != color ||
+      old.arrows.length != arrows.length ||
+      !setEquals(old.squares, squares) ||
+      !listEquals(old.arrows, arrows);
+}
