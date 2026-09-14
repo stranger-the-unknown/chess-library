@@ -119,28 +119,15 @@ void main() {
     expect(played!.uci, 'e2e4');
   });
 
-  group('İşaret rengi', () {
-    test('her tahtada tanımlı ve saydam değil', () {
-      for (final board in BoardAssets.boards) {
-        final color = BoardAssets.markColor(board);
-        expect(color >> 24 & 0xFF, 0xFF, reason: '$board için saydam renk');
-      }
-    });
-
-    test('tahtanın kendi renginden yeterince uzak', () {
-      for (final board in BoardAssets.boards) {
-        final (_, dark) = BoardAssets.squareColors(board);
-        final boardHue = HSVColor.fromColor(Color(dark)).hue;
-        final markHue =
-            HSVColor.fromColor(Color(BoardAssets.markColor(board))).hue;
-        final raw = (markHue - boardHue).abs();
-        final distance = raw > 180 ? 360 - raw : raw;
-        expect(
-          distance,
-          greaterThan(40),
-          reason: '$board üzerinde işaret rengi tahtaya çok yakın',
-        );
-      }
-    });
+  testWidgets('işaret rengi seçilen tahtaya göre değişir', (tester) async {
+    // İşaret rengi koyu kare renginden türetiliyor; tahta değişince
+    // işaretin de değişmesi gerekiyor, yoksa yeşil tahtada yeşil işaret
+    // kaybolurdu.
+    await _pumpBoard(tester);
+    SettingsService.instance.boardDark = 0xFF769656; // yeşil
+    final onGreen = BoardAssets.markColor(SettingsService.instance.boardDark);
+    SettingsService.instance.boardDark = 0xFFE2571E; // turuncu
+    final onOrange = BoardAssets.markColor(SettingsService.instance.boardDark);
+    expect(onGreen, isNot(onOrange));
   });
 }

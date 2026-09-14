@@ -1,3 +1,5 @@
+import 'dart:math' as math;
+
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -16,8 +18,16 @@ class SettingsService extends ChangeNotifier {
   // Görünüm
   ThemeMode _themeMode = ThemeMode.dark;
   AppLanguage _language = AppLanguage.system;
-  String _pieceSet = 'chessnut';
-  String _boardTheme = 'brown';
+  static const String _defaultPieceSet = 'chessnut';
+
+  String _pieceSet = _defaultPieceSet;
+
+  /// Kare renkleri. Hazır tahta yoktur; kullanıcı ikisini de kendi seçer.
+  int _boardLight = BoardAssets.defaultLight;
+  int _boardDark = BoardAssets.defaultDark;
+
+  /// Karelerin üstüne hafif bir ahşap damarı bindirilsin mi?
+  bool _boardWood = false;
   bool _showCoordinates = true;
   bool _showLegalMoves = true;
   bool _highlightLastMove = true;
@@ -35,7 +45,13 @@ class SettingsService extends ChangeNotifier {
   ThemeMode get themeMode => _themeMode;
   AppLanguage get language => _language;
   String get pieceSet => _pieceSet;
-  String get boardTheme => _boardTheme;
+  int get boardLight => _boardLight;
+  int get boardDark => _boardDark;
+
+  bool get boardWood => _boardWood;
+
+  /// Açık ve koyu kare rengi (0xAARRGGBB).
+  (int, int) get squareColors => (_boardLight, _boardDark);
   bool get showCoordinates => _showCoordinates;
   bool get showLegalMoves => _showLegalMoves;
   bool get highlightLastMove => _highlightLastMove;
@@ -46,6 +62,12 @@ class SettingsService extends ChangeNotifier {
   bool get showEvaluationBar => _showEvaluationBar;
   bool get showDailyCount => _showDailyCount;
 
+  /// Ayarları diskten okur.
+  ///
+  /// Açılışta bir kez, yedek geri yüklendiğinde bir kez daha çağrılır.
+  /// Bu yüzden eksik bir anahtar **bellekteki eski değeri korumaz**,
+  /// varsayılana döner: yoksa ayarı içermeyen bir yedek geri
+  /// yüklendiğinde cihazın eski tercihi sessizce yerinde kalırdı.
   Future<void> load() async {
     final prefs = await SharedPreferences.getInstance();
     _prefs = prefs;
@@ -59,25 +81,38 @@ class SettingsService extends ChangeNotifier {
     // Kayitli ad artik listede yoksa (eski surumden guncelleme) varsayilana
     // donulur; aksi halde bulunamayan bir varlik yuklenmeye calisilir.
     final storedPieceSet = prefs.getString('pieceSet');
-    if (storedPieceSet != null &&
-        BoardAssets.pieceSets.contains(storedPieceSet)) {
-      _pieceSet = storedPieceSet;
+    _pieceSet = storedPieceSet != null &&
+            BoardAssets.pieceSets.contains(storedPieceSet)
+        ? storedPieceSet
+        : _defaultPieceSet;
+    _boardLight = prefs.getInt('boardLight') ?? BoardAssets.defaultLight;
+    _boardDark = prefs.getInt('boardDark') ?? BoardAssets.defaultDark;
+    _boardWood = prefs.getBool('boardWood') ?? false;
+
+    // 3.0'dan önce tahta bir adla saklanıyordu ('brown', 'walnut'...).
+    // O kayıt duruyorsa karşılığı olan renk çiftine çevrilir; kullanıcı
+    // güncellemeden sonra tahtasını değişmiş bulmaz.
+    if (prefs.getInt('boardLight') == null) {
+      final legacy = BoardAssets.legacyBoardColors(prefs.getString(
+        'boardTheme',
+      ));
+      if (legacy != null) {
+        _boardLight = legacy.$1;
+        _boardDark = legacy.$2;
+        await prefs.setInt('boardLight', _boardLight);
+        await prefs.setInt('boardDark', _boardDark);
+        await prefs.remove('boardTheme');
+      }
     }
-    final storedBoard = prefs.getString('boardTheme');
-    if (storedBoard != null && BoardAssets.boards.contains(storedBoard)) {
-      _boardTheme = storedBoard;
-    }
-    _showCoordinates = prefs.getBool('showCoordinates') ?? _showCoordinates;
-    _showLegalMoves = prefs.getBool('showLegalMoves') ?? _showLegalMoves;
-    _highlightLastMove =
-        prefs.getBool('highlightLastMove') ?? _highlightLastMove;
-    _animateMoves = prefs.getBool('animateMoves') ?? _animateMoves;
-    _soundEnabled = prefs.getBool('soundEnabled') ?? _soundEnabled;
-    _confirmMoves = prefs.getBool('confirmMoves') ?? _confirmMoves;
-    _engineLevel = prefs.getInt('engineLevel') ?? _engineLevel;
-    _showEvaluationBar =
-        prefs.getBool('showEvaluationBar') ?? _showEvaluationBar;
-    _showDailyCount = prefs.getBool('showDailyCount') ?? _showDailyCount;
+    _showCoordinates = prefs.getBool('showCoordinates') ?? true;
+    _showLegalMoves = prefs.getBool('showLegalMoves') ?? true;
+    _highlightLastMove = prefs.getBool('highlightLastMove') ?? true;
+    _animateMoves = prefs.getBool('animateMoves') ?? true;
+    _soundEnabled = prefs.getBool('soundEnabled') ?? true;
+    _confirmMoves = prefs.getBool('confirmMoves') ?? false;
+    _engineLevel = prefs.getInt('engineLevel') ?? 2;
+    _showEvaluationBar = prefs.getBool('showEvaluationBar') ?? true;
+    _showDailyCount = prefs.getBool('showDailyCount') ?? true;
     notifyListeners();
   }
 
@@ -108,9 +143,32 @@ class SettingsService extends ChangeNotifier {
     notifyListeners();
   }
 
-  set boardTheme(String value) {
-    _boardTheme = value;
-    _set('boardTheme', value);
+  set boardLight(int value) {
+    _boardLight = value;
+    _set('boardLight', value);
+    notifyListeners();
+  }
+
+  set boardDark(int value) {
+    _boardDark = value;
+    _set('boardDark', value);
+    notifyListeners();
+  }
+
+  set boardWood(bool value) {
+    _boardWood = value;
+    _set('boardWood', value);
+    notifyListeners();
+  }
+
+  /// Kare renklerini başlangıç değerlerine döndürür.
+  void resetBoardColors() {
+    _boardLight = BoardAssets.defaultLight;
+    _boardDark = BoardAssets.defaultDark;
+    _boardWood = false;
+    _set('boardLight', _boardLight);
+    _set('boardDark', _boardDark);
+    _set('boardWood', _boardWood);
     notifyListeners();
   }
 
@@ -169,66 +227,142 @@ class SettingsService extends ChangeNotifier {
   }
 }
 
-/// Uygulamayla birlikte gelen tahta ve taş takımları.
-///
-/// Görsellerin tamamı bu depo için üretilmiştir; dışarıdan alınmış,
-/// telif kısıtı olan bir varlık içermez.
 /// Uygulamanın sürümü.
 ///
 /// Tek kaynak burasıdır; `pubspec.yaml` ile aynı olduğu testle denetlenir.
 /// Hakkında bölümünde ve yedek dosyasının başlığında görünür.
 const String appVersionName = '3.0.0';
 
+/// Tahta renkleri ve taş takımları.
+///
+/// Hazır tahta yoktur: kullanıcı açık ve koyu kare rengini [palette]
+/// içinden kendi seçer, tahta da doğrudan o iki renkten çizilir. Böylece
+/// tahta hiç yer kaplamaz, her ölçüde keskin çıkar ve kimsenin telifinde
+/// olmayan bir dama deseninden ibaret kalır.
 class BoardAssets {
   BoardAssets._();
 
-  /// Tahta görünümleri.
+  /// Başlangıç renkleri: klasik kahve tahta.
+  static const int defaultLight = 0xFFF0D9B5;
+  static const int defaultDark = 0xFFB58863;
+
+  /// Kare renkleri için seçenekler (100 renk).
   ///
-  /// [flatBoards] içindekiler doğrudan çizilir (görsel dosyası yoktur);
-  /// kalanlar `assets/boards/<ad>.png` dosyasından gelir.
-  static const List<String> boards = [
-    'brown',
-    'green',
-    'tournament',
-    'blue',
-    'gray',
-    'slate',
-    'sand',
-    'purple',
-    'ivory',
-    'rose',
-    'teal',
-    'midnight',
-    'dark_wood',
-    'walnut',
-    'oak',
+  /// Açıktan koyuya sıralanmıştır: seçim ızgarasının üst
+  /// satırları açık kare, alt satırları koyu kare için uygundur.
+  /// Önceki hazır tahtaların bütün kare renkleri buranın
+  /// içindedir; eski görünümlerden hiçbiri kaybolmadı.
+  static const List<int> palette = [
+    0xFFF5F5F5, 0xFFF2EDE3, 0xFFF3DFE2, 0xFFE6E0EC, 0xFFEFDFDC,
+    0xFFEFE7DC, 0xFFEFEEDC, 0xFFE4EFDC, 0xFFDCEFE2, 0xFFDCEFEF,
+    0xFFDCE4EF, 0xFFE4DCEF, 0xFFEFDCEA, 0xFFDEE3E6, 0xFFEEEED2,
+    0xFFD8E8E6, 0xFFDEDEDE, 0xFFDCDCDC, 0xFFE8E9CC, 0xFFEDDCBE,
+    0xFFF0D9B5, 0xFFC6CDD6, 0xFFD9B9E2, 0xFFDFBFB9, 0xFFDFCFB9,
+    0xFFDFDCB9, 0xFFC9DFB9, 0xFFB9DFC6, 0xFFB9DFDF, 0xFFB9C9DF,
+    0xFFC9B9DF, 0xFFC4C4C4, 0xFFAEB7C4, 0xFFDCBF92, 0xFFC3B7A4,
+    0xFFD09F95, 0xFFD0B795, 0xFFD0CB95, 0xFFAED095, 0xFF95D0A9,
+    0xFF95D0D0, 0xFF95AED0, 0xFFAE95D0, 0xFFD095C1, 0xFFA8A8A8,
+    0xFFBE8A96, 0xFF9B8BB4, 0xFFC0A47B, 0xFF8CA2AD, 0xFFC2A076,
+    0xFFBD796B, 0xFFBD9B6B, 0xFFBDB66B, 0xFF8DBD6B, 0xFF6BBD86,
+    0xFF6BBDBD, 0xFF6B8DBD, 0xFF8D6BBD, 0xFFBD6BA8, 0xFF8F8F8F,
+    0xFFB79062, 0xFFB58863, 0xFF8C8C8C, 0xFF74A09B, 0xFF854AAF,
+    0xFF69788A, 0xFF769656, 0xFFA25849, 0xFFA27D49, 0xFFA29A49,
+    0xFF6EA249, 0xFF49A266, 0xFF49A2A2, 0xFF496EA2, 0xFFA2498C,
+    0xFF986D45, 0xFF5E8A4E, 0xFF696969, 0xFF4B5A72, 0xFF784136,
+    0xFF785C36, 0xFF787236, 0xFF517836, 0xFF36784C, 0xFF367878,
+    0xFF365178, 0xFF513678, 0xFF783667, 0xFF654328, 0xFF424242,
+    0xFF53331F, 0xFF4D2A23, 0xFF4D3C23, 0xFF4D4A23, 0xFF354D23,
+    0xFF234D31, 0xFF234D4D, 0xFF23354D, 0xFF35234D, 0xFF4D2343,
   ];
 
-  /// Görsel dosyası olmayan, iki renkten çizilen tahtalar.
+  /// 3.0 öncesindeki hazır tahtaların kare renkleri.
   ///
-  /// Kareler doğrudan tuvale çizildiği için her ölçüde kusursuz keskin
-  /// çıkar; ölçekleme bulanıklığı ya da JPEG halkalanması olmaz.
-  static const Set<String> flatBoards = {
-    'brown',
-    'green',
-    'tournament',
-    'blue',
-    'gray',
-    'slate',
-    'sand',
-    'purple',
-    'ivory',
-    'rose',
-    'teal',
-    'midnight',
+  /// Yalnızca eski ayarı çevirmek için durur; arayüzde görünmez.
+  static const Map<String, (int, int)> _legacyBoards = {
+    'brown': (0xFFF0D9B5, 0xFFB58863),
+    'green': (0xFFEEEED2, 0xFF769656),
+    'tournament': (0xFFE8E9CC, 0xFF5E8A4E),
+    'blue': (0xFFDEE3E6, 0xFF8CA2AD),
+    'gray': (0xFFDCDCDC, 0xFF8F8F8F),
+    'slate': (0xFFC6CDD6, 0xFF69788A),
+    'sand': (0xFFEDDCBE, 0xFFC0A47B),
+    'purple': (0xFFE6E0EC, 0xFF9B8BB4),
+    'ivory': (0xFFF2EDE3, 0xFFC3B7A4),
+    'rose': (0xFFF3DFE2, 0xFFBE8A96),
+    'teal': (0xFFD8E8E6, 0xFF74A09B),
+    'midnight': (0xFFAEB7C4, 0xFF4B5A72),
+    'dark_wood': (0xFFB79062, 0xFF53331F),
+    'walnut': (0xFFC2A076, 0xFF654328),
+    'oak': (0xFFDCBF92, 0xFF986D45),
   };
 
-  static bool isFlat(String name) => flatBoards.contains(name);
+  /// Eski tahta adının renk karşılığı; tanınmayan ad için `null`.
+  static (int, int)? legacyBoardColors(String? name) =>
+      name == null ? null : _legacyBoards[name];
+
+  // -------------------------------------------------------------------
+  // Renk hesapları
+  // -------------------------------------------------------------------
+
+  /// Bir rengin göreli parlaklığı (WCAG).
+  static double _luminance(int argb) {
+    double channel(int value) {
+      final c = value / 255.0;
+      return c <= 0.04045
+          ? c / 12.92
+          : math.pow((c + 0.055) / 1.055, 2.4).toDouble();
+    }
+
+    return 0.2126 * channel((argb >> 16) & 0xFF) +
+        0.7152 * channel((argb >> 8) & 0xFF) +
+        0.0722 * channel(argb & 0xFF);
+  }
+
+  /// İki rengin karşıtlık oranı (1 ile 21 arasında).
+  @visibleForTesting
+  static double contrastRatio(int a, int b) {
+    final first = _luminance(a);
+    final second = _luminance(b);
+    final high = first > second ? first : second;
+    final low = first > second ? second : first;
+    return (high + 0.05) / (low + 0.05);
+  }
+
+  /// Kare adının okunabilir sayılması için gereken en düşük karşıtlık.
+  ///
+  /// Klasik kahve tahtanın kendi oranı 2,24; eşik onun altında tutuldu ki
+  /// alışılmış görünüm değişmesin, yalnızca gerçekten okunmaz duruma
+  /// düşen renk çiftlerinde devreye girsin.
+  static const double _minCoordinateContrast = 2.0;
+
+  /// Kare adlarının rengi.
+  ///
+  /// Yazı, üzerinde durduğu karenin karşıt kare rengini alır; tahta ne
+  /// olursa olsun uyumlu görünür. İki renk birbirine çok yakın seçilirse
+  /// bu yazı kaybolurdu, o yüzden karşıtlık ölçülür ve gerekirse siyah
+  /// ya da beyaza düşülür. Böylece kullanıcı hangi ikiliyi seçerse seçsin
+  /// kare adları okunur kalır.
+  static int coordinateColor({
+    required int light,
+    required int dark,
+    required bool onLightSquare,
+  }) {
+    final background = onLightSquare ? light : dark;
+    final opposite = onLightSquare ? dark : light;
+    if (contrastRatio(opposite, background) >= _minCoordinateContrast) {
+      return opposite;
+    }
+    const black = 0xFF000000;
+    const white = 0xFFFFFFFF;
+    return contrastRatio(black, background) >= contrastRatio(white, background)
+        ? black
+        : white;
+  }
 
   /// `assets/pieces/<ad>/<w|b><p|n|b|r|q|k>.svg`
   ///
-  /// Takımlar dışarıdan alınmıştır ve izin veren lisanslarla gelir;
-  /// kaynak ve lisansları `ASSETS.md` içinde listelenir.
+  /// Takımlar dışarıdan alınmıştır; kaynak ve lisansları `ASSETS.md`
+  /// içinde listelenir.
   static const List<String> pieceSets = [
     'chessnut',
     'rhosgfx',
@@ -241,66 +375,24 @@ class BoardAssets {
     'papercut',
   ];
 
-  /// Her tahtanın açık ve koyu kare rengi.
-  ///
-  /// Kare adları bu renklere göre boyanır: yazı, üzerinde durduğu karenin
-  /// karşıt kare rengini alır. Böylece koordinatlar her tahtayla uyumlu
-  /// görünür ve ayrıca bir ayar gerekmez.
-  static const Map<String, (int, int)> _squareColors = {
-    'brown': (0xF0D9B5, 0xB58863),
-    'green': (0xEEEED2, 0x769656),
-    'tournament': (0xE8E9CC, 0x5E8A4E),
-    'blue': (0xDEE3E6, 0x8CA2AD),
-    'gray': (0xDCDCDC, 0x8F8F8F),
-    'slate': (0xC6CDD6, 0x69788A),
-    'sand': (0xEDDCBE, 0xC0A47B),
-    'purple': (0xE6E0EC, 0x9B8BB4),
-    'ivory': (0xF2EDE3, 0xC3B7A4),
-    'rose': (0xF3DFE2, 0xBE8A96),
-    'teal': (0xD8E8E6, 0x74A09B),
-    'midnight': (0xAEB7C4, 0x4B5A72),
-    'dark_wood': (0xB79062, 0x53331F),
-    'walnut': (0xC2A076, 0x654328),
-    'oak': (0xDCBF92, 0x986D45),
-  };
-
-  static const (int, int) _fallbackSquares = (0xECD3AE, 0xAE815D);
-
-  /// Kare adlarının rengi.
-  ///
-  /// [onLightSquare] yazının açık karede olup olmadığını söyler; renk
-  /// olarak karşıt karenin rengi döner, böylece okunabilirlik korunur.
-  /// Bir tahtanın açık ve koyu kare rengi (0xAARRGGBB).
-  static (int, int) squareColors(String board) {
-    final pair = _squareColors[board] ?? _fallbackSquares;
-    return (0xFF000000 | pair.$1, 0xFF000000 | pair.$2);
-  }
-
-  static int coordinateColor(String board, {required bool onLightSquare}) {
-    final pair = _squareColors[board] ?? _fallbackSquares;
-    final value = onLightSquare ? pair.$2 : pair.$1;
-    return 0xFF000000 | value;
-  }
-
   /// İşaretleme rengi (0xAARRGGBB).
   ///
   /// Sağ tıkla konan işaretler ve çizilen oklar her tahtada seçilebilsin
   /// diye renk tahtadan türetilir: koyu karenin renk tonundan en uzak
-  /// ton seçilir. Böylece yeşil tahtada yeşil, mavi tahtada mavi
-  /// işaret konmaz ve tek bir sabit renk aramak gerekmez.
-  static int markColor(String board) {
-    const palette = <int>[
+  /// ton seçilir. Böylece yeşil tahtada yeşil, mavi tahtada mavi işaret
+  /// konmaz ve tek bir sabit renk aramak gerekmez.
+  static int markColor(int dark) {
+    const options = <int>[
       0xFFE2571E, // turuncu
       0xFF2E9E3F, // yeşil
       0xFF1E6FD9, // mavi
       0xFF9B27B0, // mor
     ];
-    final (_, dark) = squareColors(board);
     final boardHue = HSVColor.fromColor(Color(dark)).hue;
 
-    int best = palette.first;
+    int best = options.first;
     double bestDistance = -1;
-    for (final candidate in palette) {
+    for (final candidate in options) {
       final hue = HSVColor.fromColor(Color(candidate)).hue;
       // Renk çemberi üzerinde kısa yoldan uzaklık.
       final raw = (hue - boardHue).abs();
@@ -312,49 +404,6 @@ class BoardAssets {
     }
     return best;
   }
-
-  static const Map<String, String> _labels = {
-    'purple': 'Mor',
-    'ivory': 'Fildişi',
-    'rose': 'Gül',
-    'teal': 'Deniz Yeşili',
-    'midnight': 'Gece Mavisi',
-    'walnut': 'Ceviz',
-    'oak': 'Meşe',
-    'dark_wood': 'Koyu Ahşap',
-    'brown': 'Kahve',
-    'tournament': 'Turnuva',
-    'green': 'Yeşil',
-    'blue': 'Mavi',
-    'gray': 'Gri',
-    'slate': 'Arduvaz',
-    'sand': 'Kum',
-    'marble': 'Mermer',
-  };
-
-  static const Map<String, String> _labelsEn = {
-    'purple': 'Purple',
-    'ivory': 'Ivory',
-    'rose': 'Rose',
-    'teal': 'Teal',
-    'midnight': 'Midnight',
-    'walnut': 'Walnut',
-    'oak': 'Oak',
-    'dark_wood': 'Dark wood',
-    'brown': 'Brown',
-    'tournament': 'Tournament',
-    'green': 'Green',
-    'blue': 'Blue',
-    'gray': 'Gray',
-    'slate': 'Slate',
-    'sand': 'Sand',
-    'marble': 'Marble',
-  };
-
-  static const Map<String, Map<String, String>> _labelTables = {
-    'tr': _labels,
-    'en': _labelsEn,
-  };
 
   /// Taş takımı adları özel isimdir; hiçbir dilde çevrilmez.
   static const Map<String, String> _pieceSetLabels = {
@@ -369,16 +418,9 @@ class BoardAssets {
     'papercut': 'Papercut',
   };
 
-  static String label(String name) {
-    final pieceSet = _pieceSetLabels[name];
-    if (pieceSet != null) return pieceSet;
-    final table = _labelTables[Strings.code] ?? _labelsEn;
-    return table[name] ??
-        _labelsEn[name] ??
-        name[0].toUpperCase() + name.substring(1).replaceAll('_', ' ');
-  }
-
-  static String boardPath(String name) => 'assets/boards/$name.png';
+  static String label(String name) =>
+      _pieceSetLabels[name] ??
+      name[0].toUpperCase() + name.substring(1).replaceAll('_', ' ');
 
   static String piecePath(String set, String code) =>
       'assets/pieces/$set/$code.svg';

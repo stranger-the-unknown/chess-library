@@ -72,6 +72,13 @@ class Strings {
   // -------------------------------------------------------------------------
 
   static const Map<String, String> _tr = {
+    'settings.boardColors': 'Tahta renkleri',
+    'settings.boardColorsSub': 'Açık ve koyu kare rengini kendin seç',
+    'board.colorsTitle': 'Tahta renkleri',
+    'board.lightSquare': 'Açık kare',
+    'board.darkSquare': 'Koyu kare',
+    'board.wood': 'Ahşap dokusu',
+    'board.woodSub': 'Seçtiğin renklerin üstüne hafif bir damar bindirir.',
     'puzzles.filterWhiteWin': 'Beyaz kazanır',
     'puzzles.filterDraw': 'Beraberlik',
     'puzzles.filterBlackWin': 'Siyah kazanır',
@@ -508,7 +515,6 @@ class Strings {
     'settings.languageSystem': 'Sistem dili',
     'settings.languageTurkish': 'Türkçe',
     'settings.languageEnglish': 'İngilizce',
-    'settings.boardTheme': 'Tahta görünümü',
     'settings.pieceSet': 'Taş takımı',
     'settings.coordinates': 'Kare adlarını göster',
     'settings.coordinatesSub': 'a-h ve 1-8 koordinatları',
@@ -540,6 +546,13 @@ class Strings {
   };
 
   static const Map<String, String> _en = {
+    'settings.boardColors': 'Board colours',
+    'settings.boardColorsSub': 'Choose the light and dark square colours yourself',
+    'board.colorsTitle': 'Board colours',
+    'board.lightSquare': 'Light square',
+    'board.darkSquare': 'Dark square',
+    'board.wood': 'Wood grain',
+    'board.woodSub': 'Lays a faint grain over the colours you chose.',
     'puzzles.filterWhiteWin': 'White wins',
     'puzzles.filterDraw': 'Draw',
     'puzzles.filterBlackWin': 'Black wins',
@@ -958,7 +971,6 @@ class Strings {
     'settings.languageSystem': 'System language',
     'settings.languageTurkish': 'Turkish',
     'settings.languageEnglish': 'English',
-    'settings.boardTheme': 'Board style',
     'settings.pieceSet': 'Piece set',
     'settings.coordinates': 'Show square names',
     'settings.coordinatesSub': 'a-h and 1-8 coordinates',

@@ -9,7 +9,6 @@ import 'package:flutter/services.dart';
 import '../l10n/app_strings.dart';
 import '../models/chess_engine.dart' as engine;
 import '../services/board_image_service.dart';
-import '../services/settings_service.dart';
 import '../widgets/app_dialogs.dart';
 import '../widgets/piece_widget.dart';
 import '../widgets/cursors.dart';
@@ -339,9 +338,7 @@ class _BoardEditorScreenState extends State<BoardEditorScreen> {
                       // `Image.asset` yazmak, görsel dosyası olmayan düz
                       // tahtalarda tahtayı görünmez bırakıyordu.
                       Positioned.fill(
-                        child: BoardBackground(
-                          board: SettingsService.instance.boardTheme,
-                        ),
+                        child: const BoardBackground(),
                       ),
                       for (int i = 0; i < 64; i++)
                         Positioned(

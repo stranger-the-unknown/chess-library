@@ -5,6 +5,7 @@ import '../widgets/responsive.dart';
 
 import '../l10n/app_strings.dart';
 import '../models/chess_engine.dart' as engine;
+import 'board_colors_screen.dart';
 import '../services/backup_service.dart';
 import '../services/settings_service.dart';
 import '../services/text_file_service.dart';
@@ -86,10 +87,26 @@ class _SettingsScreenState extends State<SettingsScreen> {
               _card([
                 ListTile(
                   leading: const Icon(Icons.grid_view_rounded),
-                  title: Text(t('settings.boardTheme')),
-                  subtitle: Text(BoardAssets.label(_settings.boardTheme)),
-                  trailing: const Icon(Icons.chevron_right_rounded),
-                  onTap: _pickBoard,
+                  title: Text(t('settings.boardColors')),
+                  subtitle: Text(t('settings.boardColorsSub')),
+                  trailing: SizedBox(
+                    width: 76,
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.end,
+                      children: [
+                        SizedBox(
+                          width: 34,
+                          height: 22,
+                          child: ClipRRect(
+                            borderRadius: BorderRadius.circular(4),
+                            child: const BoardBackground(),
+                          ),
+                        ),
+                        const Icon(Icons.chevron_right_rounded),
+                      ],
+                    ),
+                  ),
+                  onTap: _openBoardColors,
                 ),
                 const Divider(indent: 56),
                 ListTile(
@@ -463,65 +480,10 @@ class _SettingsScreenState extends State<SettingsScreen> {
     if (mounted) setState(() {});
   }
 
-  Future<void> _pickBoard() async {
-    await showModalBottomSheet<void>(
-      context: context,
-      isScrollControlled: true,
-      builder: (sheetContext) => DraggableScrollableSheet(
-        expand: false,
-        initialChildSize: 0.7,
-        builder: (context, controller) => StatefulBuilder(
-          builder: (context, setSheetState) => GridView.builder(
-            controller: controller,
-            padding: const EdgeInsets.all(16),
-            gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-              crossAxisCount: 3,
-              mainAxisSpacing: 12,
-              crossAxisSpacing: 12,
-              childAspectRatio: 0.82,
-            ),
-            itemCount: BoardAssets.boards.length,
-            itemBuilder: (context, index) {
-              final name = BoardAssets.boards[index];
-              final selected = name == _settings.boardTheme;
-              return InkWell(
-                mouseCursor: kClickable,
-                borderRadius: BorderRadius.circular(12),
-                onTap: () {
-                  _settings.boardTheme = name;
-                  setSheetState(() {});
-                },
-                child: Column(
-                  children: [
-                    Expanded(
-                      child: Container(
-                        decoration: BoxDecoration(
-                          borderRadius: BorderRadius.circular(10),
-                          border: Border.all(
-                            color: selected
-                                ? Theme.of(context).colorScheme.primary
-                                : Colors.transparent,
-                            width: 3,
-                          ),
-                        ),
-                        clipBehavior: Clip.antiAlias,
-                        child: BoardBackground(board: name, fit: BoxFit.cover),
-                      ),
-                    ),
-                    const SizedBox(height: 4),
-                    Text(
-                      BoardAssets.label(name),
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: const TextStyle(fontSize: 11.5),
-                    ),
-                  ],
-                ),
-              );
-            },
-          ),
-        ),
-      ),
+  Future<void> _openBoardColors() async {
+    await Navigator.push(
+      context,
+      MaterialPageRoute(builder: (_) => const BoardColorsScreen()),
     );
     if (mounted) setState(() {});
   }
@@ -587,12 +549,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
                                   height: 30,
                                   color: Color(
                                     i.isEven
-                                        ? BoardAssets.squareColors(
-                                            _settings.boardTheme,
-                                          ).$1
-                                        : BoardAssets.squareColors(
-                                            _settings.boardTheme,
-                                          ).$2,
+                                        ? _settings.boardLight
+                                        : _settings.boardDark,
                                   ),
                                   child: SvgPicture.asset(
                                     BoardAssets.piecePath(name, code),

@@ -119,7 +119,7 @@ void main() {
             height: 128,
             child: Stack(
               children: [
-                const Positioned.fill(child: BoardBackground(board: 'brown')),
+                const Positioned.fill(child: BoardBackground()),
                 Positioned(
                   left: 0,
                   top: 0,
@@ -166,7 +166,7 @@ void main() {
               height: 128,
               child: Stack(
                 children: [
-                  const Positioned.fill(child: BoardBackground(board: 'brown')),
+                  const Positioned.fill(child: BoardBackground()),
                   if (withPiece)
                     Positioned(
                       left: 0,
@@ -233,9 +233,11 @@ void main() {
       SharedPreferences.setMockInitialValues({});
       await SettingsService.instance.load();
 
-      SettingsService.instance.boardTheme = 'brown';
+      SettingsService.instance.boardLight = 0xFFF0D9B5;
+      SettingsService.instance.boardDark = 0xFFB58863;
       final brown = await capture(tester);
-      SettingsService.instance.boardTheme = 'midnight';
+      SettingsService.instance.boardLight = 0xFFAEB7C4;
+      SettingsService.instance.boardDark = 0xFF4B5A72;
       final midnight = await capture(tester);
 
       expect(
