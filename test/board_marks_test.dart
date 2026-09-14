@@ -4,7 +4,9 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import 'package:chess_pgn_reader/models/chess_engine.dart' as engine;
+import 'package:chess_pgn_reader/services/board_image_service.dart';
 import 'package:chess_pgn_reader/services/settings_service.dart';
+import 'package:chess_pgn_reader/widgets/board_background.dart';
 import 'package:chess_pgn_reader/widgets/chess_board_widget.dart';
 
 /// Sağ tık işaretleri hamle tanıyıcılarıyla aynı tahtayı paylaşıyor;
@@ -117,6 +119,50 @@ void main() {
 
     expect(played, isNotNull, reason: 'hamle tanınmadı');
     expect(played!.uci, 'e2e4');
+  });
+
+  testWidgets('ahşap dokusu tahtayı gerçekten değiştirir', (tester) async {
+    // Damar bir görselden gelmiyor, çizimden doğuyor; anahtar açılınca
+    // aynı renklerle farklı bir görüntü çıkması gerekiyor.
+    Future<List<int>> capture({required bool wood}) async {
+      final key = GlobalKey();
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Center(
+            child: RepaintBoundary(
+              key: key,
+              child: SizedBox(
+                width: 128,
+                height: 128,
+                child: BoardBackground(
+                  light: 0xFFF0D9B5,
+                  dark: 0xFFB58863,
+                  wood: wood,
+                ),
+              ),
+            ),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+      List<int> bytes = const [];
+      await tester.runAsync(() async {
+        bytes = (await BoardImageService.capture(key, pixelRatio: 1))!;
+      });
+      return bytes;
+    }
+
+    final plain = await capture(wood: false);
+    final grained = await capture(wood: true);
+    expect(plain, isNot(equals(grained)), reason: 'damar çizilmemiş');
+
+    // Damar taşların okunmasını zorlaştırmayacak kadar hafif olmalı:
+    // sıkıştırılmış boyut düz tahtanınkinden çok büyük olmamalı.
+    expect(
+      grained.length,
+      lessThan(plain.length * 60),
+      reason: 'damar fazla belirgin',
+    );
   });
 
   testWidgets('işaret rengi seçilen tahtaya göre değişir', (tester) async {

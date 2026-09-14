@@ -58,7 +58,14 @@ class _BoardColorsScreenState extends State<BoardColorsScreen> {
           child: ListView(
             padding: const EdgeInsets.fromLTRB(16, 12, 16, 28),
             children: [
-              const _BoardPreview(),
+              // Önizleme tahtası ekranı kaplamamalı: palet de ilk
+              // bakışta görünsün diye yüksekliği sınırlanıyor.
+              const Center(
+                child: SizedBox(
+                  width: 280,
+                  child: _BoardPreview(),
+                ),
+              ),
               const SizedBox(height: 16),
               SwitchListTile(
                 contentPadding: EdgeInsets.zero,
