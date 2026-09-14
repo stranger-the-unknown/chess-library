@@ -217,6 +217,17 @@ class _OpeningStudyScreenState extends State<OpeningStudyScreen> {
 
   // -------------------------------------------------------------------------
 
+  /// Varyantın notunu siler.
+  ///
+  /// Servis boş metni "not yok" olarak ele alır; ayrı bir silme yolu
+  /// tutmaya gerek yok.
+  Future<void> _deleteNote(Opening opening) async {
+    await _service.setNote(opening.id, '');
+    if (!mounted) return;
+    setState(() => opening.note = null);
+    AppDialogs.snack(context, t('common.noteDeleted'));
+  }
+
   @override
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
@@ -272,6 +283,9 @@ class _OpeningStudyScreenState extends State<OpeningStudyScreen> {
                   await _service.setNote(opening.id, note);
                   if (mounted) setState(() => opening.note = note);
                   break;
+                case 'deleteNote':
+                  await _deleteNote(opening);
+                  break;
                 case 'learned':
                   await _service.markLearned(opening.id, learned: !_learned);
                   if (mounted) setState(() => _learned = !_learned);
@@ -304,6 +318,11 @@ class _OpeningStudyScreenState extends State<OpeningStudyScreen> {
             },
             itemBuilder: (context) => [
               PopupMenuItem(value: 'note', child: Text(t('common.addNote'))),
+              if (opening.note != null && opening.note!.isNotEmpty)
+                PopupMenuItem(
+                  value: 'deleteNote',
+                  child: Text(t('common.deleteNote')),
+                ),
               PopupMenuItem(
                 value: 'learned',
                 child: Text(

@@ -5,6 +5,7 @@ import '../../widgets/responsive.dart';
 import '../../l10n/app_strings.dart';
 import '../../models/puzzle.dart';
 import '../../services/puzzle_service.dart';
+import '../../services/settings_service.dart';
 import '../../theme/app_theme.dart';
 import '../../widgets/app_dialogs.dart';
 import 'puzzle_list_screen.dart';
@@ -46,22 +47,26 @@ class _PuzzleCollectionsScreenState extends State<PuzzleCollectionsScreen> {
   Future<void> _loadInner() async {
     final collections = await _service.collections();
     final progress = await _service.progressMap();
+    final now = DateTime.now();
 
     _stats.clear();
     for (final collection in collections) {
       final puzzles = await _service.puzzlesOf(collection);
       int solved = 0;
       int favorites = 0;
+      int today = 0;
       for (final puzzle in puzzles) {
         final entry = progress[puzzle.id];
         if (entry == null) continue;
         if (entry.solved) solved++;
         if (entry.favorite) favorites++;
+        if (entry.solvedOn(now)) today++;
       }
       _stats[collection.id] = _CollectionStats(
         total: puzzles.length,
         solved: solved,
         favorites: favorites,
+        today: today,
       );
     }
 
@@ -73,13 +78,21 @@ class _PuzzleCollectionsScreenState extends State<PuzzleCollectionsScreen> {
   }
 
   Future<void> _createCollection() async {
-    final name = await AppDialogs.prompt(
-      context,
-      title: t('puzzles.newCollection'),
-      label: t('game.listName'),
+    final result = await showDialog<(String, bool)>(
+      context: context,
+      builder: (dialogContext) => const _NewCollectionDialog(),
     );
-    if (name == null) return;
-    await _service.createCollection(name);
+    if (result == null) return;
+    await _service.createCollection(result.$1, isEndgame: result.$2);
+    await _load();
+  }
+
+  /// Listenin oyun sonu işaretini değiştirir.
+  ///
+  /// Sonuç süzgeçleri (beyaz kazanır / beraberlik / siyah kazanır) buna
+  /// bakarak görünür; liste kurulduktan sonra da değiştirilebilmeli.
+  Future<void> _toggleEndgame(PuzzleCollection collection) async {
+    await _service.setEndgame(collection.id, !collection.isEndgame);
     await _load();
   }
 
@@ -254,6 +267,9 @@ class _PuzzleCollectionsScreenState extends State<PuzzleCollectionsScreen> {
                         case 'rename':
                           _renameCollection(collection);
                           break;
+                        case 'endgame':
+                          _toggleEndgame(collection);
+                          break;
                         case 'progress':
                           _resetProgress(collection);
                           break;
@@ -271,6 +287,11 @@ class _PuzzleCollectionsScreenState extends State<PuzzleCollectionsScreen> {
                           value: 'rename',
                           child: Text(t('common.rename')),
                         ),
+                      CheckedPopupMenuItem(
+                        value: 'endgame',
+                        checked: collection.isEndgame,
+                        child: Text(t('puzzles.endgameList')),
+                      ),
                       PopupMenuItem(
                         value: 'progress',
                         child: Text(t('puzzles.resetProgress')),
@@ -311,6 +332,23 @@ class _PuzzleCollectionsScreenState extends State<PuzzleCollectionsScreen> {
                     ),
                   ),
                   const Spacer(),
+                  if (SettingsService.instance.showDailyCount &&
+                      stats.today > 0) ...[
+                    Icon(
+                      Icons.today_rounded,
+                      size: 14,
+                      color: scheme.onSurfaceVariant,
+                    ),
+                    const SizedBox(width: 3),
+                    Text(
+                      t('puzzles.todaySolved', {'count': stats.today}),
+                      style: TextStyle(
+                        fontSize: 12,
+                        color: scheme.onSurfaceVariant,
+                      ),
+                    ),
+                    const SizedBox(width: 10),
+                  ],
                   if (stats.favorites > 0) ...[
                     Icon(Icons.star_rounded, size: 14, color: scheme.warning),
                     const SizedBox(width: 3),
@@ -407,5 +445,84 @@ class _CollectionStats {
   final int solved;
   final int favorites;
 
-  const _CollectionStats({this.total = 0, this.solved = 0, this.favorites = 0});
+  /// Bugün (yerel gece yarısından beri) çözülen sayısı.
+  final int today;
+
+  const _CollectionStats({
+    this.total = 0,
+    this.solved = 0,
+    this.favorites = 0,
+    this.today = 0,
+  });
+}
+
+/// Yeni bulmaca listesi: ad ve oyun sonu işareti.
+class _NewCollectionDialog extends StatefulWidget {
+  const _NewCollectionDialog();
+
+  @override
+  State<_NewCollectionDialog> createState() => _NewCollectionDialogState();
+}
+
+class _NewCollectionDialogState extends State<_NewCollectionDialog> {
+  final TextEditingController _name = TextEditingController();
+  bool _endgame = false;
+  String? _error;
+
+  @override
+  void dispose() {
+    _name.dispose();
+    super.dispose();
+  }
+
+  void _submit() {
+    final value = _name.text.trim();
+    if (value.isEmpty) {
+      setState(() => _error = t('common.emptyNotAllowed'));
+      return;
+    }
+    Navigator.pop(context, (value, _endgame));
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AlertDialog(
+      title: Text(t('puzzles.newCollection')),
+      content: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          TextField(
+            controller: _name,
+            autofocus: true,
+            textCapitalization: TextCapitalization.sentences,
+            onSubmitted: (_) => _submit(),
+            decoration: InputDecoration(
+              labelText: t('game.listName'),
+              errorText: _error,
+            ),
+          ),
+          const SizedBox(height: 8),
+          CheckboxListTile(
+            contentPadding: EdgeInsets.zero,
+            controlAffinity: ListTileControlAffinity.leading,
+            value: _endgame,
+            onChanged: (value) => setState(() => _endgame = value ?? false),
+            title: Text(t('puzzles.endgameList')),
+            subtitle: Text(
+              t('puzzles.endgameHint'),
+              style: const TextStyle(fontSize: 11.5),
+            ),
+          ),
+        ],
+      ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.pop(context),
+          child: Text(t('common.cancel')),
+        ),
+        ElevatedButton(onPressed: _submit, child: Text(t('common.add'))),
+      ],
+    );
+  }
 }

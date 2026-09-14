@@ -29,6 +29,9 @@ class SettingsService extends ChangeNotifier {
   int _engineLevel = 2;
   bool _showEvaluationBar = true;
 
+  /// Bulmaca listelerinde "bugün çözülen" sayısı gösterilsin mi?
+  bool _showDailyCount = true;
+
   ThemeMode get themeMode => _themeMode;
   AppLanguage get language => _language;
   String get pieceSet => _pieceSet;
@@ -41,6 +44,7 @@ class SettingsService extends ChangeNotifier {
   bool get confirmMoves => _confirmMoves;
   int get engineLevel => _engineLevel;
   bool get showEvaluationBar => _showEvaluationBar;
+  bool get showDailyCount => _showDailyCount;
 
   Future<void> load() async {
     final prefs = await SharedPreferences.getInstance();
@@ -73,6 +77,7 @@ class SettingsService extends ChangeNotifier {
     _engineLevel = prefs.getInt('engineLevel') ?? _engineLevel;
     _showEvaluationBar =
         prefs.getBool('showEvaluationBar') ?? _showEvaluationBar;
+    _showDailyCount = prefs.getBool('showDailyCount') ?? _showDailyCount;
     notifyListeners();
   }
 
@@ -154,6 +159,12 @@ class SettingsService extends ChangeNotifier {
   set showEvaluationBar(bool value) {
     _showEvaluationBar = value;
     _set('showEvaluationBar', value);
+    notifyListeners();
+  }
+
+  set showDailyCount(bool value) {
+    _showDailyCount = value;
+    _set('showDailyCount', value);
     notifyListeners();
   }
 }

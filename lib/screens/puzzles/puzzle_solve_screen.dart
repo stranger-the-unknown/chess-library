@@ -33,11 +33,23 @@ class PuzzleSolveScreen extends StatefulWidget {
   final List<Puzzle> puzzles;
   final int initialIndex;
 
+  /// Bulmaca kimliği -> listedeki asıl numara.
+  ///
+  /// Ekrandaki liste süzülmüş ya da ters çevrilmiş olabilir; başlıkta ve
+  /// bilgi satırında ise her zaman bu numara görünür, böylece kullanıcının
+  /// gördüğü numara kitaptaki/listedeki numarayla aynı kalır.
+  final Map<String, int> numbers;
+
+  /// Süzgeçsiz listedeki toplam bulmaca sayısı.
+  final int totalInCollection;
+
   const PuzzleSolveScreen({
     super.key,
     required this.collection,
     required this.puzzles,
     required this.initialIndex,
+    this.numbers = const {},
+    this.totalInCollection = 0,
   });
 
   @override
@@ -373,12 +385,22 @@ class _PuzzleSolveScreenState extends State<PuzzleSolveScreen> {
     _loadPuzzle();
   }
 
+  /// Bulmacanın süzgeçten bağımsız numarası.
+  int get _absoluteNumber =>
+      widget.numbers[_puzzle.id] ?? _puzzle.number ?? _index + 1;
+
   /// Tahtanın o anki görüntüsünü PNG olarak kaydeder.
+  ///
+  /// Dosya adı `board-<liste>-<numara>.png` olur: kaydedilen görüntüler
+  /// hangi listenin kaçıncı bulmacası olduğu belli olacak şekilde
+  /// birikir.
   Future<void> _saveBoardImage() async {
-    final number = _puzzle.number ?? _index + 1;
+    final list = widget.collection.name
+        .replaceAll(RegExp(r'[\\/:*?"<>|]'), '_')
+        .trim();
     final result = await BoardImageService.saveBoardPng(
       _boardKey,
-      fileName: 'bulmaca-$number.png',
+      fileName: 'board-${list.isEmpty ? 'liste' : list}-$_absoluteNumber.png',
     );
     if (!mounted) return;
     AppDialogs.snack(context, t('board.saveResult.$result'));
@@ -402,6 +424,21 @@ class _PuzzleSolveScreenState extends State<PuzzleSolveScreen> {
       tags: _puzzle.tags,
     );
     setState(() => _puzzle.note = note);
+  }
+
+  /// Bulmacanın notunu siler.
+  Future<void> _deleteNote() async {
+    await _service.updatePuzzle(
+      widget.collection,
+      _puzzle,
+      fen: _puzzle.fen,
+      title: _puzzle.title,
+      note: null,
+      tags: _puzzle.tags,
+    );
+    if (!mounted) return;
+    setState(() => _puzzle.note = null);
+    AppDialogs.snack(context, t('common.noteDeleted'));
   }
 
   // -------------------------------------------------------------------------
@@ -433,8 +470,7 @@ class _PuzzleSolveScreenState extends State<PuzzleSolveScreen> {
     return Scaffold(
       appBar: AppBar(
         title: Text(
-          _puzzle.title ??
-              t('puzzles.puzzleTitle', {'n': _puzzle.number ?? _index + 1}),
+          _puzzle.title ?? t('puzzles.puzzleTitle', {'n': _absoluteNumber}),
         ),
         actions: [
           IconButton(
@@ -463,6 +499,9 @@ class _PuzzleSolveScreenState extends State<PuzzleSolveScreen> {
                   break;
                 case 'note':
                   _addNote();
+                  break;
+                case 'deleteNote':
+                  _deleteNote();
                   break;
                 case 'fen':
                   Clipboard.setData(ClipboardData(text: _puzzle.fen));
@@ -503,6 +542,11 @@ class _PuzzleSolveScreenState extends State<PuzzleSolveScreen> {
                 child: Text(t('common.editPosition')),
               ),
               PopupMenuItem(value: 'note', child: Text(t('common.addNote'))),
+              if (_puzzle.note != null && _puzzle.note!.isNotEmpty)
+                PopupMenuItem(
+                  value: 'deleteNote',
+                  child: Text(t('common.deleteNote')),
+                ),
               PopupMenuItem(value: 'fen', child: Text(t('common.copyFen'))),
               PopupMenuItem(value: 'png', child: Text(t('board.savePng'))),
               PopupMenuItem(
@@ -600,8 +644,10 @@ class _PuzzleSolveScreenState extends State<PuzzleSolveScreen> {
             child: Text(
               t('puzzles.header', {
                 'side': _puzzle.sideToMoveLabel,
-                'index': _index + 1,
-                'total': widget.puzzles.length,
+                'index': _absoluteNumber,
+                'total': widget.totalInCollection == 0
+                    ? widget.puzzles.length
+                    : widget.totalInCollection,
               }),
               style: TextStyle(
                 fontSize: 12.5,

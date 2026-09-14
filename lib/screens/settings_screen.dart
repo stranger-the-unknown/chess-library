@@ -156,6 +156,13 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   value: _settings.showEvaluationBar,
                   onChanged: (value) => _settings.showEvaluationBar = value,
                 ),
+                SwitchListTile(
+                  secondary: const Icon(Icons.today_rounded),
+                  title: Text(t('settings.dailyCount')),
+                  subtitle: Text(t('settings.dailyCountSub')),
+                  value: _settings.showDailyCount,
+                  onChanged: (value) => _settings.showDailyCount = value,
+                ),
               ]),
               const SizedBox(height: 16),
               _section(t('settings.soundSection')),

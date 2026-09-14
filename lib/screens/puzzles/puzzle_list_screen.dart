@@ -9,9 +9,11 @@ import '../../models/chess_engine.dart' as engine;
 import '../../models/puzzle.dart';
 import '../../models/puzzle_search.dart';
 import '../../services/puzzle_service.dart';
+import '../../services/settings_service.dart';
 import '../../theme/app_theme.dart';
 import '../../widgets/app_dialogs.dart';
 import '../../widgets/mini_board.dart';
+import '../../widgets/range_dialog.dart';
 import '../board_editor_screen.dart';
 import 'puzzle_solve_screen.dart';
 import '../../widgets/cursors.dart';
@@ -19,7 +21,16 @@ import '../../services/text_file_service.dart';
 
 import 'package:flutter/services.dart';
 
-enum _Filter { all, unsolved, solved, favorites, mateInOne, enPassant, custom }
+enum _Filter {
+  all,
+  unsolved,
+  solved,
+  favorites,
+  custom,
+  whiteWin,
+  draw,
+  blackWin,
+}
 
 /// Bir listedeki bulmacaları gösterir; arama, süzme ve düzenleme sunar.
 class PuzzleListScreen extends StatefulWidget {
@@ -43,6 +54,16 @@ class _PuzzleListScreenState extends State<PuzzleListScreen> {
   _Filter _filter = _Filter.all;
   String _query = '';
   bool _loading = true;
+
+  /// Liste sondan başa mı sıralansın?
+  ///
+  /// Varsayılan budur: kullanıcı en son eklediği bulmacaları ilk görür.
+  /// Numaralar bundan etkilenmez; onlar her zaman listedeki asıl sırayı
+  /// gösterir.
+  bool _descending = true;
+
+  /// Bugün (yerel gece yarısından beri) çözülen bulmaca sayısı.
+  int _solvedToday = 0;
 
   @override
   void initState() {
@@ -68,9 +89,16 @@ class _PuzzleListScreenState extends State<PuzzleListScreen> {
       _numbers[puzzles[i].id] = puzzles[i].number ?? i + 1;
     }
 
+    final today = DateTime.now();
+    int todayCount = 0;
+    for (final puzzle in puzzles) {
+      if (progress[puzzle.id]?.solvedOn(today) == true) todayCount++;
+    }
+
     setState(() {
       _all = puzzles;
       _progress = progress;
+      _solvedToday = todayCount;
       _loading = false;
     });
   }
@@ -89,11 +117,14 @@ class _PuzzleListScreenState extends State<PuzzleListScreen> {
         case _Filter.favorites:
           if (entry?.favorite != true) return false;
           break;
-        case _Filter.mateInOne:
-          if (!puzzle.tags.contains('mat-1')) return false;
+        case _Filter.whiteWin:
+          if (!puzzle.marksWhiteWin) return false;
           break;
-        case _Filter.enPassant:
-          if (!puzzle.tags.contains('gecerken-alma')) return false;
+        case _Filter.draw:
+          if (!puzzle.marksDraw) return false;
+          break;
+        case _Filter.blackWin:
+          if (!puzzle.marksBlackWin) return false;
           break;
         case _Filter.custom:
           if (!puzzle.custom) return false;
@@ -106,12 +137,24 @@ class _PuzzleListScreenState extends State<PuzzleListScreen> {
     }).toList();
   }
 
+  /// Ekranda görünen sıra.
+  ///
+  /// Süzme her zaman asıl sıra üzerinde yapılır, ters çevirme en sonda
+  /// uygulanır; böylece süzgeç açıkken de sıralama aynı yönde kalır.
+  List<Puzzle> get _ordered {
+    final list = _visible;
+    return _descending ? list.reversed.toList() : list;
+  }
+
+  /// Bir bulmacanın süzgeçten bağımsız, listedeki asıl numarası.
+  int _numberOf(Puzzle puzzle) => _numbers[puzzle.id] ?? 0;
+
   // -------------------------------------------------------------------------
   // İşlemler
   // -------------------------------------------------------------------------
 
   Future<void> _open(Puzzle puzzle) async {
-    final visible = _visible;
+    final visible = _ordered;
     final index = visible.indexWhere((p) => p.id == puzzle.id);
     await Navigator.push(
       context,
@@ -120,6 +163,9 @@ class _PuzzleListScreenState extends State<PuzzleListScreen> {
           collection: widget.collection,
           puzzles: visible,
           initialIndex: index < 0 ? 0 : index,
+          // Başlık ve bilgi satırı süzgeçten bağımsız numarayı gösterir.
+          numbers: Map<String, int>.from(_numbers),
+          totalInCollection: _all.length,
         ),
       ),
     );
@@ -127,16 +173,18 @@ class _PuzzleListScreenState extends State<PuzzleListScreen> {
   }
 
   Future<void> _startNextUnsolved() async {
-    final next = _visible.firstWhere(
-      (p) => _progress[p.id]?.solved != true,
-      orElse: () => _visible.isEmpty ? _all.first : _visible.first,
-    );
     if (_all.isEmpty) return;
+    final ordered = _ordered;
+    if (ordered.isEmpty) return;
+    final next = ordered.firstWhere(
+      (p) => _progress[p.id]?.solved != true,
+      orElse: () => ordered.first,
+    );
     await _open(next);
   }
 
   Future<void> _startRandom() async {
-    final visible = _visible;
+    final visible = _ordered;
     if (visible.isEmpty) return;
     await _open(visible[math.Random().nextInt(visible.length)]);
   }
@@ -256,6 +304,75 @@ class _PuzzleListScreenState extends State<PuzzleListScreen> {
     }
   }
 
+  /// Numara aralığındaki bulmacaları toplu olarak işaretler.
+  ///
+  /// Numaralar süzgeçten bağımsızdır: kullanıcı ekranda gördüğü numarayı
+  /// yazar, hangi süzgeç açık olursa olsun aynı bulmacalar işaretlenir.
+  Future<void> _markRange() async {
+    if (_all.isEmpty) return;
+    final numbers = _all.map(_numberOf).toList()..sort();
+    final result = await showDialog<(int, int, bool)>(
+      context: context,
+      builder: (dialogContext) => RangeDialog(
+        min: numbers.first,
+        max: numbers.last,
+        hint: t('puzzles.rangeHint', {
+          'min': numbers.first,
+          'max': numbers.last,
+        }),
+        markLabel: t('puzzles.markSolved'),
+        unmarkLabel: t('puzzles.markUnsolved'),
+      ),
+    );
+    if (result == null || !mounted) return;
+
+    final (from, to, solved) = result;
+    final ids = _all
+        .where((p) => _numberOf(p) >= from && _numberOf(p) <= to)
+        .map((p) => p.id)
+        .toList();
+    final changed = await _service.markManySolved(ids, solved: solved);
+    await _load();
+    if (!mounted) return;
+    AppDialogs.snack(
+      context,
+      changed == 0
+          ? t('puzzles.rangeNone')
+          : t('puzzles.rangeMarked', {'count': changed}),
+    );
+  }
+
+  /// Oyun sonu listelerinde bir bulmacanın sonucunu işaretler.
+  Future<void> _setOutcome(Puzzle puzzle, String? tag) async {
+    const outcomes = {'beyaz-kazanir', 'white-wins', 'beraberlik', 'draw',
+        'siyah-kazanir', 'black-wins'};
+    final tags = puzzle.tags.where((t) => !outcomes.contains(t)).toList();
+    if (tag != null) tags.add(tag);
+    await _service.updatePuzzle(
+      widget.collection,
+      puzzle,
+      fen: puzzle.fen,
+      title: puzzle.title,
+      note: puzzle.note,
+      tags: tags,
+    );
+    await _load();
+  }
+
+  /// Bulmacanın notunu siler.
+  Future<void> _deleteNote(Puzzle puzzle) async {
+    await _service.updatePuzzle(
+      widget.collection,
+      puzzle,
+      fen: puzzle.fen,
+      title: puzzle.title,
+      note: null,
+      tags: puzzle.tags,
+    );
+    await _load();
+    if (mounted) AppDialogs.snack(context, t('common.noteDeleted'));
+  }
+
   Future<void> _exportPuzzles() async {
     if (_all.isEmpty) {
       AppDialogs.snack(context, t('puzzles.exportEmpty'));
@@ -285,12 +402,37 @@ class _PuzzleListScreenState extends State<PuzzleListScreen> {
   @override
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
-    final visible = _visible;
+    final visible = _ordered;
+    final showToday =
+        SettingsService.instance.showDailyCount && _solvedToday > 0;
 
     return Scaffold(
       appBar: AppBar(
         title: Text(widget.collection.name),
         actions: [
+          if (showToday)
+            Padding(
+              padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 4),
+              child: Chip(
+                visualDensity: VisualDensity.compact,
+                padding: EdgeInsets.zero,
+                labelPadding: const EdgeInsets.symmetric(horizontal: 6),
+                label: Text(
+                  t('puzzles.todaySolved', {'count': _solvedToday}),
+                  style: const TextStyle(fontSize: 11.5),
+                ),
+              ),
+            ),
+          IconButton(
+            tooltip:
+                _descending ? t('puzzles.sortOldest') : t('puzzles.sortNewest'),
+            icon: Icon(
+              _descending
+                  ? Icons.arrow_downward_rounded
+                  : Icons.arrow_upward_rounded,
+            ),
+            onPressed: () => setState(() => _descending = !_descending),
+          ),
           IconButton(
             tooltip: t('puzzles.random'),
             icon: const Icon(Icons.casino_outlined),
@@ -302,6 +444,7 @@ class _PuzzleListScreenState extends State<PuzzleListScreen> {
               if (value == 'import') _importFens();
               if (value == 'importFile') _importFromFile();
               if (value == 'export') _exportPuzzles();
+              if (value == 'range') _markRange();
             },
             itemBuilder: (context) => [
               PopupMenuItem(
@@ -330,6 +473,13 @@ class _PuzzleListScreenState extends State<PuzzleListScreen> {
                 child: ListTile(
                   leading: const Icon(Icons.ios_share_rounded),
                   title: Text(t('puzzles.exportFile')),
+                ),
+              ),
+              PopupMenuItem(
+                value: 'range',
+                child: ListTile(
+                  leading: const Icon(Icons.done_all_rounded),
+                  title: Text(t('puzzles.markRange')),
                 ),
               ),
             ],
@@ -373,12 +523,20 @@ class _PuzzleListScreenState extends State<PuzzleListScreen> {
                       t('puzzles.filterFavorites'),
                       _Filter.favorites,
                     ),
-                    _filterChip(t('puzzles.filterMate'), _Filter.mateInOne),
-                    _filterChip(
-                      t('puzzles.filterEnPassant'),
-                      _Filter.enPassant,
-                    ),
                     _filterChip(t('puzzles.filterCustom'), _Filter.custom),
+                    // Sonuç süzgeçleri yalnızca oyun sonu listelerinde
+                    // anlamlı; başka listelerde yer kaplamasınlar.
+                    if (widget.collection.isEndgame) ...[
+                      _filterChip(
+                        t('puzzles.filterWhiteWin'),
+                        _Filter.whiteWin,
+                      ),
+                      _filterChip(t('puzzles.filterDraw'), _Filter.draw),
+                      _filterChip(
+                        t('puzzles.filterBlackWin'),
+                        _Filter.blackWin,
+                      ),
+                    ],
                   ],
                 ),
               ),
@@ -402,7 +560,7 @@ class _PuzzleListScreenState extends State<PuzzleListScreen> {
                     padding: const EdgeInsets.fromLTRB(12, 8, 12, 90),
                     itemCount: visible.length,
                     itemBuilder: (context, index) =>
-                        _puzzleTile(visible[index], index, scheme),
+                        _puzzleTile(visible[index], scheme),
                   ),
                 ),
     );
@@ -452,7 +610,7 @@ class _PuzzleListScreenState extends State<PuzzleListScreen> {
     );
   }
 
-  Widget _puzzleTile(Puzzle puzzle, int index, ColorScheme scheme) {
+  Widget _puzzleTile(Puzzle puzzle, ColorScheme scheme) {
     final progress = _progress[puzzle.id];
     final solved = progress?.solved == true;
     final favorite = progress?.favorite == true;
@@ -484,8 +642,7 @@ class _PuzzleListScreenState extends State<PuzzleListScreen> {
                         children: [
                           Expanded(
                             child: Text(
-                              puzzle.title ??
-                                  '#${_numbers[puzzle.id] ?? index + 1}',
+                              puzzle.title ?? '#${_numberOf(puzzle)}',
                               maxLines: 1,
                               overflow: TextOverflow.ellipsis,
                               style: const TextStyle(
@@ -573,6 +730,21 @@ class _PuzzleListScreenState extends State<PuzzleListScreen> {
                         );
                         await _load();
                         break;
+                      case 'deleteNote':
+                        await _deleteNote(puzzle);
+                        break;
+                      case 'outWhite':
+                        await _setOutcome(puzzle, 'beyaz-kazanir');
+                        break;
+                      case 'outDraw':
+                        await _setOutcome(puzzle, 'beraberlik');
+                        break;
+                      case 'outBlack':
+                        await _setOutcome(puzzle, 'siyah-kazanir');
+                        break;
+                      case 'outNone':
+                        await _setOutcome(puzzle, null);
+                        break;
                       case 'delete':
                         _deletePuzzle(puzzle);
                         break;
@@ -603,6 +775,34 @@ class _PuzzleListScreenState extends State<PuzzleListScreen> {
                             : t('puzzles.markSolved'),
                       ),
                     ),
+                    if (puzzle.note != null && puzzle.note!.isNotEmpty)
+                      PopupMenuItem(
+                        value: 'deleteNote',
+                        child: Text(t('common.deleteNote')),
+                      ),
+                    if (widget.collection.isEndgame) ...[
+                      const PopupMenuDivider(),
+                      CheckedPopupMenuItem(
+                        value: 'outWhite',
+                        checked: puzzle.marksWhiteWin,
+                        child: Text(t('puzzles.filterWhiteWin')),
+                      ),
+                      CheckedPopupMenuItem(
+                        value: 'outDraw',
+                        checked: puzzle.marksDraw,
+                        child: Text(t('puzzles.filterDraw')),
+                      ),
+                      CheckedPopupMenuItem(
+                        value: 'outBlack',
+                        checked: puzzle.marksBlackWin,
+                        child: Text(t('puzzles.filterBlackWin')),
+                      ),
+                      PopupMenuItem(
+                        value: 'outNone',
+                        child: Text(t('puzzles.outcomeNone')),
+                      ),
+                      const PopupMenuDivider(),
+                    ],
                     PopupMenuItem(
                       value: 'delete',
                       child: Text(t('common.delete')),

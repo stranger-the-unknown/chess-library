@@ -12,11 +12,12 @@ import '../services/pgn_import_service.dart';
 import '../services/storage_service.dart';
 import '../theme/app_theme.dart';
 import '../widgets/app_dialogs.dart';
+import '../widgets/range_dialog.dart';
 import 'game_screen.dart';
 import '../widgets/cursors.dart';
 
 /// Liste içindeki oyun süzgeci.
-enum _GameFilter { all, unread, read }
+enum _GameFilter { all, unread, read, favorites }
 
 /// Bir listedeki kayıtlı oyunlar.
 class PlaylistDetailScreen extends StatefulWidget {
@@ -239,6 +240,9 @@ class _PlaylistDetailScreenState extends State<PlaylistDetailScreen> {
         case _GameFilter.read:
           if (!game.read) return false;
           break;
+        case _GameFilter.favorites:
+          if (!game.favorite) return false;
+          break;
         case _GameFilter.all:
           break;
       }
@@ -274,6 +278,63 @@ class _PlaylistDetailScreenState extends State<PlaylistDetailScreen> {
     await _storage.setAllRead(widget.playlistId, read);
   }
 
+  Future<void> _toggleFavorite(SavedGame game) async {
+    await _storage.toggleGameFavorite(widget.playlistId, game.id);
+  }
+
+  /// Oyunun notunu siler.
+  Future<void> _deleteNote(SavedGame game) async {
+    game.note = null;
+    await _storage.updateGame(widget.playlistId, game);
+    if (mounted) AppDialogs.snack(context, t('common.noteDeleted'));
+  }
+
+  /// Sıra numarası aralığındaki oyunları okundu/okunmadı yapar.
+  ///
+  /// Numaralar süzgeçten bağımsızdır; kullanıcı satırda gördüğü numarayı
+  /// yazar.
+  Future<void> _markRange() async {
+    final games = _playlist?.games ?? const <SavedGame>[];
+    if (games.isEmpty) return;
+    final numbers = games.map((g) => _numbers[g.id] ?? 0).toList()..sort();
+
+    final result = await showDialog<(int, int, bool)>(
+      context: context,
+      builder: (dialogContext) => RangeDialog(
+        min: numbers.first,
+        max: numbers.last,
+        hint: t('lists.rangeHint', {
+          'min': numbers.first,
+          'max': numbers.last,
+        }),
+        markLabel: t('lists.markRead'),
+        unmarkLabel: t('lists.markUnread'),
+      ),
+    );
+    if (result == null || !mounted) return;
+
+    final (from, to, read) = result;
+    final ids = games
+        .where((g) {
+          final number = _numbers[g.id];
+          return number != null && number >= from && number <= to;
+        })
+        .map((g) => g.id)
+        .toList();
+    final changed = await _storage.markManyRead(
+      widget.playlistId,
+      ids,
+      read: read,
+    );
+    if (!mounted) return;
+    AppDialogs.snack(
+      context,
+      changed == 0
+          ? t('puzzles.rangeNone')
+          : t('lists.rangeMarked', {'count': changed}),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
@@ -300,6 +361,7 @@ class _PlaylistDetailScreenState extends State<PlaylistDetailScreen> {
             onSelected: (value) {
               if (value == 'allRead') _setAllRead(true);
               if (value == 'allUnread') _setAllRead(false);
+              if (value == 'range') _markRange();
             },
             itemBuilder: (context) => [
               PopupMenuItem(
@@ -309,6 +371,10 @@ class _PlaylistDetailScreenState extends State<PlaylistDetailScreen> {
               PopupMenuItem(
                 value: 'allUnread',
                 child: Text(t('lists.markAllUnread')),
+              ),
+              PopupMenuItem(
+                value: 'range',
+                child: Text(t('lists.markRange')),
               ),
             ],
           ),
@@ -358,6 +424,10 @@ class _PlaylistDetailScreenState extends State<PlaylistDetailScreen> {
                             _GameFilter.unread,
                           ),
                           _filterChip(t('lists.filterRead'), _GameFilter.read),
+                          _filterChip(
+                            t('common.onlyFavorites'),
+                            _GameFilter.favorites,
+                          ),
                           Padding(
                             padding: const EdgeInsets.only(left: 8, top: 10),
                             child: Text(
@@ -461,6 +531,18 @@ class _PlaylistDetailScreenState extends State<PlaylistDetailScreen> {
                 ),
                 onPressed: () => _toggleRead(game),
               ),
+              IconButton(
+                tooltip: game.favorite
+                    ? t('common.favoriteRemove')
+                    : t('common.favoriteAdd'),
+                icon: Icon(
+                  game.favorite ? Icons.star_rounded : Icons.star_border_rounded,
+                  size: 20,
+                  color:
+                      game.favorite ? scheme.warning : scheme.onSurfaceVariant,
+                ),
+                onPressed: () => _toggleFavorite(game),
+              ),
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -527,6 +609,12 @@ class _PlaylistDetailScreenState extends State<PlaylistDetailScreen> {
                     case 'read':
                       _toggleRead(game);
                       break;
+                    case 'favorite':
+                      _toggleFavorite(game);
+                      break;
+                    case 'deleteNote':
+                      _deleteNote(game);
+                      break;
                     case 'rename':
                       _rename(game);
                       break;
@@ -549,9 +637,22 @@ class _PlaylistDetailScreenState extends State<PlaylistDetailScreen> {
                     ),
                   ),
                   PopupMenuItem(
+                    value: 'favorite',
+                    child: Text(
+                      game.favorite
+                          ? t('common.favoriteRemove')
+                          : t('common.favoriteAdd'),
+                    ),
+                  ),
+                  PopupMenuItem(
                     value: 'rename',
                     child: Text(t('common.rename')),
                   ),
+                  if (game.note != null && game.note!.isNotEmpty)
+                    PopupMenuItem(
+                      value: 'deleteNote',
+                      child: Text(t('common.deleteNote')),
+                    ),
                   PopupMenuItem(value: 'pgn', child: Text(t('game.copyPgn'))),
                   PopupMenuItem(
                     value: 'move',
