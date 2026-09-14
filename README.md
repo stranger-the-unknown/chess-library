@@ -120,6 +120,9 @@ başlığında ve üstteki bilgi satırında hep aynı sayıyı okursun.
 
 **Sıralama** — Liste baştan sona gelir; kitaptaki sıra neyse o. Başlık
 çubuğundaki okla ters çevirip en son eklediklerini üste alabilirsin.
+Süzgeci değiştirdiğinde sıralama baştan sonaya döner: ters sıralama
+çoğunlukla tek bir bakış için açılıyor, süzgeç değişince o iş bitmiş
+oluyor.
 
 **Arama ve süzgeçler** — Tümü / çözülmemiş / çözülen / favoriler /
 eklediklerim. Liste oyun sonu listesi olarak işaretliyse ayrıca **beyaz

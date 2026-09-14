@@ -90,6 +90,22 @@ void main() {
     expect(_numbersOnScreen(tester), ['#4', '#3', '#2', '#1']);
   });
 
+  testWidgets('süzgeç değişince sıralama varsayılana döner', (tester) async {
+    // Ters sıralama tek bir bakış için açılıyor; süzgeç değişince o
+    // niyet bitiyor. Açık kalsaydı kullanıcı her süzgeçte oku yeniden
+    // tıklamak zorunda kalırdı.
+    final collection = await _seed();
+    await _pump(tester, collection);
+
+    await tester.tap(find.byIcon(Icons.arrow_upward_rounded));
+    await tester.pumpAndSettle();
+    expect(_numbersOnScreen(tester), ['#4', '#3', '#2', '#1']);
+
+    await tester.tap(find.text('Çözülmemiş'));
+    await tester.pumpAndSettle();
+    expect(_numbersOnScreen(tester), ['#1', '#2', '#3', '#4']);
+  });
+
   testWidgets('süzgeç açıkken numaralar listedeki asıl numara kalır', (
     tester,
   ) async {

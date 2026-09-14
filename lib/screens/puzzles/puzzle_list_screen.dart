@@ -567,6 +567,20 @@ class _PuzzleListScreenState extends State<PuzzleListScreen> {
     );
   }
 
+  /// Süzgeci değiştirir ve sıralamayı varsayılana döndürür.
+  ///
+  /// Ters sıralama çoğunlukla bir soruya bakmak için bir kerelik
+  /// açılıyor (ör. en son çözüleni görmek). Süzgeç değişince o niyet
+  /// bitmiş oluyor; sıralama açık kalırsa kullanıcının her seferinde
+  /// oku yeniden tıklaması gerekiyordu.
+  void _selectFilter(_Filter value) {
+    if (_filter == value) return;
+    setState(() {
+      _filter = value;
+      _descending = false;
+    });
+  }
+
   Widget _filterChip(String label, _Filter value) {
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 4),
@@ -574,7 +588,7 @@ class _PuzzleListScreenState extends State<PuzzleListScreen> {
         mouseCursor: kClickable,
         label: Text(label),
         selected: _filter == value,
-        onSelected: (_) => setState(() => _filter = value),
+        onSelected: (_) => _selectFilter(value),
       ),
     );
   }

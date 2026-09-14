@@ -33,7 +33,8 @@ Yedekleme
 
 Bulmacalar
 - Numaralar artık süzgeçten bağımsız: listedeki asıl numara görünüyor.
-- Başlıktaki okla liste sondan başa çevrilebiliyor.
+- Başlıktaki okla liste sondan başa çevrilebiliyor; süzgeç
+  değişince sıralama baştan sonaya dönüyor.
 - Numara aralığı verip toplu çözüldü/çözülmedi işaretleme.
 - Oyun sonu listelerinde beyaz kazanır / beraberlik / siyah kazanır
   süzgeçleri.

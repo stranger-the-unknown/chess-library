@@ -35,7 +35,8 @@ Backup
 Puzzles
 - Numbers are now independent of filters: the number shown is the one
   the puzzle has in the list.
-- The arrow in the title bar flips the list to newest first.
+- The arrow in the title bar flips the list to newest first;
+  changing the filter returns it to oldest first.
 - Mark a range of numbers solved or unsolved in one go.
 - White wins / draw / black wins filters on endgame lists.
 - Count of puzzles solved today (can be turned off in settings).
