@@ -5,7 +5,10 @@ import '../widgets/responsive.dart';
 
 import '../l10n/app_strings.dart';
 import '../models/chess_engine.dart' as engine;
+import '../services/backup_service.dart';
 import '../services/settings_service.dart';
+import '../services/text_file_service.dart';
+import '../widgets/app_dialogs.dart';
 import '../widgets/piece_widget.dart';
 import '../widgets/cursors.dart';
 import '../widgets/board_background.dart';
@@ -165,6 +168,24 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 ),
               ]),
               const SizedBox(height: 16),
+              _section(t('backup.section')),
+              _card([
+                ListTile(
+                  leading: const Icon(Icons.backup_outlined),
+                  title: Text(t('backup.export')),
+                  subtitle: Text(t('backup.exportHint')),
+                  trailing: const Icon(Icons.chevron_right_rounded),
+                  onTap: _exportBackup,
+                ),
+                ListTile(
+                  leading: const Icon(Icons.settings_backup_restore_rounded),
+                  title: Text(t('backup.import')),
+                  subtitle: Text(t('backup.importHint')),
+                  trailing: const Icon(Icons.chevron_right_rounded),
+                  onTap: _importBackup,
+                ),
+              ]),
+              const SizedBox(height: 16),
               _section(t('settings.about')),
               _card([
                 ListTile(
@@ -207,6 +228,192 @@ class _SettingsScreenState extends State<SettingsScreen> {
       clipBehavior: Clip.antiAlias,
       child: Column(children: children),
     );
+  }
+
+  // ------------------------------------------------------------ yedekleme
+
+  Future<void> _exportBackup() async {
+    final text = await AppDialogs.runWithProgress<String>(
+      context,
+      message: t('backup.preparing'),
+      task: (report) => BackupService.instance.exportAll(onProgress: report),
+    );
+    if (!mounted) return;
+
+    String? path;
+    try {
+      path = await TextFileService.save(
+        'chess-library-${_stamp()}',
+        text,
+        extension: 'json',
+      );
+    } catch (_) {
+      path = null;
+    }
+    if (!mounted) return;
+    AppDialogs.snack(
+      context,
+      path == null ? t('puzzles.exportFallback') : t('backup.exported'),
+    );
+  }
+
+  Future<void> _importBackup() async {
+    final picked = await TextFileService.pick();
+    if (!mounted) return;
+    if (picked == null) {
+      AppDialogs.snack(context, t('puzzles.fileEmpty'));
+      return;
+    }
+
+    final BackupSummary summary;
+    final Map<String, Object?> data;
+    try {
+      final read = await AppDialogs.runWithProgress(
+        context,
+        message: t('backup.reading'),
+        task: (report) async {
+          report(0.3);
+          return BackupService.instance.read(picked.content);
+        },
+      );
+      summary = read.$1;
+      data = read.$2;
+    } catch (error) {
+      if (mounted) AppDialogs.snack(context, BackupService.messageFor(error));
+      return;
+    }
+    if (!mounted) return;
+
+    final mode = await _askImportMode(summary);
+    if (mode == null || !mounted) return;
+
+    if (mode == ImportMode.replace) {
+      final confirmed = await AppDialogs.confirm(
+        context,
+        title: t('backup.import'),
+        message: t('backup.replaceWarning'),
+        confirmLabel: t('backup.replace'),
+        destructive: true,
+      );
+      if (!confirmed || !mounted) return;
+    }
+
+    try {
+      await AppDialogs.runWithProgress<void>(
+        context,
+        message: t('backup.applying'),
+        task: (report) => BackupService.instance
+            .apply(data, mode: mode, onProgress: report),
+      );
+    } catch (error) {
+      if (mounted) {
+        AppDialogs.snack(
+          context,
+          '${BackupService.messageFor(error)} ${t('backup.nothingChanged')}',
+        );
+      }
+      return;
+    }
+    if (mounted) AppDialogs.snack(context, t('backup.imported'));
+  }
+
+  /// Yedeğin içeriğini gösterip yükleme biçimini sorar.
+  ///
+  /// Sayılar önce gösterilir: kullanıcı yanlış dosyayı seçtiyse veriyi
+  /// silmeden önce fark eder.
+  Future<ImportMode?> _askImportMode(BackupSummary summary) {
+    final scheme = Theme.of(context).colorScheme;
+    final date = summary.exportedAt;
+    return showDialog<ImportMode>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: Text(t('backup.contents')),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              t('backup.takenAt', {
+                'version': summary.appVersion,
+                'platform': summary.platform,
+                'date': date == null
+                    ? '-'
+                    : '${date.day}.${date.month}.${date.year}',
+              }),
+              style: TextStyle(color: scheme.onSurfaceVariant, fontSize: 12),
+            ),
+            const SizedBox(height: 12),
+            Text(t('backup.countPlaylists', {
+              'count': summary.playlists,
+              'games': summary.games,
+            })),
+            Text(t('backup.countCollections', {
+              'count': summary.puzzleCollections,
+              'puzzles': summary.puzzles,
+            })),
+            Text(t('backup.countOpenings', {'count': summary.openings})),
+            if (summary.hasSettings)
+              Padding(
+                padding: const EdgeInsets.only(top: 4),
+                child: Text(
+                  t('backup.withSettings'),
+                  style:
+                      TextStyle(color: scheme.onSurfaceVariant, fontSize: 12),
+                ),
+              ),
+            const Divider(height: 24),
+            Text(
+              t('backup.modeQuestion'),
+              style: const TextStyle(fontWeight: FontWeight.w600),
+            ),
+            const SizedBox(height: 8),
+            _modeTile(
+              dialogContext,
+              icon: Icons.merge_rounded,
+              title: t('backup.merge'),
+              subtitle: t('backup.mergeHint'),
+              mode: ImportMode.merge,
+            ),
+            _modeTile(
+              dialogContext,
+              icon: Icons.swap_horiz_rounded,
+              title: t('backup.replace'),
+              subtitle: t('backup.replaceHint'),
+              mode: ImportMode.replace,
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(dialogContext),
+            child: Text(t('common.cancel')),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _modeTile(
+    BuildContext dialogContext, {
+    required IconData icon,
+    required String title,
+    required String subtitle,
+    required ImportMode mode,
+  }) {
+    return ListTile(
+      contentPadding: EdgeInsets.zero,
+      leading: Icon(icon),
+      title: Text(title),
+      subtitle: Text(subtitle, style: const TextStyle(fontSize: 12)),
+      onTap: () => Navigator.pop(dialogContext, mode),
+    );
+  }
+
+  /// Dosya adına giren `yyyy-aa-gg` damgası.
+  String _stamp() {
+    final now = DateTime.now();
+    String two(int value) => value.toString().padLeft(2, '0');
+    return '${now.year}-${two(now.month)}-${two(now.day)}';
   }
 
   // -------------------------------------------------------------------------

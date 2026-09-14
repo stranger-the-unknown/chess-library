@@ -12,7 +12,7 @@ void main() {
   setUp(() async {
     SharedPreferences.setMockInitialValues({});
     Strings.language = AppLanguage.turkish;
-    await OpeningService.instance.debugReset();
+    OpeningService.instance.resetCache();
   });
 
   tearDown(() => Strings.language = AppLanguage.system);
@@ -168,7 +168,7 @@ bu satır bozuk
     final text = await service.exportText();
 
     SharedPreferences.setMockInitialValues({});
-    await service.debugReset();
+    service.resetCache();
     final added = await service.importText(text);
 
     expect(added, 2, reason: 'başlık satırları atlanmalı');

@@ -162,6 +162,12 @@ class SettingsService extends ChangeNotifier {
 ///
 /// Görsellerin tamamı bu depo için üretilmiştir; dışarıdan alınmış,
 /// telif kısıtı olan bir varlık içermez.
+/// Uygulamanın sürümü.
+///
+/// Tek kaynak burasıdır; `pubspec.yaml` ile aynı olduğu testle denetlenir.
+/// Hakkında bölümünde ve yedek dosyasının başlığında görünür.
+const String appVersionName = '3.0.0';
+
 class BoardAssets {
   BoardAssets._();
 
@@ -179,6 +185,9 @@ class BoardAssets {
     'sand',
     'purple',
     'ivory',
+    'rose',
+    'teal',
+    'midnight',
     'dark_wood',
     'walnut',
     'oak',
@@ -198,6 +207,9 @@ class BoardAssets {
     'sand',
     'purple',
     'ivory',
+    'rose',
+    'teal',
+    'midnight',
   };
 
   static bool isFlat(String name) => flatBoards.contains(name);
@@ -213,6 +225,9 @@ class BoardAssets {
     'spatial',
     'celtic',
     'kiwen-suwi',
+    'firi',
+    'totoy',
+    'papercut',
   ];
 
   /// Her tahtanın açık ve koyu kare rengi.
@@ -230,6 +245,9 @@ class BoardAssets {
     'sand': (0xEDDCBE, 0xC0A47B),
     'purple': (0xE6E0EC, 0x9B8BB4),
     'ivory': (0xF2EDE3, 0xC3B7A4),
+    'rose': (0xF3DFE2, 0xBE8A96),
+    'teal': (0xD8E8E6, 0x74A09B),
+    'midnight': (0xAEB7C4, 0x4B5A72),
     'dark_wood': (0xB79062, 0x53331F),
     'walnut': (0xC2A076, 0x654328),
     'oak': (0xDCBF92, 0x986D45),
@@ -256,6 +274,9 @@ class BoardAssets {
   static const Map<String, String> _labels = {
     'purple': 'Mor',
     'ivory': 'Fildişi',
+    'rose': 'Gül',
+    'teal': 'Deniz Yeşili',
+    'midnight': 'Gece Mavisi',
     'walnut': 'Ceviz',
     'oak': 'Meşe',
     'dark_wood': 'Koyu Ahşap',
@@ -272,6 +293,9 @@ class BoardAssets {
   static const Map<String, String> _labelsEn = {
     'purple': 'Purple',
     'ivory': 'Ivory',
+    'rose': 'Rose',
+    'teal': 'Teal',
+    'midnight': 'Midnight',
     'walnut': 'Walnut',
     'oak': 'Oak',
     'dark_wood': 'Dark wood',
@@ -298,6 +322,9 @@ class BoardAssets {
     'spatial': 'Spatial',
     'celtic': 'Celtic',
     'kiwen-suwi': 'Kiwen Suwi',
+    'firi': 'Firi',
+    'totoy': 'Totoy',
+    'papercut': 'Papercut',
   };
 
   static String label(String name) {

@@ -1,6 +1,5 @@
 import 'dart:convert';
 
-import 'package:flutter/foundation.dart' show visibleForTesting;
 import 'package:flutter/services.dart' show rootBundle;
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -37,10 +36,8 @@ class PuzzleService {
 
   /// Bellekteki önbelleği boşaltır.
   ///
-  /// Yalnızca testler içindir: veri gerçekten diske yazıldı mı diye
-  /// servisi soğuk başlatmayı sağlar.
-  @visibleForTesting
-  void debugReset() {
+  /// Yedek geri yüklendiğinde ve testlerde soğuk başlangıç için kullanılır.
+  void resetCache() {
     _collections = null;
     _overrides = null;
     _progress = null;

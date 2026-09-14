@@ -23,6 +23,14 @@ class StorageService extends ChangeNotifier {
 
   List<Playlist>? _cache;
 
+  /// Bellekteki önbelleği boşaltır ve açık ekranları uyarır.
+  ///
+  /// Yedek geri yüklendiğinde ve testlerde soğuk başlangıç için kullanılır.
+  void resetCache() {
+    _cache = null;
+    notifyListeners();
+  }
+
   Future<List<Playlist>> loadPlaylists() async {
     if (_cache != null) return _cache!;
     final prefs = await SharedPreferences.getInstance();

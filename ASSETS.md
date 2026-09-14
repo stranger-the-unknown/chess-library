@@ -13,7 +13,7 @@ Hiçbir varlık ticari bir üründen kopyalanmamıştır.
 
 ## Taş takımları — `assets/pieces/`
 
-Altı takımın tamamı [Lichess](https://github.com/lichess-org/lila)
+Dokuz takımın tamamı [Lichess](https://github.com/lichess-org/lila)
 deposundan alınmıştır. Hepsi **ticari kullanıma da izin veren** ve
 "bulaşıcı" olmayan (projenizin lisansını belirlemeyen) lisanslardadır.
 
@@ -25,6 +25,9 @@ deposundan alınmıştır. Hepsi **ticari kullanıma da izin veren** ve
 | `spatial` | [Maurizio Monge](https://github.com/maurimo/chess-art) | [MIT](https://github.com/maurimo/chess-art/blob/main/LICENSE) |
 | `celtic` | [Maurizio Monge](https://github.com/maurimo/chess-art) | [MIT](https://github.com/maurimo/chess-art/blob/main/LICENSE) |
 | `kiwen-suwi` | [neverRare](https://github.com/neverRare) | [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/) |
+| `firi` | [James Faure](https://github.com/jfaure/Firi-pieceset) | [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/) |
+| `totoy` | Kosal Sen | [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/) |
+| `papercut` | [Nikolay Anzarov](https://nikoichu.itch.io/) | [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/) |
 
 **Yükümlülük:** `rhosgfx` kamu malıdır, hiçbir şey gerektirmez. Diğerleri
 yalnızca **atıf** ister — yani bu tablonun uygulamayla birlikte
@@ -51,13 +54,22 @@ değişmez; yalnızca aynı biçimlendirme başka bir sözdizimiyle yazılır.
 
 ### Bilerek alınmayanlar
 
-- **cburnett, merida, mono** (GPLv2+) ve **letter, pirouetti, pixel**
-  (AGPLv3+): "bulaşıcı" lisanslar. Kullanılsalardı uygulamanın tamamının
-  aynı lisansla yayımlanması gerekirdi.
-- **maestro, staunty, cardinal, california, caliente, horsey** ve
-  benzerleri (CC BY-NC-SA): ticari kullanıma kapalı.
+Bu proje açık kaynak (MIT) olduğu hâlde aşağıdakiler **yine de**
+alınamaz; engel açık kaynak olup olmamak değil, lisansların birbiriyle
+bağdaşmaması:
+
+- **cburnett, merida, mono** (GPLv2+) ve **letter, pirouetti, pixel,
+  mpchess** (AGPLv3+): "bulaşıcı" lisanslar. Bir tanesini bile koymak
+  uygulamanın tamamının GPL/AGPL ile yayımlanmasını gerektirir; MIT
+  olarak kalamaz.
+- **maestro, staunty, cardinal, california, caliente, horsey, cooke,
+  monarchy, xkcd** ve benzerleri (CC BY-NC-SA): ticari kullanıma kapalı.
+  MIT "dilediğiniz gibi kullanın" der; bu ikisi bir arada tutarlı
+  değildir. Ayrıca "SA" koşulu aynı bulaşma sorununu getirir.
+- **shahi-ivory-brown**: türetme ve değiştirme yasak.
 - **Lichess tahta görselleri** (AGPLv3+): aynı sebeple alınmadı; ahşap
-  tahtalar bu proje için üretildi.
+  tahtalar bu proje için üretildi, düz renkli tahtalar ise doğrudan
+  çizilir.
 
 ---
 
@@ -71,6 +83,8 @@ patlaması vuruş transiyentini verir. Çan benzeri sesler (terfi, bildirim,
 oyun başı/sonu) birkaç kısmi harmonikli tonlardan kurulur.
 
 ## Tahtalar — `assets/boards/`
+
+Uygulamada on beş tahta vardır: on iki düz renk ve üç ahşap.
 
 **Düz renkli tahtaların görsel dosyası yoktur.** Uygulama onları
 `BoardAssets` içindeki iki renkten doğrudan tuvale çizer: her ölçüde

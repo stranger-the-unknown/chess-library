@@ -1,6 +1,5 @@
 import 'dart:convert';
 
-import 'package:flutter/foundation.dart' show visibleForTesting;
 import 'package:shared_preferences/shared_preferences.dart';
 
 import '../l10n/app_strings.dart';
@@ -25,9 +24,10 @@ class OpeningService {
 
   // ---------------------------------------------------------------------
 
-  /// Bellekteki önbelleği boşaltır (yalnızca testler için).
-  @visibleForTesting
-  Future<void> debugReset() async {
+  /// Bellekteki önbelleği boşaltır.
+  ///
+  /// Yedek geri yüklendiğinde ve testlerde soğuk başlangıç için kullanılır.
+  void resetCache() {
     _custom = null;
     _progress = null;
   }

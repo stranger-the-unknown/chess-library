@@ -71,7 +71,7 @@ void main() {
 
   setUp(() {
     SharedPreferences.setMockInitialValues({});
-    PuzzleService.instance.debugReset();
+    PuzzleService.instance.resetCache();
   });
 
   test('üretilen FEN\'ler geçerli ve benzersiz', () {
@@ -88,7 +88,7 @@ void main() {
 
     for (final count in [500, 2000, 8000]) {
       SharedPreferences.setMockInitialValues({});
-      service.debugReset();
+      service.resetCache();
 
       final collection = await service.createCollection('Ölçek $count');
       final text = _fens(count).join('\n');
@@ -113,7 +113,7 @@ void main() {
       expect(reports, greaterThan(1), reason: 'ilerleme çubuğu beslenmeli');
 
       // Geri okuma: liste diskten tazelenince aynı sayıda bulmaca gelmeli.
-      service.debugReset();
+      service.resetCache();
       final reloaded = (await service.collections())
           .firstWhere((c) => c.name == 'Ölçek $count');
       final puzzles = await service.puzzlesOf(reloaded);
@@ -157,14 +157,14 @@ void main() {
               '"asset":"assets/puzzles/mates.txt"},'
               '{"id":"u_1","name":"Kendi listem"}]',
     });
-    PuzzleService.instance.debugReset();
+    PuzzleService.instance.resetCache();
 
     final all = await PuzzleService.instance.collections();
     expect(all.map((c) => c.id), ['u_1'],
         reason: 'yalnızca kullanıcının kendi listesi kalmalı');
 
     // Temizlik kalıcı olmalı: servis soğuk başlasa da aynı sonuç.
-    PuzzleService.instance.debugReset();
+    PuzzleService.instance.resetCache();
     final again = await PuzzleService.instance.collections();
     expect(again.map((c) => c.id), ['u_1']);
   });

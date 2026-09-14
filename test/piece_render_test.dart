@@ -1,4 +1,7 @@
+import 'dart:ui' as ui;
+
 import 'package:flutter/material.dart';
+import 'package:flutter/rendering.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import 'package:chess_pgn_reader/models/chess_engine.dart' as engine;
@@ -38,6 +41,65 @@ void main() {
             reason: '$set / ${PieceWidget.codeFor(piece)} çizilemedi',
           );
         }
+      }
+    }
+  });
+
+  testWidgets('her taş gerçekten boyanır ve renkler ayırt edilir', (
+    tester,
+  ) async {
+    // Bir SVG dosyası çözümlenemezse flutter_svg sessizce boş bir resim
+    // döner: hata da yoktur, taş da yoktur. Bunu ancak piksel sayarak
+    // yakalayabiliyoruz. Aynı geçişte beyazın siyahtan ayırt edilip
+    // edilmediğine de bakılır.
+    Future<(int, List<int>)> render(engine.Piece piece, String set) async {
+      final key = GlobalKey();
+      await tester.pumpWidget(
+        _wrap(
+          RepaintBoundary(
+            key: key,
+            child: SizedBox(
+              width: 64,
+              height: 64,
+              child: PieceWidget(piece: piece, size: 64, pieceSet: set),
+            ),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      int opaque = 0;
+      List<int> pixels = const [];
+      await tester.runAsync(() async {
+        final boundary =
+            key.currentContext!.findRenderObject() as RenderRepaintBoundary;
+        final image = await boundary.toImage();
+        final data = await image.toByteData(format: ui.ImageByteFormat.rawRgba);
+        pixels = data!.buffer.asUint8List().toList(growable: false);
+        for (int i = 3; i < pixels.length; i += 4) {
+          if (pixels[i] > 16) opaque++;
+        }
+      });
+      return (opaque, pixels);
+    }
+
+    for (final set in BoardAssets.pieceSets) {
+      for (final type in engine.PieceType.values) {
+        final (whiteCount, whitePixels) =
+            await render(engine.Piece(type, engine.Color.white), set);
+        final (blackCount, blackPixels) =
+            await render(engine.Piece(type, engine.Color.black), set);
+
+        // 64x64 = 4096 piksel; en ince taş (piyon) bile bunun yüzde
+        // onunu kaplıyor. Eşiği düşük tutup yalnızca "boş" durumu
+        // yakalıyoruz.
+        expect(whiteCount, greaterThan(400), reason: '$set beyaz $type boş');
+        expect(blackCount, greaterThan(400), reason: '$set siyah $type boş');
+        expect(
+          whitePixels,
+          isNot(equals(blackPixels)),
+          reason: '$set için beyaz ve siyah $type birebir aynı görünüyor',
+        );
       }
     }
   });

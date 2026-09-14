@@ -39,10 +39,14 @@ class TextFileService {
   ///
   /// Kullanıcı iptal ederse ya da platform kaydetme penceresini
   /// desteklemiyorsa `null` döner (çağıran panoya kopyalamaya düşebilir).
-  static Future<String?> save(String suggestedName, String content) {
+  static Future<String?> save(
+    String suggestedName,
+    String content, {
+    String extension = 'txt',
+  }) {
     final safe = suggestedName.replaceAll(RegExp(r'[\\/:*?"<>|]'), '_').trim();
     return FilePicker.platform.saveFile(
-      fileName: '${safe.isEmpty ? 'bulmacalar' : safe}.txt',
+      fileName: '${safe.isEmpty ? 'chess-library' : safe}.$extension',
       bytes: Uint8List.fromList(utf8.encode(content)),
     );
   }
