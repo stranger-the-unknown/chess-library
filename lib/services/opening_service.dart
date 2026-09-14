@@ -297,6 +297,42 @@ class OpeningService {
     final custom = await _loadCustom();
     custom.removeWhere((o) => o.id == id);
     await _saveCustom();
+    await _forget([id]);
+  }
+
+  /// Bir açılış ailesinin bütün varyantlarını siler; kaç tanesini
+  /// sildiğini döner.
+  ///
+  /// Tek tek silmek, bir kitaptan alınmış yüzlerce varyantta iş göremez
+  /// hâle geliyordu.
+  Future<int> deleteFamily(String family) async {
+    final custom = await _loadCustom();
+    final doomed = custom
+        .where((o) => o.family == family)
+        .map((o) => o.id)
+        .toList();
+    if (doomed.isEmpty) return 0;
+    custom.removeWhere((o) => o.family == family);
+    await _saveCustom();
+    await _forget(doomed);
+    return doomed.length;
+  }
+
+  /// Silinen açılışların ilerlemesini ve notunu da temizler; yoksa
+  /// artık hiçbir açılışa bağlı olmayan kayıtlar birikiyor.
+  Future<void> _forget(Iterable<String> ids) async {
+    final progress = await progressMap();
+    final notes = await _loadNotes();
+    bool progressChanged = false, notesChanged = false;
+    for (final id in ids) {
+      if (progress.remove(id) != null) progressChanged = true;
+      if (notes.remove(id) != null) notesChanged = true;
+    }
+    if (progressChanged) await _saveProgress();
+    if (notesChanged) {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setString(_notesKey, jsonEncode(notes));
+    }
   }
 
   static List<String> _tokenize(String text) {

@@ -163,6 +163,11 @@ bırakırsan o ailede sıradaki numarayı alır.
 satır menüsünden değiştirebilir, notunu silebilir ya da varyantı
 kaldırabilirsin.
 
+**Başlığı silme** — Bir açılış başlığının yanındaki menüden o başlığın
+altındaki bütün varyantlar tek seferde silinir; kaç varyant gideceği
+sorulur. Bir dosyadan yüzlerce varyant aldıysan tek tek silmek iş
+görmüyor. Silinen varyantların ilerlemesi ve notu da temizlenir.
+
 **Metin dosyası** — Açılış listesi başlık menüsünden dosyaya verilir ve
 dosyadan alınır. Biçim satır başına bir varyanttır:
 

@@ -243,6 +243,28 @@ class _OpeningListScreenState extends State<OpeningListScreen> {
     await _load();
   }
 
+  Future<void> _deleteFamily(String family, int count) async {
+    final confirmed = await AppDialogs.confirm(
+      context,
+      title: t('openings.deleteFamily'),
+      message: t('openings.deleteFamilyMessage', {
+        'name': family,
+        'count': count,
+      }),
+      confirmLabel: t('common.delete'),
+      destructive: true,
+    );
+    if (!confirmed) return;
+    final removed = await _service.deleteFamily(family);
+    await _load();
+    if (mounted) {
+      AppDialogs.snack(
+        context,
+        t('openings.familyDeleted', {'count': removed}),
+      );
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
@@ -420,19 +442,52 @@ class _OpeningListScreenState extends State<OpeningListScreen> {
 
     return Padding(
       padding: const EdgeInsets.only(bottom: 8),
-      child: Container(
-        decoration: BoxDecoration(
-          color: scheme.surfaceContainer,
-          borderRadius: BorderRadius.circular(16),
-        ),
+      // Boyanmış bir Container, ListTile'ın mürekkep dalgasını gizliyor;
+      // zemini Material verince başlığa dokunma geri bildirimi görünüyor.
+      child: Material(
+        color: scheme.surfaceContainer,
+        borderRadius: BorderRadius.circular(16),
         clipBehavior: Clip.antiAlias,
         child: Theme(
           data: Theme.of(context).copyWith(dividerColor: Colors.transparent),
           child: ExpansionTile(
             initiallyExpanded: _query.isNotEmpty,
-            title: Text(
-              family,
-              style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w700),
+            title: Row(
+              children: [
+                Expanded(
+                  child: Text(
+                    family,
+                    style: const TextStyle(
+                      fontSize: 15,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                ),
+                // Menü dokunuşu kendine alıyor, başlık açılıp kapanmıyor.
+                PopupMenuButton<String>(
+                  tooltip: t('openings.deleteFamily'),
+                  icon: Icon(
+                    Icons.more_vert,
+                    size: 20,
+                    color: scheme.onSurfaceVariant,
+                  ),
+                  onSelected: (value) {
+                    if (value == 'deleteFamily') {
+                      _deleteFamily(family, openings.length);
+                    }
+                  },
+                  itemBuilder: (context) => [
+                    PopupMenuItem<String>(
+                      value: 'deleteFamily',
+                      child: ListTile(
+                        contentPadding: EdgeInsets.zero,
+                        leading: const Icon(Icons.delete_sweep_outlined),
+                        title: Text(t('openings.deleteFamily')),
+                      ),
+                    ),
+                  ],
+                ),
+              ],
             ),
             subtitle: Text(
               t('openings.familySummary', {

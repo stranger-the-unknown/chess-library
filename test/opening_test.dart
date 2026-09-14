@@ -200,4 +200,82 @@ bu satır bozuk
     expect(lastDone, 600);
     expect(reports, greaterThan(1));
   });
+
+  group('Başlığı silme', () {
+    Future<OpeningService> seed() async {
+      final service = OpeningService.instance;
+      await service.addFromSan(
+        family: 'Sicilya',
+        variation: 'Najdorf',
+        moveText: '1. e4 c5 2. Nf3 d6 3. d4 cxd4 4. Nxd4 Nf6 5. Nc3 a6',
+      );
+      await service.addFromSan(
+        family: 'Sicilya',
+        variation: 'Dragon',
+        moveText: '1. e4 c5 2. Nf3 d6 3. d4 cxd4 4. Nxd4 Nf6 5. Nc3 g6',
+      );
+      await service.addFromSan(
+        family: 'Fransız',
+        variation: 'Winawer',
+        moveText: '1. e4 e6 2. d4 d5 3. Nc3 Bb4',
+      );
+      return service;
+    }
+
+    test('yalnızca o başlığın varyantları gider', () async {
+      final service = await seed();
+      expect(await service.deleteFamily('Sicilya'), 2);
+
+      final left = await service.all();
+      expect(left, hasLength(1));
+      expect(left.single.family, 'Fransız');
+    });
+
+    test('silinen varyantların ilerlemesi ve notu da temizlenir', () async {
+      // Kalan kayıtlar hiçbir açılışa bağlı olmadığı için yedeği
+      // şişiriyor ve aynı kimlik yeniden üretilirse yanlış ilerleme
+      // gösteriyordu.
+      final service = await seed();
+      final sicilian =
+          (await service.all()).where((o) => o.family == 'Sicilya').toList();
+      final other =
+          (await service.all()).firstWhere((o) => o.family == 'Fransız');
+
+      for (final opening in sicilian) {
+        await service.markLearned(opening.id);
+        await service.setNote(opening.id, 'not');
+      }
+      await service.markLearned(other.id);
+      await service.setNote(other.id, 'kalsın');
+
+      await service.deleteFamily('Sicilya');
+
+      final progress = await service.progressMap();
+      for (final opening in sicilian) {
+        expect(progress.containsKey(opening.id), isFalse,
+            reason: 'silinen varyantın ilerlemesi kaldı');
+      }
+      expect(progress[other.id]?.learned, isTrue,
+          reason: 'başka ailenin ilerlemesine dokunulmamalı');
+
+      final reloaded = await service.all();
+      expect(reloaded.single.note, 'kalsın');
+    });
+
+    test('tek varyant silmek de ilerlemesini temizler', () async {
+      final service = await seed();
+      final opening = (await service.all()).first;
+      await service.markLearned(opening.id);
+
+      await service.deleteCustom(opening.id);
+
+      expect((await service.progressMap()).containsKey(opening.id), isFalse);
+    });
+
+    test('olmayan başlık silinince hiçbir şey değişmez', () async {
+      final service = await seed();
+      expect(await service.deleteFamily('Kral Hint'), 0);
+      expect(await service.all(), hasLength(3));
+    });
+  });
 }

@@ -475,6 +475,10 @@ class Strings {
     'openings.added': '{count} hamlelik varyant eklendi.',
     'openings.deleteVariation': 'Varyantı sil',
     'openings.deleteMessage': '"{name}" silinsin mi?',
+    'openings.deleteFamily': 'Başlığı sil',
+    'openings.deleteFamilyMessage':
+        '"{name}" başlığındaki {count} varyantın hepsi silinsin mi?',
+    'openings.familyDeleted': '{count} varyant silindi.',
     'openings.search': 'Ara: açılış adı, ECO kodu ya da hamle',
     'openings.summary': '{total} varyant · {learned} tanesini öğrendin',
     'openings.noMatch': 'Eşleşen açılış yok.',
@@ -928,6 +932,10 @@ class Strings {
     'openings.added': 'Added a {count}-move line.',
     'openings.deleteVariation': 'Delete line',
     'openings.deleteMessage': 'Delete "{name}"?',
+    'openings.deleteFamily': 'Delete title',
+    'openings.deleteFamilyMessage':
+        'Delete all {count} lines under "{name}"?',
+    'openings.familyDeleted': '{count} lines deleted.',
     'openings.search': 'Search: opening name, ECO code or move',
     'openings.summary': '{total} lines · {learned} learned',
     'openings.noMatch': 'No opening matches.',
