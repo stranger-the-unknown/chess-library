@@ -10,6 +10,18 @@ import '../models/opening.dart';
 ///
 /// Liste bilerek boş başlar: varyantları kullanıcı kendi ekler (SAN ya da
 /// PGN yapıştırarak). Eklenen satırlar, notlar ve ilerleme cihazda tutulur.
+/// Metinden alma sonucu.
+///
+/// Atlananları da bildirmek gerekiyor: kullanıcı 10.000 satırlık bir
+/// dosya verip "3 varyant eklendi" görünce bozuk sanıyor. Atlananlar
+/// listede zaten bulunan hamle dizileridir.
+class ImportResult {
+  final int added;
+  final int skipped;
+
+  const ImportResult({required this.added, required this.skipped});
+}
+
 class OpeningService {
   static final OpeningService instance = OpeningService._();
   OpeningService._();
@@ -17,10 +29,12 @@ class OpeningService {
   static const _customKey = 'openings_custom_v1';
   static const _progressKey = 'openings_progress_v1';
   static const _notesKey = 'openings_notes_v1';
+  static const _hiddenKey = 'openings_hidden_v1';
 
   List<Opening>? _custom;
   Map<String, OpeningProgress>? _progress;
   Map<String, String>? _notes;
+  Set<String>? _hidden;
 
   // ---------------------------------------------------------------------
 
@@ -30,6 +44,8 @@ class OpeningService {
   void resetCache() {
     _custom = null;
     _progress = null;
+    _notes = null;
+    _hidden = null;
   }
 
   Future<List<Opening>> all() async {
@@ -199,7 +215,7 @@ class OpeningService {
   ///   `eco|aile|varyant|uci|san`   (eski varlık biçimi)
   /// `#` ile başlayan satırlar ve boş satırlar atlanır. Hamleler
   /// kurallara göre doğrulanır; hiç geçerli hamle içermeyen satır atlanır.
-  Future<int> importText(
+  Future<ImportResult> importText(
     String content, {
     void Function(int done, int total)? onProgress,
   }) async {
@@ -207,6 +223,14 @@ class OpeningService {
     final custom = await _loadCustom();
     final stamp = DateTime.now().microsecondsSinceEpoch;
     int added = 0;
+    int skipped = 0;
+
+    // Aynı dosya ikinci kez alındığında her şey ikiye katlanıyordu.
+    // Ölçüt hamle dizisi: ad değil, çünkü kullanıcı adı değiştirmiş
+    // olabilir ve kitaplar aynı adı farklı hatlara veriyor. Farklı
+    // sırayla aynı pozisyona varanlar (transpozisyon) ayrı dizi
+    // oldukları için ayrı varyant sayılır.
+    final known = custom.map((o) => o.uciMoves.join(' ')).toSet();
 
     for (int i = 0; i < lines.length; i++) {
       final text = lines[i].trim();
@@ -244,7 +268,9 @@ class OpeningService {
             uci.add(move.uci);
             position.makeMove(move);
           }
-          if (uci.isNotEmpty) {
+          if (uci.isNotEmpty && !known.add(uci.join(' '))) {
+            skipped++;
+          } else if (uci.isNotEmpty) {
             final resolvedFamily =
                 family.isEmpty ? t('openings.ownFamily') : family;
             custom.add(Opening(
@@ -271,7 +297,7 @@ class OpeningService {
     onProgress?.call(lines.length, lines.length);
 
     if (added > 0) await _saveCustom();
-    return added;
+    return ImportResult(added: added, skipped: skipped);
   }
 
   /// Eklenmiş varyantları metin olarak verir.
@@ -316,6 +342,73 @@ class OpeningService {
     await _saveCustom();
     await _forget(doomed);
     return doomed.length;
+  }
+
+  /// Bütün açılışları ve onlara bağlı her şeyi siler; kaç varyant
+  /// sildiğini döner.
+  ///
+  /// Binlerce varyant alındıktan sonra listeyi temizlemenin başka yolu
+  /// yoktu; başlık başlık silmek 1400 başlıkta iş görmüyor.
+  Future<int> deleteAll() async {
+    final custom = await _loadCustom();
+    final count = custom.length;
+    custom.clear();
+    await _saveCustom();
+
+    final prefs = await SharedPreferences.getInstance();
+    _progress = <String, OpeningProgress>{};
+    await _saveProgress();
+    _notes = <String, String>{};
+    await prefs.setString(_notesKey, jsonEncode(_notes));
+    _hidden = <String>{};
+    await prefs.setStringList(_hiddenKey, const []);
+    return count;
+  }
+
+  // ---------------------------------------------------------------------
+  // Gizleme
+  // ---------------------------------------------------------------------
+
+  /// Gizlenen açılış aileleri.
+  ///
+  /// Gizlilik açılış kimliğine değil **aile adına** bağlı: kimlikler her
+  /// almada yeniden üretiliyor, kimliğe bağlasaydık dosya yeniden
+  /// alındığında bütün gizlilikler dağılırdı.
+  Future<Set<String>> hiddenFamilies() async {
+    if (_hidden != null) return _hidden!;
+    final prefs = await SharedPreferences.getInstance();
+    _hidden = (prefs.getStringList(_hiddenKey) ?? const <String>[]).toSet();
+    return _hidden!;
+  }
+
+  Future<void> setHiddenFamilies(Set<String> families) async {
+    _hidden = families;
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setStringList(_hiddenKey, families.toList()..sort());
+  }
+
+  Future<void> setFamilyHidden(String family, bool hidden) async {
+    final current = Set<String>.from(await hiddenFamilies());
+    if (hidden) {
+      current.add(family);
+    } else {
+      current.remove(family);
+    }
+    await setHiddenFamilies(current);
+  }
+
+  /// Verilenler dışındaki bütün aileleri gizler. [keep] boşsa hepsi
+  /// gizlenir.
+  Future<void> hideAllExcept(Set<String> keep) async {
+    final families = (await all()).map((o) => o.family).toSet();
+    await setHiddenFamilies(families.difference(keep));
+  }
+
+  /// Verilenler dışındaki bütün gizlilikleri kaldırır. [keep] boşsa
+  /// hiçbir aile gizli kalmaz.
+  Future<void> showAllExcept(Set<String> keep) async {
+    final hidden = await hiddenFamilies();
+    await setHiddenFamilies(hidden.intersection(keep));
   }
 
   /// Silinen açılışların ilerlemesini ve notunu da temizler; yoksa

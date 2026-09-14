@@ -171,6 +171,7 @@ class Strings {
     'common.hint': 'İpucu',
     'common.restart': 'Baştan',
     'common.showAll': 'Tümünü göster',
+    'common.clearSelection': 'Seçimi temizle',
     'common.onlyFavorites': 'Sadece favoriler',
     'common.editPosition': 'Pozisyonu düzenle',
     'common.noMovesYet': 'Henüz hamle yok',
@@ -479,6 +480,25 @@ class Strings {
     'openings.deleteFamilyMessage':
         '"{name}" başlığındaki {count} varyantın hepsi silinsin mi?',
     'openings.familyDeleted': '{count} varyant silindi.',
+    'openings.importedWithSkips':
+        '{count} varyant eklendi, {skipped} tanesi listede zaten vardı.',
+    'openings.deleteAll': 'Tüm açılışları sil',
+    'openings.deleteAllMessage':
+        '{count} varyantın hepsi, ilerlemen ve notlarınla birlikte '
+        'silinsin mi? Bu işlem geri alınamaz.',
+    'openings.deleteAllEmpty': 'Silinecek açılış yok.',
+    'openings.hidden': 'Gizli açılışlar',
+    'openings.allHidden':
+        'Bütün başlıklar gizli. Çalışmak istediklerini geri getir.',
+    'openings.hiddenCount': '{count} başlık gizli',
+    'openings.hideOne': 'Gizle',
+    'openings.hideAll': 'Hepsini gizle',
+    'openings.showAll': 'Hepsini göster',
+    'openings.hideAllExcept': 'Seçili {count} başlık hariç hepsini gizle',
+    'openings.showAllExcept': 'Seçili {count} başlık hariç hepsini göster',
+    'openings.visibilitySummary': '{total} başlık · {hidden} gizli',
+    'openings.familySummaryShort': '{count} varyant',
+    'openings.selectedCount': '{count} seçili',
     'openings.search': 'Ara: açılış adı, ECO kodu ya da hamle',
     'openings.summary': '{total} varyant · {learned} tanesini öğrendin',
     'openings.noMatch': 'Eşleşen açılış yok.',
@@ -642,6 +662,7 @@ class Strings {
     'common.hint': 'Hint',
     'common.restart': 'Restart',
     'common.showAll': 'Show all',
+    'common.clearSelection': 'Clear selection',
     'common.onlyFavorites': 'Favorites only',
     'common.editPosition': 'Edit position',
     'common.noMovesYet': 'No moves yet',
@@ -936,6 +957,25 @@ class Strings {
     'openings.deleteFamilyMessage':
         'Delete all {count} lines under "{name}"?',
     'openings.familyDeleted': '{count} lines deleted.',
+    'openings.importedWithSkips':
+        '{count} lines added, {skipped} were already in the list.',
+    'openings.deleteAll': 'Delete all openings',
+    'openings.deleteAllMessage':
+        'Delete all {count} lines, along with your progress and notes? '
+        'This cannot be undone.',
+    'openings.deleteAllEmpty': 'Nothing to delete.',
+    'openings.hidden': 'Hidden openings',
+    'openings.allHidden':
+        'Every title is hidden. Bring back the ones you want to study.',
+    'openings.hiddenCount': '{count} titles hidden',
+    'openings.hideOne': 'Hide',
+    'openings.hideAll': 'Hide all',
+    'openings.showAll': 'Show all',
+    'openings.hideAllExcept': 'Hide all but the {count} selected',
+    'openings.showAllExcept': 'Show all but the {count} selected',
+    'openings.visibilitySummary': '{total} titles · {hidden} hidden',
+    'openings.familySummaryShort': '{count} lines',
+    'openings.selectedCount': '{count} selected',
     'openings.search': 'Search: opening name, ECO code or move',
     'openings.summary': '{total} lines · {learned} learned',
     'openings.noMatch': 'No opening matches.',

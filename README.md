@@ -168,8 +168,25 @@ altındaki bütün varyantlar tek seferde silinir; kaç varyant gideceği
 sorulur. Bir dosyadan yüzlerce varyant aldıysan tek tek silmek iş
 görmüyor. Silinen varyantların ilerlemesi ve notu da temizlenir.
 
+**Gizleme** — Başlık menüsündeki **gizli açılışlar** ekranından, şu an
+çalışmadığın başlıklar listeden kaldırılır; ana ekranda yalnızca
+çalıştıkların kalır, gizlenenler silinmez. Satırın sonundaki göz o
+başlığı tek başına gizler. Kutucuklar seçim içindir: birkaç başlık
+seçip **seçilenler hariç hepsini gizle** dersen geriye yalnızca onlar
+kalır, **seçilenler hariç hepsini göster** ise tersini yapar. Hiçbir şey
+seçili değilken aynı iki komut *hepsini gizle* ve *hepsini göster* olur.
+Gizlilik aile adına bağlıdır, açılış kimliğine değil; dosyayı yeniden
+alsan da yerinde kalır.
+
+**Hepsini silme** — Başlık menüsündeki **tüm açılışları sil**, varyantlarla
+birlikte ilerlemeni ve notlarını da siler. Geri alınamaz, kaç varyantın
+gideceği sorulur.
+
 **Metin dosyası** — Açılış listesi başlık menüsünden dosyaya verilir ve
-dosyadan alınır. Biçim satır başına bir varyanttır:
+dosyadan alınır. Aynı dosya ikinci kez alındığında listede zaten bulunan
+hamle dizileri atlanır, hiçbir şey ikiye katlanmaz; kaç tanesinin
+atlandığı da söylenir. Farklı hamle sırasıyla aynı pozisyona varan iki
+hat ayrı varyant sayılır. Biçim satır başına bir varyanttır:
 
 ```
 C95|İspanyol Açılışı|Breyer Varyantı|1. e4 e5 2. Nf3 Nc6 3. Bb5 a6

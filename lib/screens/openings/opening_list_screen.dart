@@ -5,6 +5,7 @@ import '../../widgets/responsive.dart';
 import '../../l10n/app_strings.dart';
 import '../../models/opening.dart';
 import '../../services/opening_service.dart';
+import 'opening_visibility_screen.dart';
 import '../../theme/app_theme.dart';
 import '../../widgets/app_dialogs.dart';
 import 'opening_study_screen.dart';
@@ -25,6 +26,7 @@ class _OpeningListScreenState extends State<OpeningListScreen> {
 
   List<Opening> _all = [];
   Map<String, OpeningProgress> _progress = {};
+  Set<String> _hidden = <String>{};
   String _query = '';
   bool _onlyFavorites = false;
   bool _loading = true;
@@ -44,17 +46,23 @@ class _OpeningListScreenState extends State<OpeningListScreen> {
   Future<void> _load() async {
     final all = await _service.all();
     final progress = await _service.progressMap();
+    final hidden = await _service.hiddenFamilies();
     if (!mounted) return;
     setState(() {
       _all = all;
       _progress = progress;
+      _hidden = Set<String>.from(hidden);
       _loading = false;
     });
   }
 
+  /// Gizlenen ailelerin dışındaki açılışlar.
+  List<Opening> get _shown =>
+      _all.where((o) => !_hidden.contains(o.family)).toList();
+
   List<Opening> get _visible {
     final query = _query.trim().toLowerCase();
-    return _all.where((opening) {
+    return _shown.where((opening) {
       if (_onlyFavorites && _progress[opening.id]?.favorite != true) {
         return false;
       }
@@ -194,7 +202,7 @@ class _OpeningListScreenState extends State<OpeningListScreen> {
       return;
     }
     if (!mounted) return;
-    final added = await AppDialogs.runWithProgress<int>(
+    final result = await AppDialogs.runWithProgress<ImportResult>(
       context,
       message: t('openings.importing'),
       task: (report) => _service.importText(
@@ -203,9 +211,46 @@ class _OpeningListScreenState extends State<OpeningListScreen> {
       ),
     );
     await _load();
-    if (mounted) {
-      AppDialogs.snack(context, t('openings.imported', {'count': added}));
+    if (!mounted) return;
+    // Atlananları söylemezsek, listede zaten bulunan bir dosyayı yeniden
+    // alan kullanıcı "0 varyant eklendi" görüp bozuk sanıyor.
+    AppDialogs.snack(
+      context,
+      result.skipped == 0
+          ? t('openings.imported', {'count': result.added})
+          : t('openings.importedWithSkips', {
+              'count': result.added,
+              'skipped': result.skipped,
+            }),
+    );
+  }
+
+  Future<void> _deleteAll() async {
+    if (_all.isEmpty) {
+      AppDialogs.snack(context, t('openings.deleteAllEmpty'));
+      return;
     }
+    final confirmed = await AppDialogs.confirm(
+      context,
+      title: t('openings.deleteAll'),
+      message: t('openings.deleteAllMessage', {'count': _all.length}),
+      confirmLabel: t('common.delete'),
+      destructive: true,
+    );
+    if (!confirmed) return;
+    final removed = await _service.deleteAll();
+    await _load();
+    if (mounted) {
+      AppDialogs.snack(context, t('openings.familyDeleted', {'count': removed}));
+    }
+  }
+
+  Future<void> _manageVisibility() async {
+    await Navigator.push(
+      context,
+      MaterialPageRoute(builder: (_) => const OpeningVisibilityScreen()),
+    );
+    await _load();
   }
 
   Future<void> _exportToFile() async {
@@ -296,6 +341,8 @@ class _OpeningListScreenState extends State<OpeningListScreen> {
             onSelected: (value) {
               if (value == 'import') _importFromFile();
               if (value == 'export') _exportToFile();
+              if (value == 'visibility') _manageVisibility();
+              if (value == 'deleteAll') _deleteAll();
             },
             itemBuilder: (context) => [
               PopupMenuItem(
@@ -310,6 +357,24 @@ class _OpeningListScreenState extends State<OpeningListScreen> {
                 child: ListTile(
                   leading: const Icon(Icons.ios_share_rounded),
                   title: Text(t('openings.exportFile')),
+                ),
+              ),
+              PopupMenuItem(
+                value: 'visibility',
+                child: ListTile(
+                  leading: const Icon(Icons.visibility_off_outlined),
+                  title: Text(t('openings.hidden')),
+                  subtitle: _hidden.isEmpty
+                      ? null
+                      : Text(t('openings.hiddenCount',
+                          {'count': _hidden.length})),
+                ),
+              ),
+              PopupMenuItem(
+                value: 'deleteAll',
+                child: ListTile(
+                  leading: const Icon(Icons.delete_forever_outlined),
+                  title: Text(t('openings.deleteAll')),
                 ),
               ),
             ],
@@ -379,6 +444,34 @@ class _OpeningListScreenState extends State<OpeningListScreen> {
                   if (_all.isNotEmpty) const SizedBox(height: 12),
                   if (_all.isEmpty)
                     _emptyState(scheme)
+                  // Her şey gizliyken "eşleşen yok" demek yanıltıcı ve
+                  // kullanıcıyı çıkışsız bırakıyor; gizleme ekranına yol
+                  // gösterilmeli.
+                  else if (_shown.isEmpty)
+                    Padding(
+                      padding: const EdgeInsets.only(top: 60),
+                      child: Column(
+                        children: [
+                          Icon(
+                            Icons.visibility_off_outlined,
+                            size: 40,
+                            color: scheme.onSurfaceVariant,
+                          ),
+                          const SizedBox(height: 14),
+                          Text(
+                            t('openings.allHidden'),
+                            textAlign: TextAlign.center,
+                            style: TextStyle(color: scheme.onSurfaceVariant),
+                          ),
+                          const SizedBox(height: 18),
+                          ElevatedButton.icon(
+                            onPressed: _manageVisibility,
+                            icon: const Icon(Icons.visibility_outlined),
+                            label: Text(t('openings.hidden')),
+                          ),
+                        ],
+                      ),
+                    )
                   else if (families.isEmpty)
                     Padding(
                       padding: const EdgeInsets.only(top: 60),

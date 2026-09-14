@@ -144,8 +144,8 @@ C20|Aile B|Varyant B|1. d4 d5
 C42|Aile C|Varyant C|e2e4 e7e5|1. e4 e5
 bu satır bozuk
 ''';
-    final added = await service.importText(text);
-    expect(added, 3);
+    final result = await service.importText(text);
+    expect(result.added, 3);
 
     final all = await service.all();
     expect(all.map((o) => o.family),
@@ -169,9 +169,9 @@ bu satır bozuk
 
     SharedPreferences.setMockInitialValues({});
     service.resetCache();
-    final added = await service.importText(text);
+    final result = await service.importText(text);
 
-    expect(added, 2, reason: 'başlık satırları atlanmalı');
+    expect(result.added, 2, reason: 'başlık satırları atlanmalı');
     final all = await service.all();
     expect(all.length, 2);
     final naj = all.firstWhere((o) => o.variation == 'Najdorf');
@@ -181,23 +181,36 @@ bu satır bozuk
 
   test('büyük alma ilerleme bildirir ve donmaz', () async {
     final service = OpeningService.instance;
-    final lines = List<String>.generate(
-      600,
-      (i) => 'Aile ${i % 7}||1. e4 e5 2. Nf3 Nc6',
-    );
+    // Satırlar birbirinden farklı olmalı: alma artık aynı hamle dizisini
+    // ikinci kez eklemiyor, hepsi aynı olsaydı bu test tekrar denetimini
+    // ölçerdi. Beyazın 20 ilk hamlesi x siyahın 20 cevabı, hepsi kurallı.
+    const whiteMoves = [
+      'a3', 'a4', 'b3', 'b4', 'c3', 'c4', 'd3', 'd4', 'e3', 'e4',
+      'f3', 'f4', 'g3', 'g4', 'h3', 'h4', 'Na3', 'Nc3', 'Nf3', 'Nh3',
+    ];
+    const blackMoves = [
+      'a6', 'a5', 'b6', 'b5', 'c6', 'c5', 'd6', 'd5', 'e6', 'e5',
+      'f6', 'f5', 'g6', 'g5', 'h6', 'h5', 'Na6', 'Nc6', 'Nf6', 'Nh6',
+    ];
+    final lines = <String>[
+      for (int i = 0; i < 400; i++)
+        'Aile ${i % 7}||1. ${whiteMoves[i % 20]} ${blackMoves[i ~/ 20]}',
+    ];
+
     int reports = 0;
     int lastDone = 0;
-    final added = await service.importText(
+    final result = await service.importText(
       lines.join('\n'),
       onProgress: (done, total) {
-        expect(total, 600);
+        expect(total, 400);
         expect(done, greaterThanOrEqualTo(lastDone));
         lastDone = done;
         reports++;
       },
     );
-    expect(added, 600);
-    expect(lastDone, 600);
+    expect(result.added, 400);
+    expect(result.skipped, 0);
+    expect(lastDone, 400);
     expect(reports, greaterThan(1));
   });
 
