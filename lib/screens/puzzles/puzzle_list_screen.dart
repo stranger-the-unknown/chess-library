@@ -57,10 +57,11 @@ class _PuzzleListScreenState extends State<PuzzleListScreen> {
 
   /// Liste sondan başa mı sıralansın?
   ///
-  /// Varsayılan budur: kullanıcı en son eklediği bulmacaları ilk görür.
-  /// Numaralar bundan etkilenmez; onlar her zaman listedeki asıl sırayı
-  /// gösterir.
-  bool _descending = true;
+  /// Varsayılan hayır: bulmaca kitapları baştan sona çözülür, liste de
+  /// kitaptaki sırayla açılır. Başlıktaki okla ters çevrilebilir.
+  /// Numaralar sıralamadan etkilenmez; onlar her zaman listedeki asıl
+  /// sırayı gösterir.
+  bool _descending = false;
 
   /// Bugün (yerel gece yarısından beri) çözülen bulmaca sayısı.
   int _solvedToday = 0;

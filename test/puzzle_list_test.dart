@@ -71,21 +71,23 @@ void main() {
     view.resetDevicePixelRatio();
   });
 
-  testWidgets('liste sondan başa sıralanır', (tester) async {
+  testWidgets('liste baştan sona sıralanır', (tester) async {
+    // Bulmaca kitapları baştan sona çözülür; liste de kitaptaki
+    // sırayla açılmalı.
     final collection = await _seed();
     await _pump(tester, collection);
 
-    expect(_numbersOnScreen(tester), ['#4', '#3', '#2', '#1']);
+    expect(_numbersOnScreen(tester), ['#1', '#2', '#3', '#4']);
   });
 
   testWidgets('sıralama düğmesi yönü çevirir', (tester) async {
     final collection = await _seed();
     await _pump(tester, collection);
 
-    await tester.tap(find.byIcon(Icons.arrow_downward_rounded));
+    await tester.tap(find.byIcon(Icons.arrow_upward_rounded));
     await tester.pumpAndSettle();
 
-    expect(_numbersOnScreen(tester), ['#1', '#2', '#3', '#4']);
+    expect(_numbersOnScreen(tester), ['#4', '#3', '#2', '#1']);
   });
 
   testWidgets('süzgeç açıkken numaralar listedeki asıl numara kalır', (
@@ -103,8 +105,8 @@ void main() {
     await tester.tap(find.text('Çözülen'));
     await tester.pumpAndSettle();
 
-    // Süzgeç iki satır bırakır ama numaraları 1 ve 2 değil, 4 ve 2.
-    expect(_numbersOnScreen(tester), ['#4', '#2']);
+    // Süzgeç iki satır bırakır ama numaraları 1 ve 2 değil, 2 ve 4.
+    expect(_numbersOnScreen(tester), ['#2', '#4']);
   });
 
   testWidgets('sonuç süzgeçleri yalnızca oyun sonu listesinde görünür', (

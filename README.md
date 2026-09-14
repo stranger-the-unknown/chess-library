@@ -118,8 +118,8 @@ ekleyebilir, çözüldü olarak işaretleyebilir ve not düşebilirsin.
 sıralama ters çevrilmişken de aynı numara görünür; satırda, bulmaca
 başlığında ve üstteki bilgi satırında hep aynı sayıyı okursun.
 
-**Sıralama** — Liste sondan başa gelir: en son eklediğin bulmacalar üstte
-olur. Başlık çubuğundaki okla yön değişir.
+**Sıralama** — Liste baştan sona gelir; kitaptaki sıra neyse o. Başlık
+çubuğundaki okla ters çevirip en son eklediklerini üste alabilirsin.
 
 **Arama ve süzgeçler** — Tümü / çözülmemiş / çözülen / favoriler /
 eklediklerim. Liste oyun sonu listesi olarak işaretliyse ayrıca **beyaz

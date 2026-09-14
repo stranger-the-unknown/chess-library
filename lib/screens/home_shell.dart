@@ -44,50 +44,72 @@ class _HomeShellState extends State<HomeShell> {
 
   void _select(int index) => setState(() => _index = index);
 
+  /// Geri tuşuna basıldığında uygulamadan çıkılacak mı?
+  ///
+  /// Yalnızca ilk sekmedeyken çıkılır. Başka bir sekmedeyken geri tuşu
+  /// önce Oyna sekmesine döner: Android'in gezinme kuralı, geri tuşunun
+  /// önce başlangıç hedefine götürmesini, çıkışın oradan olmasını söyler.
+  /// Aksi hâlde ayarlara bakarken basılan bir geri tuşu uygulamayı
+  /// kapatıyordu.
+  bool get _canPop => _index == 0;
+
+  void _onPopInvoked(bool didPop, Object? result) {
+    if (didPop) return;
+    setState(() => _index = 0);
+  }
+
   @override
   Widget build(BuildContext context) {
     final pages = IndexedStack(index: _index, children: _pages);
 
     if (Layout.isWide(context)) {
       final scheme = Theme.of(context).colorScheme;
-      return Scaffold(
-        body: Row(
-          // Şerit ve ayraç, Row'un varsayılan ortalaması yüzünden içeriği
-          // kadar yüksek kalıyordu; ekranın tamamını kaplamaları gerekiyor.
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            _rail(scheme),
-            VerticalDivider(width: 1, color: scheme.outlineVariant),
-            Expanded(child: pages),
-          ],
+      return PopScope(
+        canPop: _canPop,
+        onPopInvokedWithResult: _onPopInvoked,
+        child: Scaffold(
+          body: Row(
+            // Şerit ve ayraç, Row'un varsayılan ortalaması yüzünden içeriği
+            // kadar yüksek kalıyordu; ekranın tamamını kaplamaları gerekiyor.
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              _rail(scheme),
+              VerticalDivider(width: 1, color: scheme.outlineVariant),
+              Expanded(child: pages),
+            ],
+          ),
         ),
       );
     }
 
-    return Scaffold(
-      body: pages,
-      bottomNavigationBar: NavigationBar(
-        selectedIndex: _index,
-        onDestinationSelected: _select,
-        height: 64,
-        labelBehavior: NavigationDestinationLabelBehavior.alwaysShow,
-        destinations: [
-          for (final (icon, selectedIcon, key) in _destinations)
-            NavigationDestination(
-              // Material'ın kendi imleci masaüstünde ok olduğu için simgeyi
-              // sarmalıyoruz; içteki bölge dıştakini geçersiz kıldığından
-              // sarmalın burada, simgenin üzerinde olması gerekiyor.
-              icon: MouseRegion(
-                cursor: SystemMouseCursors.click,
-                child: Icon(icon),
+    return PopScope(
+      canPop: _canPop,
+      onPopInvokedWithResult: _onPopInvoked,
+      child: Scaffold(
+        body: pages,
+        bottomNavigationBar: NavigationBar(
+          selectedIndex: _index,
+          onDestinationSelected: _select,
+          height: 64,
+          labelBehavior: NavigationDestinationLabelBehavior.alwaysShow,
+          destinations: [
+            for (final (icon, selectedIcon, key) in _destinations)
+              NavigationDestination(
+                // Material'ın kendi imleci masaüstünde ok olduğu için simgeyi
+                // sarmalıyoruz; içteki bölge dıştakini geçersiz kıldığından
+                // sarmalın burada, simgenin üzerinde olması gerekiyor.
+                icon: MouseRegion(
+                  cursor: SystemMouseCursors.click,
+                  child: Icon(icon),
+                ),
+                selectedIcon: MouseRegion(
+                  cursor: SystemMouseCursors.click,
+                  child: Icon(selectedIcon),
+                ),
+                label: t(key),
               ),
-              selectedIcon: MouseRegion(
-                cursor: SystemMouseCursors.click,
-                child: Icon(selectedIcon),
-              ),
-              label: t(key),
-            ),
-        ],
+          ],
+        ),
       ),
     );
   }

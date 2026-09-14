@@ -235,11 +235,12 @@ class _SettingsScreenState extends State<SettingsScreen> {
   }
 
   Widget _card(List<Widget> children) {
-    return Container(
-      decoration: BoxDecoration(
-        color: Theme.of(context).colorScheme.surfaceContainer,
-        borderRadius: BorderRadius.circular(16),
-      ),
+    // Renk `Material` üzerinden veriliyor: boyalı bir `Container`
+    // kullanıldığında içindeki satırların dokunma dalgası zeminin
+    // altında kalıp görünmüyordu.
+    return Material(
+      color: Theme.of(context).colorScheme.surfaceContainer,
+      borderRadius: BorderRadius.circular(16),
       clipBehavior: Clip.antiAlias,
       child: Column(children: children),
     );
@@ -481,7 +482,15 @@ class _SettingsScreenState extends State<SettingsScreen> {
         builder: (context, controller) => StatefulBuilder(
           builder: (context, setSheetState) => GridView.builder(
             controller: controller,
-            padding: const EdgeInsets.all(16),
+            // Telefonun gezinme çubuğu listenin son satırının üstüne
+            // biniyordu; alta sistem payı ekleniyor ki son tahta da
+            // tıklanabilsin.
+            padding: EdgeInsets.fromLTRB(
+              16,
+              16,
+              16,
+              16 + MediaQuery.viewPaddingOf(context).bottom,
+            ),
             gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
               crossAxisCount: 3,
               mainAxisSpacing: 12,
@@ -544,7 +553,14 @@ class _SettingsScreenState extends State<SettingsScreen> {
         builder: (context, controller) => StatefulBuilder(
           builder: (context, setSheetState) => ListView.separated(
             controller: controller,
-            padding: const EdgeInsets.all(16),
+            // Tahta seçicideki ile aynı sebep: son takım gezinme
+            // çubuğunun altında kalıyordu.
+            padding: EdgeInsets.fromLTRB(
+              16,
+              16,
+              16,
+              16 + MediaQuery.viewPaddingOf(context).bottom,
+            ),
             itemCount: BoardAssets.pieceSets.length,
             separatorBuilder: (_, __) => const SizedBox(height: 8),
             itemBuilder: (context, index) {
