@@ -1,0 +1,34 @@
+Version 3.0
+
+Backup
+- Everything the app stores can be written to a single file and restored:
+  game lists, puzzles and your progress, openings, settings. The file is
+  plain text, so it carries between phone and computer as it is.
+- Before restoring, the file's contents are summarised; there are two
+  modes, merge and replace.
+
+Puzzles
+- Numbers are now independent of filters: the number shown is the one
+  the puzzle has in the list.
+- Lists are ordered newest first; the arrow in the title bar flips it.
+- Mark a range of numbers solved or unsolved in one go.
+- White wins / draw / black wins filters on endgame lists.
+- Count of puzzles solved today (can be turned off in settings).
+
+Game lists
+- Favourites, and marking a range of games read or unread.
+
+Openings
+- Added variations can be edited, several variations can live under one
+  family, and they import and export as text files.
+
+Board
+- Nine piece sets and fifteen boards.
+- On the desktop, right-click marks a square and right-drag draws an
+  arrow.
+
+Fixes
+- The first move after a cold start made no sound.
+- The board was invisible when "Set up position" was opened from the
+  play-the-engine dialog.
+- The illegal-move sound now only plays while you are in check.

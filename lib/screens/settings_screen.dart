@@ -199,7 +199,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   leading: const Icon(Icons.info_outline_rounded),
                   title: Text(t('app.title')),
                   subtitle: Text(
-                    t('settings.aboutText'),
+                    t('settings.aboutText', {'version': appVersionName}),
                     style: TextStyle(color: scheme.onSurfaceVariant),
                   ),
                 ),

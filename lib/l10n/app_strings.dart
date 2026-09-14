@@ -521,7 +521,8 @@ class Strings {
     'settings.sound': 'Hamle sesleri',
     'settings.about': 'Hakkında',
     'settings.aboutText':
-        'Sürüm 2.0 · Motor tamamen cihazda çalışır, internet gerektirmez.',
+        'Sürüm {version} · Motor tamamen cihazda çalışır, internet '
+            'gerektirmez.',
 
     // Motor seviyeleri
     'level.0.name': 'Acemi',
@@ -970,8 +971,8 @@ class Strings {
     'settings.sound': 'Move sounds',
     'settings.about': 'About',
     'settings.aboutText':
-        'Version 2.0 · The engine runs entirely on your device, no internet '
-            'required.',
+        'Version {version} · The engine runs entirely on your device, no '
+            'internet required.',
     'level.0.name': 'Beginner',
     'level.0.desc': 'Blunders often, good for starting out',
     'level.1.name': 'Novice',

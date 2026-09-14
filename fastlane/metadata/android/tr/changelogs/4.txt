@@ -1,0 +1,33 @@
+Sürüm 3.0
+
+Yedekleme
+- Uygulamanın sakladığı her şey tek dosyaya yazılıp geri yüklenebiliyor:
+  oyun listeleri, bulmacalar ve ilerlemen, açılışlar, ayarlar. Dosya düz
+  metin olduğu için telefonla bilgisayar arasında olduğu gibi taşınıyor.
+- Geri yüklemeden önce dosyanın içeriği özetleniyor; birleştirme ve
+  değiştirme diye iki kip var.
+
+Bulmacalar
+- Numaralar artık süzgeçten bağımsız: listedeki asıl numara görünüyor.
+- Liste sondan başa sıralanıyor, başlıktaki okla yön değişiyor.
+- Numara aralığı verip toplu çözüldü/çözülmedi işaretleme.
+- Oyun sonu listelerinde beyaz kazanır / beraberlik / siyah kazanır
+  süzgeçleri.
+- Bugün çözülen bulmaca sayısı (ayarlardan kapatılabilir).
+
+Oyun listeleri
+- Favoriler ve sıra aralığıyla toplu okundu işaretleme.
+
+Açılışlar
+- Eklenen varyantlar düzenlenebiliyor, aynı aile altında birden çok
+  varyant tutulabiliyor, metin dosyasından alınıp verilebiliyor.
+
+Tahta
+- Dokuz taş takımı ve on beş tahta.
+- Masaüstünde sağ tıkla kare işaretleme, sağ sürüklemeyle ok çizme.
+
+Düzeltmeler
+- Soğuk başlangıçtan sonra ilk hamlede ses çalmıyordu.
+- Motora karşı oyun penceresinden "Pozisyon kur" açıldığında tahta
+  görünmüyordu.
+- Kural dışı hamle sesi artık yalnızca şah çekilmişken çalıyor.

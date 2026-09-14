@@ -8,8 +8,8 @@ bağlantısı gerekmez; hiçbir veri dışarı gönderilmez.
 sağlar: telefonda alt gezinme çubuğu, masaüstünde soldaki gezinme şeridi
 kullanılır.
 
-Diller: Türkçe, İngilizce, İspanyolca, Almanca, Fransızca. Ayarlardan
-değiştirilir; varsayılan sistem dilidir.
+Diller: Türkçe ve İngilizce. Ayarlardan değiştirilir; varsayılan sistem
+dilidir.
 
 ---
 
@@ -46,6 +46,11 @@ ayrı bir iş parçacığında çalışır, tahta akıcı kalır.
 **Gezinme** — Hamle listesindeki herhangi bir hamleye dokunarak o konuma
 gidersin; alttaki düğmelerle bir ileri, bir geri, başa ya da sona gidersin.
 
+**İşaretleme (fare ile)** — Bir kareye **sağ tıklamak** o kareyi işaretler;
+**sağ tuşu basılı tutup sürüklemek** iki kare arasına ok çizer. Aynı yere
+yeniden sağ tıklamak işareti kaldırır, sol tık hepsini siler. İşaret rengi
+seçili tahtadan türetilir, bu yüzden her tahtada seçilir.
+
 **Deneme hamleleri** — Kayıtlı bir oyuna bakarken tahtaya istediğin hamleyi
 oynayıp motorun değerlendirmesinin nasıl değiştiğini görebilirsin. Bu
 hamleler oyunun kendisine yazılmaz: hamle listesinde görünmez, PGN'e girmez,
@@ -71,8 +76,10 @@ altındayken** duyulur; oradaki anlamı "bu hamle şahı kurtarmıyor"dur.
 
 Uygulama hazır bulmaca ile gelmez; listeleri kendin oluşturursun.
 
-**Liste oluşturma** — Sağ üstteki **+** ile yeni bir liste açarsın. Listeyi
-üç yolla doldurabilirsin:
+**Liste oluşturma** — Sağ üstteki **+** ile yeni bir liste açarsın. Adı
+verirken listeyi **oyun sonu listesi** olarak da işaretleyebilirsin; bu
+işaret sonuç süzgeçlerini açar (aşağıda). Sonradan da liste menüsünden
+değiştirilebilir. Listeyi üç yolla doldurabilirsin:
 
 1. **Tek tek ekleme** — Menüden "Bulmaca ekle", pozisyonu tahtada kurarsın.
 2. **FEN listesi yapıştırma** — Menüden "FEN listesi yapıştır", her satıra
@@ -106,12 +113,35 @@ Doğru hamleden sonra rakibin cevabını motor oynar.
 İpucu alabilir, çözümü izleyebilir, baştan başlayabilir, favorilere
 ekleyebilir, çözüldü olarak işaretleyebilir ve not düşebilirsin.
 
-**Arama ve süzgeçler** — Çözülmemiş / çözülen / favoriler / mat var /
-geçerken alma / eklediklerim. Arama kutusu sıra numarası (`#128`),
-etiketler, ad, not ve FEN üzerinde çalışır; Türkçe harflere duyarsızdır.
+**Numaralar** — Her bulmacanın numarası **listedeki asıl sırasıdır**
+(kaynak dosyada numara verilmişse o kullanılır). Süzgeç açıkken de,
+sıralama ters çevrilmişken de aynı numara görünür; satırda, bulmaca
+başlığında ve üstteki bilgi satırında hep aynı sayıyı okursun.
 
-Menüden **tahtayı PNG olarak kaydedebilirsin**. Her bulmaca yeniden
-adlandırılabilir, pozisyonu düzenlenebilir ya da silinebilir.
+**Sıralama** — Liste sondan başa gelir: en son eklediğin bulmacalar üstte
+olur. Başlık çubuğundaki okla yön değişir.
+
+**Arama ve süzgeçler** — Tümü / çözülmemiş / çözülen / favoriler /
+eklediklerim. Liste oyun sonu listesi olarak işaretliyse ayrıca **beyaz
+kazanır / beraberlik / siyah kazanır** süzgeçleri görünür; bir bulmacanın
+sonucu satır menüsünden işaretlenir ya da alınan dosyada etiket olarak
+verilir (`beyaz-kazanir`, `beraberlik`, `siyah-kazanir`; İngilizce yazımı
+da tanınır).
+
+Arama kutusu sıra numarası (`#128`), etiketler, ad, not ve FEN üzerinde
+çalışır; Türkçe harflere duyarsızdır.
+
+**Aralık işaretleme** — Menüdeki "Aralığı işaretle" ile iki numara arası
+bulmacayı tek seferde çözüldü ya da çözülmedi yaparsın. Numaralar
+süzgeçten bağımsızdır: ekranda gördüğün numarayı yazarsın.
+
+**Bugün çözülen** — Her listede gece yarısından beri kaç bulmaca
+çözdüğün başlıkta ve liste kartında görünür. Ayarlardan kapatılabilir.
+
+Menüden **tahtayı PNG olarak kaydedebilirsin**; dosya
+`board-<liste adı>-<numara>.png` olarak kaydedilir. Her bulmaca yeniden
+adlandırılabilir, pozisyonu düzenlenebilir, notu silinebilir ya da
+tamamen kaldırılabilir.
 
 ---
 
@@ -122,7 +152,23 @@ Liste boş başlar; çalışmak istediğin varyantları kendin eklersin.
 **Varyant ekleme** — Aile adı (ör. "İspanyol Açılışı"), varyant adı (ör.
 "Breyer Varyantı") ve hamleler (SAN ya da PGN olarak yapıştırılabilir).
 Her hamle kurallara göre doğrulanır; hatalı bir hamle varsa uyarı alırsın.
-Eklediklerin aileye göre gruplanır.
+Eklediklerin aileye göre gruplanır: aynı aile adını yazarak bir ailenin
+altına istediğin kadar varyant koyabilirsin. Varyant adını boş
+bırakırsan o ailede sıradaki numarayı alır.
+
+**Düzenleme** — Eklediğin bir varyantın adını, ailesini ve hamlelerini
+satır menüsünden değiştirebilir, notunu silebilir ya da varyantı
+kaldırabilirsin.
+
+**Metin dosyası** — Açılış listesi başlık menüsünden dosyaya verilir ve
+dosyadan alınır. Biçim satır başına bir varyanttır:
+
+```
+C95|İspanyol Açılışı|Breyer Varyantı|1. e4 e5 2. Nf3 Nc6 3. Bb5 a6
+İspanyol Açılışı|Breyer Varyantı|1. e4 e5 2. Nf3 Nc6 3. Bb5 a6
+```
+
+Yani `ECO|aile|varyant|hamleler` ya da ECO'suz üç alan.
 
 **İzle** — Varyantı adım adım ya da otomatik oynatarak izlersin.
 
@@ -143,28 +189,62 @@ taşıma, silme.
 - **Listeyi PGN dosyası olarak ver** ile listenin tamamını dışarı alırsın.
 - Listedeki oyunlar numaralandırılır; arama numara (`#42`), oyun adı,
   oyuncu, sonuç ve not üzerinde çalışır.
-- **Okundu işareti**: tek tek ya da toplu işaretleme, "okunmamış / okunan"
-  süzgeci ve başlıkta okunma oranı.
-- Tüm verinin JSON yedeğini alıp geri yükleyebilirsin.
+- **Okundu işareti**: tek tek, tümü birden ya da **numara aralığı vererek**
+  işaretleme; "okunmamış / okunan" süzgeci ve başlıkta okunma oranı.
+- **Favoriler**: satırdaki yıldızla işaretlenir, kendi süzgeci vardır.
+- Oyunlara not düşebilir, notu sonradan silebilirsin.
+
+---
+
+## Yedekleme ve cihaz değiştirme
+
+**Ayarlar → Veri → Tüm veriyi yedekle** uygulamanın sakladığı her şeyi tek
+bir `.json` dosyasına yazar: oyun listeleri ve içindeki oyunlar (okundu,
+favori, not), bulmaca listeleri ve ilerlemen (çözüldü, favori, deneme
+sayısı, çözüm tarihi), eklediğin açılışlar ve açılış ilerlemen, bütün
+ayarlar.
+
+Dosya düz metindir ve platforma özgü hiçbir şey içermez; telefonda
+alınan yedek bilgisayarda, bilgisayarda alınan yedek telefonda olduğu
+gibi açılır.
+
+**Ayarlar → Veri → Yedekten geri yükle** ile dosyayı seçersin. Önce
+dosyanın içindekiler özetlenir (kaç liste, kaç oyun, kaç bulmaca, kaç
+açılış) — yanlış dosyayı seçtiysen veri silinmeden fark edersin. Sonra
+iki seçenek sunulur:
+
+- **Birleştir** — Yedektekiler var olanın üstüne eklenir. Aynı kayıt iki
+  tarafta da varsa yedekteki geçerli olur, cihazın ayarlarına
+  dokunulmaz.
+- **Değiştir** — Cihazdaki veri silinir, yerine yedektekiler konur. İki
+  cihazı birebir aynı yapmak içindir; ayrıca onay sorar.
+
+Dosyanın içine bir sağlama damgası yazılır: yarım inen ya da bozulan bir
+yedek yüklenmeden önce fark edilir. Yazma sırasında bir şey ters
+giderse eski veri geri konur.
 
 ---
 
 ## Ayarlar
 
 - **Tema** — koyu, açık ya da sistemi izle.
-- **Dil** — sistem, Türkçe, İngilizce, İspanyolca, Almanca, Fransızca.
-- **Tahta görünümü** — 12 seçenek: 9 düz renk (kahve, yeşil, turnuva,
-  mavi, gri, arduvaz, kum, mor, fildişi) ve 3 ahşap (koyu ahşap, ceviz,
-  meşe).
-- **Taş takımı** — 6 seçenek: Chessnut, RhosGFX, Fantasy, Spatial,
-  Celtic, Kiwen Suwi.
+- **Dil** — sistem, Türkçe, İngilizce.
+- **Tahta görünümü** — 15 seçenek: 12 düz renk (kahve, yeşil, turnuva,
+  mavi, gri, arduvaz, kum, mor, fildişi, gül, deniz yeşili, gece mavisi)
+  ve 3 ahşap (koyu ahşap, ceviz, meşe).
+- **Taş takımı** — 9 seçenek: Chessnut, RhosGFX, Fantasy, Spatial,
+  Celtic, Kiwen Suwi, Firi, Totoy, Papercut.
 - **Kare adlarını göster** — koordinatların rengi seçtiğin tahtadan gelir:
   yazı, üzerinde durduğu karenin karşıt rengini alır, böylece her tahtada
   okunur kalır.
 - Yasal hamle göstergeleri, son hamle vurgusu, hamle animasyonu,
   değerlendirme çubuğu.
-- Hamle sesleri ve titreşim.
-- Varsayılan motor zorluğu.
+- **Bugün çözülen sayısı** — bulmaca listelerinde günlük sayacı gösterir.
+- Hamle sesleri.
+- **Veri** — yedek alma ve geri yükleme (yukarıya bakın).
+
+Seçtiğin tahta ve taş takımı yalnızca oyun tahtasında değil, bulmaca ve
+oyun listelerindeki küçük önizlemelerde de kullanılır.
 
 ---
 

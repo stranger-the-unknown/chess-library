@@ -3,6 +3,7 @@ import 'dart:io';
 import 'package:flutter_test/flutter_test.dart';
 
 import 'package:chess_pgn_reader/l10n/app_strings.dart';
+import 'package:chess_pgn_reader/services/settings_service.dart';
 
 /// Dil tablolarının bütünlüğü.
 ///
@@ -102,6 +103,32 @@ void main() {
     });
 
     expect(missing, isEmpty, reason: 'tabloda karşılığı olmayan anahtarlar');
+  });
+
+  test('sürüm numarası tek yerde tutuluyor', () {
+    // `pubspec.yaml`, kurulum betiği ve hakkında metni ayrı ayrı elle
+    // güncellendiğinde biri geride kalıyordu; hakkında metni artık
+    // koddaki sabitten besleniyor, sabit de burada pubspec ile
+    // karşılaştırılıyor.
+    final pubspec = File('pubspec.yaml').readAsStringSync();
+    final match = RegExp(r'^version:\s*([0-9.]+)\+', multiLine: true)
+        .firstMatch(pubspec);
+    expect(match, isNotNull, reason: 'pubspec sürümü okunamadı');
+    expect(appVersionName, match!.group(1));
+
+    final installer =
+        File('windows/installer/chess_library.iss').readAsStringSync();
+    expect(
+      installer,
+      contains('#define AppVersion "$appVersionName"'),
+      reason: 'kurulum betiği eski sürümde kalmış',
+    );
+
+    Strings.language = AppLanguage.turkish;
+    expect(
+      Strings.get('settings.aboutText', {'version': appVersionName}),
+      contains(appVersionName),
+    );
   });
 
   test('dil seçimi metinleri değiştiriyor', () {
