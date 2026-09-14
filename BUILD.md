@@ -23,10 +23,22 @@ keytool -genkey -v -keystore chess-library.jks -keyalg RSA \
 Play'e yüklenemez ve sonradan güncellenemez.
 
 ```bash
+flutter build apk --release
+```
+
+Çıktı: `build/app/outputs/flutter-apk/app-release.apk` (~56 MB). Bu dosya
+üç mimariyi de (arm64, arm32, x86_64) taşır; hangi telefona verilirse
+verilsin kurulur. Yayınlanan dosya budur: karşı tarafın kendi işlemcisini
+bilmesi gerekmez.
+
+Yalnızca 64 bit ARM için yaklaşık 21 MB'lık ayrı bir dosya isterseniz:
+
+```bash
 flutter build apk --release --split-per-abi
 ```
 
-Çıktı: `build/app/outputs/flutter-apk/app-arm64-v8a-release.apk` (~21 MB).
+Çıktı: `build/app/outputs/flutter-apk/app-arm64-v8a-release.apk`. Bugünkü
+telefonların hemen hepsi bunu kurar ama eski 32 bit cihazlar kuramaz.
 
 İmzayı doğrulamak için:
 

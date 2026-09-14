@@ -517,7 +517,7 @@ class Strings {
     'settings.animations': 'Hamle animasyonu',
     'settings.evalBar': 'Değerlendirme çubuğu',
     'settings.evalBarSub': 'Analiz açıkken tahtanın yanında',
-    'settings.soundSection': 'Ses ve dokunma',
+    'settings.soundSection': 'Ses',
     'settings.sound': 'Hamle sesleri',
     'settings.about': 'Hakkında',
     'settings.aboutText':
@@ -967,7 +967,7 @@ class Strings {
     'settings.animations': 'Move animation',
     'settings.evalBar': 'Evaluation bar',
     'settings.evalBarSub': 'Next to the board while analysis is on',
-    'settings.soundSection': 'Sound and haptics',
+    'settings.soundSection': 'Sound',
     'settings.sound': 'Move sounds',
     'settings.about': 'About',
     'settings.aboutText':
