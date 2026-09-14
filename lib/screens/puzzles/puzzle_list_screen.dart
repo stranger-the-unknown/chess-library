@@ -26,7 +26,6 @@ enum _Filter {
   unsolved,
   solved,
   favorites,
-  custom,
   whiteWin,
   draw,
   blackWin,
@@ -126,9 +125,6 @@ class _PuzzleListScreenState extends State<PuzzleListScreen> {
           break;
         case _Filter.blackWin:
           if (!puzzle.marksBlackWin) return false;
-          break;
-        case _Filter.custom:
-          if (!puzzle.custom) return false;
           break;
         case _Filter.all:
           break;
@@ -534,7 +530,6 @@ class _PuzzleListScreenState extends State<PuzzleListScreen> {
                       t('puzzles.filterFavorites'),
                       _Filter.favorites,
                     ),
-                    _filterChip(t('puzzles.filterCustom'), _Filter.custom),
                     // Sonuç süzgeçleri yalnızca oyun sonu listelerinde
                     // anlamlı; başka listelerde yer kaplamasınlar.
                     if (widget.collection.isEndgame && _hasOutcomes) ...[

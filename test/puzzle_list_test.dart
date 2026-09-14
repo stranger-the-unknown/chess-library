@@ -168,6 +168,9 @@ void main() {
     await _pump(tester, collection);
     expect(find.text('Mat var'), findsNothing);
     expect(find.text('Geçerken alma'), findsNothing);
+    // Artık bütün bulmacalar kullanıcının eklediği; süzgeç hiçbir şey
+    // ayırmıyordu.
+    expect(find.text('Eklediklerim'), findsNothing);
   });
 
   group('Aralık işaretleme', () {

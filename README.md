@@ -124,8 +124,8 @@ Süzgeci değiştirdiğinde sıralama baştan sonaya döner: ters sıralama
 çoğunlukla tek bir bakış için açılıyor, süzgeç değişince o iş bitmiş
 oluyor.
 
-**Arama ve süzgeçler** — Tümü / çözülmemiş / çözülen / favoriler /
-eklediklerim. Liste oyun sonu listesi olarak işaretliyse ayrıca **beyaz
+**Arama ve süzgeçler** — Tümü / çözülmemiş / çözülen / favoriler.
+Liste oyun sonu listesi olarak işaretliyse ayrıca **beyaz
 kazanır / beraberlik / siyah kazanır** süzgeçleri görünür; bir bulmacanın
 sonucu satır menüsünden işaretlenir ya da alınan dosyada etiket olarak
 verilir (`beyaz-kazanir`, `beraberlik`, `siyah-kazanir`; İngilizce yazımı
