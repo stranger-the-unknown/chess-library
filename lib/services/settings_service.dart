@@ -231,7 +231,7 @@ class SettingsService extends ChangeNotifier {
 ///
 /// Tek kaynak burasıdır; `pubspec.yaml` ile aynı olduğu testle denetlenir.
 /// Hakkında bölümünde ve yedek dosyasının başlığında görünür.
-const String appVersionName = '3.0.0';
+const String appVersionName = '3.1.0';
 
 /// Tahta renkleri ve taş takımları.
 ///
@@ -373,6 +373,13 @@ class BoardAssets {
     'firi',
     'totoy',
     'papercut',
+    'cburnett',
+    'merida',
+    'mono',
+    'letter',
+    'pirouetti',
+    'pixel',
+    'mpchess',
   ];
 
   /// İşaretleme rengi (0xAARRGGBB).
@@ -416,6 +423,13 @@ class BoardAssets {
     'firi': 'Firi',
     'totoy': 'Totoy',
     'papercut': 'Papercut',
+    'cburnett': 'Cburnett',
+    'merida': 'Merida',
+    'mono': 'Mono',
+    'letter': 'Letter',
+    'pirouetti': 'Pirouetti',
+    'pixel': 'Pixel',
+    'mpchess': 'MPChess',
   };
 
   static String label(String name) =>

@@ -72,6 +72,8 @@ class Strings {
   // -------------------------------------------------------------------------
 
   static const Map<String, String> _tr = {
+    'settings.license': 'Lisans',
+    'settings.licenseText': 'AGPLv3 · Özgür yazılım. Kaynak kodu: github.com/stranger-the-unknown/chess-library',
     'settings.boardColors': 'Tahta renkleri',
     'settings.boardColorsSub': 'Açık ve koyu kare rengini kendin seç',
     'board.colorsTitle': 'Tahta renkleri',
@@ -546,6 +548,8 @@ class Strings {
   };
 
   static const Map<String, String> _en = {
+    'settings.license': 'Licence',
+    'settings.licenseText': 'AGPLv3 · Free software. Source code: github.com/stranger-the-unknown/chess-library',
     'settings.boardColors': 'Board colours',
     'settings.boardColorsSub': 'Choose the light and dark square colours yourself',
     'board.colorsTitle': 'Board colours',

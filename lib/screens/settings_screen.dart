@@ -220,6 +220,14 @@ class _SettingsScreenState extends State<SettingsScreen> {
                     style: TextStyle(color: scheme.onSurfaceVariant),
                   ),
                 ),
+                ListTile(
+                  leading: const Icon(Icons.balance_rounded),
+                  title: Text(t('settings.license')),
+                  subtitle: Text(
+                    t('settings.licenseText'),
+                    style: TextStyle(color: scheme.onSurfaceVariant),
+                  ),
+                ),
               ]),
             ],
           ),

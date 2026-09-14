@@ -10,7 +10,7 @@
 ; klasörüne kurulur. Böylece kullanıcı UAC uyarısıyla karşılaşmaz.
 
 #define AppName "Chess Library"
-#define AppVersion "3.0.0"
+#define AppVersion "3.1.0"
 #define AppPublisher "stranger-the-unknown"
 #define AppExeName "ChessLibrary.exe"
 #define BuildDir "..\..\build\windows\x64\runner\Release"
@@ -56,6 +56,7 @@ Source: "{#BuildDir}\data\*"; DestDir: "{app}\data"; \
 ; Lisans ve atıf belgeleri kurulumla birlikte gitsin.
 Source: "..\..\LICENSE"; DestDir: "{app}"; Flags: ignoreversion
 Source: "..\..\ASSETS.md"; DestDir: "{app}"; Flags: ignoreversion
+Source: "..\..\COPYRIGHT.md"; DestDir: "{app}"; Flags: ignoreversion
 
 [Icons]
 Name: "{group}\{#AppName}"; Filename: "{app}\{#AppExeName}"

@@ -2,20 +2,26 @@
 
 Bu depodaki varlıklar iki gruba ayrılır:
 
-1. **Taş takımları** — dışarıdan alınmıştır, izin veren lisanslarla gelir.
-   Aşağıdaki atıf listesi projeyle birlikte dağıtılmalıdır.
-2. **Sesler, ahşap tahta dokuları ve uygulama simgesi** — bu proje için
-   üretilmiştir; hiçbir yükümlülüğü yoktur.
+1. **Taş takımları** — dışarıdan alınmıştır. Aşağıdaki atıf listesi
+   projeyle birlikte dağıtılmalıdır.
+2. **Sesler ve uygulama simgesi** — bu proje için üretilmiştir;
+   uygulamanın lisansı altındadır.
 
 Hiçbir varlık ticari bir üründen kopyalanmamıştır.
+
+Uygulamanın lisansı **AGPLv3**'tür; nedeni [COPYRIGHT.md](COPYRIGHT.md)
+dosyasında anlatılmıştır.
 
 ---
 
 ## Taş takımları — `assets/pieces/`
 
-Dokuz takımın tamamı [Lichess](https://github.com/lichess-org/lila)
-deposundan alınmıştır. Hepsi **ticari kullanıma da izin veren** ve
-"bulaşıcı" olmayan (projenizin lisansını belirlemeyen) lisanslardadır.
+On altı takımın tamamı [Lichess](https://github.com/lichess-org/lila)
+deposundan alınmıştır. Hepsi ticari kullanıma izin verir. İlk dokuzu
+"bulaşıcı" olmayan lisanslarla gelir; son yedisi GPL/AGPL ailesindendir
+ve uygulamanın AGPLv3 olmasının nedeni onlardır.
+
+### İzin veren lisanslar
 
 | Takım | Çizen | Lisans |
 |---|---|---|
@@ -29,10 +35,27 @@ deposundan alınmıştır. Hepsi **ticari kullanıma da izin veren** ve
 | `totoy` | Kosal Sen | [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/) |
 | `papercut` | [Nikolay Anzarov](https://nikoichu.itch.io/) | [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/) |
 
-**Yükümlülük:** `rhosgfx` kamu malıdır, hiçbir şey gerektirmez. Diğerleri
-yalnızca **atıf** ister — yani bu tablonun uygulamayla birlikte
-dağıtılması yeterlidir. Hiçbiri projenin kendi lisansını kısıtlamaz ve
-hiçbiri ticari kullanımı yasaklamaz.
+### Bulaşıcı (copyleft) lisanslar
+
+Bunlar uygulamanın tamamının aynı koşullarla dağıtılmasını gerektirir.
+Uygulama bu yüzden AGPLv3'tür.
+
+| Takım | Çizen | Lisans |
+|---|---|---|
+| `cburnett` | [Colin M.L. Burnett](https://en.wikipedia.org/wiki/User:Cburnett) | [GPLv2+](https://www.gnu.org/licenses/gpl-2.0.txt) |
+| `merida` | Armando Hernandez Marroquin | [GPLv2+](https://www.gnu.org/licenses/gpl-2.0.txt) |
+| `mono` | Thibault Duplessis ve [Colin M.L. Burnett](https://en.wikipedia.org/wiki/User:Cburnett) | [GPLv2+](https://www.gnu.org/licenses/gpl-2.0.txt) |
+| `letter` | [usolando](https://lichess.org/@/usolando) | AGPLv3+ |
+| `pirouetti` | [pirouetti](https://lichess.org/@/pirouetti) | AGPLv3+ |
+| `pixel` | therealqtpi | AGPLv3+ |
+| `mpchess` | [Maxime Chupin](https://github.com/chupinmaxime) | [GPLv3+](https://www.gnu.org/licenses/gpl-3.0.txt) |
+
+**Yükümlülük:** `rhosgfx` kamu malıdır, hiçbir şey gerektirmez. İzin
+veren lisanslardaki diğerleri yalnızca **atıf** ister — bu tabloların
+uygulamayla birlikte dağıtılması yeterlidir. Copyleft olanlar ayrıca
+uygulamanın kaynak koduyla birlikte, aynı lisansla dağıtılmasını
+gerektirir; bu da AGPLv3 ile sağlanıyor. Hiçbiri ticari kullanımı
+yasaklamaz.
 
 Dosyalar SVG'dir; uygulama bunları `flutter_svg` ile çizer, bu yüzden her
 ölçüde net görünürler.
@@ -52,24 +75,23 @@ değişmez; yalnızca aynı biçimlendirme başka bir sözdizimiyle yazılır.
 
     python tools/assets/inline_svg_styles.py assets/pieces
 
+`mono` takımı Lichess'te tek bir gri siluet olarak durur; beyaz ve siyah
+ayrımı CSS ile yapılır. Bu depoda altı dosyadan on iki dosya üretildi:
+dolgu ve kontur renkleri beyaz taşta açık/koyu, siyah taşta koyu/açık
+olacak şekilde yazıldı. Çizimin kendisi değişmedi.
+
 ### Bilerek alınmayanlar
 
-Bu proje açık kaynak (MIT) olduğu hâlde aşağıdakiler **yine de**
-alınamaz; engel açık kaynak olup olmamak değil, lisansların birbiriyle
-bağdaşmaması:
-
-- **cburnett, merida, mono** (GPLv2+) ve **letter, pirouetti, pixel,
-  mpchess** (AGPLv3+): "bulaşıcı" lisanslar. Bir tanesini bile koymak
-  uygulamanın tamamının GPL/AGPL ile yayımlanmasını gerektirir; MIT
-  olarak kalamaz.
 - **maestro, staunty, cardinal, california, caliente, horsey, cooke,
-  monarchy, xkcd** ve benzerleri (CC BY-NC-SA): ticari kullanıma kapalı.
-  MIT "dilediğiniz gibi kullanın" der; bu ikisi bir arada tutarlı
-  değildir. Ayrıca "SA" koşulu aynı bulaşma sorununu getirir.
+  monarchy, xkcd** ve benzerleri (CC BY-NC-SA): ticari kullanıma
+  kapalıdır. Lisansı AGPLv3 yapmak bunu **çözmez**: GPL ailesi ticari
+  kullanma hakkını güvence altına alır, "NC" ise yasaklar. İkisi bir
+  arada tutarlı değildir. Bu takımlar ancak uygulama ticari kullanıma
+  kapatılırsa kullanılabilir, o da uygulamanın özgür yazılım olmaktan
+  çıkması demektir.
 - **shahi-ivory-brown**: türetme ve değiştirme yasak.
-- **Lichess tahta görselleri** (AGPLv3+): aynı sebeple alınmadı; ahşap
-  tahtalar bu proje için üretildi, düz renkli tahtalar ise doğrudan
-  çizilir.
+- **Lichess tahta görselleri**: uygulamada tahta görseli yok; tahta
+  kullanıcının seçtiği iki renkten çiziliyor.
 
 ---
 
@@ -82,24 +104,28 @@ binmesiyle modellenir; en tepede bant geçirgen süzülmüş kısa bir gürült�
 patlaması vuruş transiyentini verir. Çan benzeri sesler (terfi, bildirim,
 oyun başı/sonu) birkaç kısmi harmonikli tonlardan kurulur.
 
-## Tahtalar — `assets/boards/`
+## Tahta
 
-Uygulamada on beş tahta vardır: on iki düz renk ve üç ahşap.
+**Tahtanın görsel dosyası yoktur.** Hazır tahta da yoktur: kullanıcı açık
+ve koyu kare rengini `BoardAssets.palette` içindeki yüz renkten kendisi
+seçer, uygulama da kareleri o iki renkten doğrudan tuvale çizer. Her
+ölçüde kusursuz keskin çıkar, ölçekleme bulanıklığı ya da sıkıştırma izi
+olmaz, hiç yer kaplamaz. İki renkli dama deseni zaten kimsenin telifinde
+değildir.
 
-**Düz renkli tahtaların görsel dosyası yoktur.** Uygulama onları
-`BoardAssets` içindeki iki renkten doğrudan tuvale çizer: her ölçüde
-kusursuz keskin çıkarlar, ölçekleme bulanıklığı ya da sıkıştırma izi
-olmaz ve hiç yer kaplamazlar. İki renkli dama deseni zaten kimsenin
-telifinde değildir.
+Palet 3.0 öncesindeki on beş hazır tahtanın bütün kare renklerini
+içerir; eski görünümlerden hiçbiri kaybolmadı.
 
-Ahşap görünümlü üç tahta (`dark_wood`, `walnut`, `oak`)
-`tools/assets/make_boards.py` ile üretilir. Damar bilerek çok hafif
-tutulmuştur — parlaklığı yalnızca ±%6 dolayında oynatır — böylece ahşap
-hissi verir ama taşların okunmasını zorlaştırmaz.
+İsteğe bağlı **ahşap dokusu** de bir görselden gelmez: sabit tohumlu,
+hafifçe dalgalı yatay çizgilerden çizilir ve seçilen renklerin üstüne
+biner. Böylece damar üç sabit ahşaba değil, kullanıcının seçtiği her
+renk çiftine uyar.
 
-Her tahtanın açık ve koyu kare rengi `BoardAssets` içinde kayıtlıdır; kare
-adlarının rengi de buradan türetilir (yazı, üzerinde durduğu karenin
-karşıt rengini alır).
+Kare adlarının rengi seçilen iki renkten türetilir: yazı, üzerinde
+durduğu karenin karşıt kare rengini alır. İki renk birbirine çok yakın
+seçilirse yazı kaybolacağı için karşıtlık ölçülür ve gerekirse siyah ya
+da beyaza düşülür; paletten kurulabilecek on bin tahtanın hepsinde kare
+adlarının okunur kaldığı testle denetlenir.
 
 ## Uygulama simgesi — `assets/icon/`
 
@@ -111,9 +137,8 @@ Düz çokgenlerden oluşan bir at silueti; bu proje için çizilmiştir
 ## Üretimi yinelemek
 
 ```bash
-python -m pip install numpy pillow lameenc
+python -m pip install numpy lameenc
 python tools/assets/make_sounds.py assets/sounds
-python tools/assets/make_boards.py assets/boards
 ```
 
 Rastgelelik sabit tohumlarla beslendiği için çıktı her çalıştırmada

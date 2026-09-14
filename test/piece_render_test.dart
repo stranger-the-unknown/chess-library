@@ -92,11 +92,12 @@ void main() {
         final (blackCount, blackPixels) =
             await render(engine.Piece(type, engine.Color.black), set);
 
-        // 64x64 = 4096 piksel; en ince taş (piyon) bile bunun yüzde
-        // onunu kaplıyor. Eşiği düşük tutup yalnızca "boş" durumu
-        // yakalıyoruz.
-        expect(whiteCount, greaterThan(400), reason: '$set beyaz $type boş');
-        expect(blackCount, greaterThan(400), reason: '$set siyah $type boş');
+        // 64x64 = 4096 piksel. Çoğu takımda en ince taş bile bunun
+        // yüzde on beşini kaplıyor; harflerden kurulu 'letter' takımı
+        // ise yüzde sekizde kalıyor. Eşik onun altında tutuldu: amaç
+        // ince çizimi elemek değil, hiç çizilmemiş olanı yakalamak.
+        expect(whiteCount, greaterThan(200), reason: '$set beyaz $type boş');
+        expect(blackCount, greaterThan(200), reason: '$set siyah $type boş');
         expect(
           whitePixels,
           isNot(equals(blackPixels)),

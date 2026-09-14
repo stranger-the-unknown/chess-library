@@ -229,22 +229,26 @@ giderse eski veri geri konur.
 
 - **Tema** — koyu, açık ya da sistemi izle.
 - **Dil** — sistem, Türkçe, İngilizce.
-- **Tahta görünümü** — 15 seçenek: 12 düz renk (kahve, yeşil, turnuva,
-  mavi, gri, arduvaz, kum, mor, fildişi, gül, deniz yeşili, gece mavisi)
-  ve 3 ahşap (koyu ahşap, ceviz, meşe).
-- **Taş takımı** — 9 seçenek: Chessnut, RhosGFX, Fantasy, Spatial,
-  Celtic, Kiwen Suwi, Firi, Totoy, Papercut.
-- **Kare adlarını göster** — koordinatların rengi seçtiğin tahtadan gelir:
-  yazı, üzerinde durduğu karenin karşıt rengini alır, böylece her tahtada
-  okunur kalır.
+- **Tahta renkleri** — Hazır tahta yoktur: açık ve koyu kare rengini
+  100 renklik paletten kendin seçersin, tahta da o iki renkten çizilir.
+  Üstteki önizleme gerçek tahtanın aynısıdır (taşlar ve kare adları
+  dâhil), böylece seçimini anında görürsün. İstersen **ahşap dokusu**
+  anahtarıyla seçtiğin renklerin üstüne hafif bir damar bindirirsin.
+- **Taş takımı** — 16 seçenek: Chessnut, RhosGFX, Fantasy, Spatial,
+  Celtic, Kiwen Suwi, Firi, Totoy, Papercut, Cburnett, Merida, Mono,
+  Letter, Pirouetti, Pixel, MPChess.
+- **Kare adlarını göster** — koordinatların rengi seçtiğin renklerden
+  gelir: yazı, üzerinde durduğu karenin karşıt rengini alır. İki rengi
+  birbirine çok yakın seçersen yazı kaybolmasın diye karşıtlık ölçülür
+  ve gerekirse siyah ya da beyaza düşülür.
 - Yasal hamle göstergeleri, son hamle vurgusu, hamle animasyonu,
   değerlendirme çubuğu.
 - **Bugün çözülen sayısı** — bulmaca listelerinde günlük sayacı gösterir.
 - Hamle sesleri.
 - **Veri** — yedek alma ve geri yükleme (yukarıya bakın).
 
-Seçtiğin tahta ve taş takımı yalnızca oyun tahtasında değil, bulmaca ve
-oyun listelerindeki küçük önizlemelerde de kullanılır.
+Seçtiğin renkler ve taş takımı yalnızca oyun tahtasında değil, bulmaca
+ve oyun listelerindeki küçük önizlemelerde de kullanılır.
 
 ---
 
@@ -269,8 +273,12 @@ klasörün **tamamını** kopyalayıp içindeki `ChessLibrary.exe` dosyasını
 
 ## Lisans
 
-Proje [MIT](LICENSE) lisanslıdır. Taş takımları dışarıdan alınmıştır ve
-kendi izin veren lisanslarıyla gelir; kaynakları ve atıfları için
+Proje [AGPLv3](LICENSE) lisanslıdır: özgür yazılımdır, isteyen satabilir,
+isteyen değiştirebilir; ancak uygulamayı alan herkes kaynak koduna da
+erişebilmeli ve değiştirilmiş sürümler aynı lisansla dağıtılmalıdır.
+Nedeni ve ayrıntısı [COPYRIGHT.md](COPYRIGHT.md) dosyasındadır.
+
+Taş takımları dışarıdan alınmıştır; çizenleri ve lisansları için
 [ASSETS.md](ASSETS.md) dosyasına bakın.
 
 ---
