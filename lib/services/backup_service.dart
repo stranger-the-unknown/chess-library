@@ -175,7 +175,7 @@ class BackupService {
         puzzles: counts['puzzles'] ?? 0,
         openings: counts['openings'] ?? 0,
         hasSettings: data.containsKey('pieceSet') ||
-            data.containsKey('boardLight') ||
+            data.containsKey('boardTheme') ||
             data.containsKey('themeMode'),
       ),
       data,

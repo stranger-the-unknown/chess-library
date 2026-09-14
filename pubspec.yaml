@@ -25,6 +25,7 @@ flutter:
   uses-material-design: true
   assets:
     - assets/sounds/
+    - assets/boards/
     - assets/icon/
     - assets/pieces/chessnut/
     - assets/pieces/rhosgfx/

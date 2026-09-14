@@ -17,17 +17,15 @@ class MiniBoard extends StatelessWidget {
   final double size;
   final bool flipped;
 
-  /// Belirtilmezse ayarlardaki kare renkleri kullanılır.
-  final int? light;
-  final int? dark;
+  /// Belirtilmezse ayarlardaki tahta kullanılır.
+  final String? boardTheme;
 
   const MiniBoard({
     super.key,
     required this.fen,
     this.size = 64,
     this.flipped = false,
-    this.light,
-    this.dark,
+    this.boardTheme,
   });
 
   @override
@@ -39,9 +37,8 @@ class MiniBoard extends StatelessWidget {
       game = null;
     }
 
-    final settings = SettingsService.instance;
-    final squareLight = light ?? settings.boardLight;
-    final squareDark = dark ?? settings.boardDark;
+    final theme = boardTheme ?? SettingsService.instance.boardTheme;
+    final (light, dark) = BoardAssets.squareColors(theme);
 
     final square = size / 8;
     return ClipRRect(
@@ -53,10 +50,7 @@ class MiniBoard extends StatelessWidget {
           children: [
             CustomPaint(
               size: Size(size, size),
-              painter: _MiniSquaresPainter(
-                Color(squareLight),
-                Color(squareDark),
-              ),
+              painter: _MiniSquaresPainter(Color(light), Color(dark)),
             ),
             if (game != null)
               for (int i = 0; i < 64; i++)

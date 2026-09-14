@@ -442,7 +442,7 @@ class _ChessBoardWidgetState extends State<ChessBoardWidget>
                               arrows: _pendingArrows,
                               flipped: widget.flipped,
                               color: Color(
-                                BoardAssets.markColor(settings.boardDark),
+                                BoardAssets.markColor(settings.boardTheme),
                               ),
                             ),
                           ),
@@ -471,7 +471,7 @@ class _ChessBoardWidgetState extends State<ChessBoardWidget>
     return Positioned.fill(
       child: ClipRRect(
         borderRadius: BorderRadius.circular(6),
-        child: const BoardBackground(),
+        child: BoardBackground(board: settings.boardTheme),
       ),
     );
   }
@@ -557,8 +557,7 @@ class _ChessBoardWidgetState extends State<ChessBoardWidget>
           fontWeight: FontWeight.w700,
           color: Color(
             BoardAssets.coordinateColor(
-              light: settings.boardLight,
-              dark: settings.boardDark,
+              settings.boardTheme,
               onLightSquare: onLightSquare,
             ),
           ),

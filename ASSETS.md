@@ -104,27 +104,62 @@ binmesiyle modellenir; en tepede bant geçirgen süzülmüş kısa bir gürült�
 patlaması vuruş transiyentini verir. Çan benzeri sesler (terfi, bildirim,
 oyun başı/sonu) birkaç kısmi harmonikli tonlardan kurulur.
 
-## Tahta
+## Tahtalar — `assets/boards/`
 
-**Tahtanın görsel dosyası yoktur.** Hazır tahta da yoktur: kullanıcı açık
-ve koyu kare rengini `BoardAssets.palette` içindeki yüz renkten kendisi
-seçer, uygulama da kareleri o iki renkten doğrudan tuvale çizer. Her
-ölçüde kusursuz keskin çıkar, ölçekleme bulanıklığı ya da sıkıştırma izi
-olmaz, hiç yer kaplamaz. İki renkli dama deseni zaten kimsenin telifinde
-değildir.
+Otuz iki tahta vardır: on ikisi düz renk, üçü bu proje için üretilmiş
+ahşap, on yedisi Lichess'ten alınmış doku.
 
-Palet 3.0 öncesindeki on beş hazır tahtanın bütün kare renklerini
-içerir; eski görünümlerden hiçbiri kaybolmadı.
+### Düz renkli tahtalar (12)
 
-İsteğe bağlı **ahşap dokusu** de bir görselden gelmez: sabit tohumlu,
-hafifçe dalgalı yatay çizgilerden çizilir ve seçilen renklerin üstüne
-biner. Böylece damar üç sabit ahşaba değil, kullanıcının seçtiği her
-renk çiftine uyar.
+Kahve, yeşil, turnuva, mavi, gri, arduvaz, kum, mor, fildişi, gül, deniz
+yeşili, gece mavisi.
 
-Kare adlarının rengi seçilen iki renkten türetilir: yazı, üzerinde
-durduğu karenin karşıt kare rengini alır. İki renk birbirine çok yakın
-seçilirse yazı kaybolacağı için karşıtlık ölçülür ve gerekirse siyah ya
-da beyaza düşülür; paletten kurulabilecek on bin tahtanın hepsinde kare
+**Görsel dosyaları yoktur.** Uygulama onları `BoardAssets` içindeki iki
+renkten doğrudan tuvale çizer: her ölçüde kusursuz keskin çıkarlar,
+ölçekleme bulanıklığı ya da sıkıştırma izi olmaz ve hiç yer kaplamazlar.
+İki renkli dama deseni zaten kimsenin telifinde değildir.
+
+### Bu proje için üretilen ahşaplar (3)
+
+`dark_wood`, `walnut`, `oak` — `tools/assets/make_boards.py` ile
+üretilir. Damar bilerek çok hafif tutulmuştur (parlaklığı ±%6 dolayında
+oynatır): ahşap hissi verir ama taşların okunmasını zorlaştırmaz.
+
+### Lichess'ten alınan dokular (17)
+
+| Tahta | Dosya |
+|---|---|
+| Ahşap, Ahşap II, III, IV | `wood.jpg`, `wood2.jpg`, `wood3.jpg`, `wood4.jpg` |
+| Akçaağaç, Akçaağaç II | `maple.jpg`, `maple2.jpg` |
+| Mermer, Mavi Mermer | `marble.jpg`, `blue_marble.jpg` |
+| Taş, Metal | `stone.jpg`, `metal.jpg` |
+| Deri, Kanvas, Zeytin | `leather.jpg`, `canvas.jpg`, `olive.jpg` |
+| Yeşil Plastik, Pembe Piramit, Mor Çizgi | `green_plastic.png`, `pink_pyramid.png`, `purple_diag.png` |
+| Horsey | `horsey.jpg` |
+
+Tamamı [Lichess](https://github.com/lichess-org/lila) deposundaki
+`public/images/board` klasöründen, **AGPLv3+** lisansıyla alınmıştır
+(çizenler: lila yazarları ve
+[pirouetti](https://lichess.org/@/pirouetti)). Uygulamanın kendisi
+AGPLv3 olduğu için bu tahtalar kullanılabiliyor; 3.0 öncesindeki MIT
+lisansıyla alınamazlardı.
+
+Dosyalar olduğu gibi kopyalanmıştır, yalnızca adları projenin adlandırma
+düzenine uydurulmuştur (`blue-marble.jpg` → `blue_marble.jpg`,
+`canvas2.jpg` → `canvas.jpg`, `grey.jpg` → `stone.jpg`).
+
+### Kare renkleri ve kare adları
+
+Her tahtanın açık ve koyu kare rengi `BoardAssets` içinde kayıtlıdır.
+Görselli tahtalarda bu renkler elle tahmin edilmemiş, görselin
+kendisinden ölçülmüştür: her karenin ortasından bir alan alınıp kanal
+başına ortanca değer hesaplanır (`tools/assets/sample_board_colors.py`).
+Bu renkler liste önizlemelerinde ve kare adlarının renginde kullanılır.
+
+Kare adı, üzerinde durduğu karenin karşıt kare rengini alır. Taş, mermer
+ve zeytin gibi tahtalarda iki kare rengi birbirine çok yakın olduğu için
+bu yetmiyor; orada yazı zeminde kayboluyordu. Bu yüzden karşıtlık
+ölçülür ve gerekirse siyah ya da beyaza düşülür. Her tahtada kare
 adlarının okunur kaldığı testle denetlenir.
 
 ## Uygulama simgesi — `assets/icon/`

@@ -1,16 +1,13 @@
 Sürüm 3.0
 
-Tahta renkleri
-- Hazır tahtalar kalktı. Artık açık ve koyu kare rengini 100 renklik
-  paletten kendin seçiyorsun; tahta doğrudan o iki renkten çiziliyor.
-- Renk ekranında gerçek tahtanın önizlemesi var: taşlar ve kare adları
-  dâhil, seçimini anında görüyorsun.
-- Ahşap dokusu artık üç sabit tahtaya bağlı değil; seçtiğin her renk
-  çiftinin üstüne hafif damar bindiren bir anahtar.
-- Eski on beş tahtanın bütün kare renkleri palette; hiçbir görünüm
-  kaybolmadı ve eski ayarın otomatik olarak çevriliyor.
-- Kare adları: iki rengi birbirine çok yakın seçersen yazı kaybolmasın
-  diye karşıtlık ölçülüyor, gerekirse siyah ya da beyaza düşülüyor.
+Tahtalar
+- On beş tahtaya on yedi yenisi eklendi, toplam otuz iki oldu: dört
+  ahşap, iki akçaağaç, mermer, mavi mermer, taş, metal, deri, kanvas,
+  zeytin, yeşil plastik, pembe piramit, mor çizgi ve horsey. Bunlar
+  gerçek doku görselleri; lisans AGPLv3'e geçtiği için kullanılabildi.
+- Kare adları: taş ve mermer gibi iki kare rengi birbirine yakın olan
+  tahtalarda yazı zeminde kayboluyordu. Artık karşıtlık ölçülüyor ve
+  gerekirse siyah ya da beyaza düşülüyor.
 
 Taş takımları
 - Yedi takım daha: Cburnett, Merida, Mono, Letter, Pirouetti, Pixel,

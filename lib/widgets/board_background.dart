@@ -1,51 +1,52 @@
-import 'dart:math' as math;
-
 import 'package:flutter/material.dart';
 
 import '../services/settings_service.dart';
 
 /// Bir tahtanın zeminini çizer.
 ///
-/// Tahtanın görsel dosyası yoktur: kareler kullanıcının seçtiği iki
-/// renkten doğrudan tuvale çizilir. Böylece her ölçüde kusursuz keskin
-/// çıkar (ölçekleme bulanıklığı ya da sıkıştırma izi olmaz), hiç yer
-/// kaplamaz ve iki renkli dama deseni kimsenin telifinde değildir.
+/// Düz renkli tahtaların görsel dosyası yoktur; kareler doğrudan tuvale
+/// çizilir. Böylece her ölçüde kusursuz keskin çıkarlar (ölçekleme
+/// bulanıklığı ya da sıkıştırma izi olmaz) ve hiç yer kaplamazlar.
+/// Ahşap görünümlü tahtalar ise bir görselden gelir.
 ///
 /// Hem oyun tahtası hem ayarlardaki önizleme bunu kullanır; ikisinin
 /// ayrışıp birinin boş kalması böylece mümkün olmaz.
 class BoardBackground extends StatelessWidget {
-  /// Belirtilmezse ayarlardaki renkler kullanılır.
-  final int? light;
-  final int? dark;
+  final String board;
 
-  /// Belirtilmezse ayarlardaki ahşap dokusu tercihi kullanılır.
-  final bool? wood;
+  /// Görselden gelen tahtalarda kullanılacak kutu doldurma biçimi.
+  final BoxFit fit;
 
-  const BoardBackground({super.key, this.light, this.dark, this.wood});
+  const BoardBackground({
+    super.key,
+    required this.board,
+    this.fit = BoxFit.fill,
+  });
 
   @override
   Widget build(BuildContext context) {
-    final settings = SettingsService.instance;
-    return CustomPaint(
-      painter: CheckerPainter(
-        Color(light ?? settings.boardLight),
-        Color(dark ?? settings.boardDark),
-        wood: wood ?? settings.boardWood,
-      ),
-      size: Size.infinite,
+    final (light, dark) = BoardAssets.squareColors(board);
+    final painter = CheckerPainter(Color(light), Color(dark));
+
+    if (BoardAssets.isFlat(board)) {
+      return CustomPaint(painter: painter, size: Size.infinite);
+    }
+    return Image.asset(
+      BoardAssets.boardPath(board),
+      fit: fit,
+      filterQuality: FilterQuality.medium,
+      errorBuilder: (context, error, stack) =>
+          CustomPaint(painter: painter, size: Size.infinite),
     );
   }
 }
 
-/// İki renkli 8x8 kare deseni, isteğe bağlı ahşap damarıyla.
+/// İki renkli 8x8 kare deseni.
 class CheckerPainter extends CustomPainter {
   final Color light;
   final Color dark;
 
-  /// Kareler üzerine hafif bir damar deseni bindirilsin mi?
-  final bool wood;
-
-  const CheckerPainter(this.light, this.dark, {this.wood = false});
+  const CheckerPainter(this.light, this.dark);
 
   @override
   void paint(Canvas canvas, Size size) {
@@ -71,53 +72,9 @@ class CheckerPainter extends CustomPainter {
         );
       }
     }
-
-    if (wood) _paintGrain(canvas, size);
-  }
-
-  /// Tahtanın üstüne hafif bir ahşap damarı çizer.
-  ///
-  /// Desen bir görselden gelmez; hafifçe dalgalı yatay çizgilerden
-  /// kurulur. Böylece hangi renk çifti seçilirse seçilsin damar o
-  /// renklerin üstünde doğar — sabit bir ahşap görseli tek bir renge
-  /// bağlı kalırdı. Tohum sabittir: desen her çizimde aynı olur, tahta
-  /// ekranda titremez.
-  void _paintGrain(Canvas canvas, Size size) {
-    final random = math.Random(20260914);
-    final paint = Paint()
-      ..style = PaintingStyle.stroke
-      ..strokeCap = StrokeCap.round;
-
-    const lineCount = 110;
-    for (int i = 0; i < lineCount; i++) {
-      final y = random.nextDouble() * size.height;
-      final darker = random.nextBool();
-      // Damar çok belirgin olursa taşların okunmasını zorlaştırıyor;
-      // parlaklığı yüzde birkaç oynatmakla yetiniliyor.
-      paint
-        ..color = (darker ? Colors.black : Colors.white).withValues(
-          alpha: 0.015 + random.nextDouble() * 0.045,
-        )
-        ..strokeWidth = size.height * (0.002 + random.nextDouble() * 0.010);
-
-      final amplitude = size.height * (0.002 + random.nextDouble() * 0.010);
-      final frequency = 1 + random.nextDouble() * 2.5;
-      final phase = random.nextDouble() * math.pi * 2;
-
-      final path = Path()..moveTo(0, y);
-      const steps = 10;
-      for (int step = 1; step <= steps; step++) {
-        final x = size.width * step / steps;
-        final wave = math.sin(phase + (x / size.width) * math.pi * frequency);
-        path.lineTo(x, y + wave * amplitude);
-      }
-      canvas.drawPath(path, paint);
-    }
   }
 
   @override
   bool shouldRepaint(covariant CheckerPainter oldDelegate) =>
-      oldDelegate.light != light ||
-      oldDelegate.dark != dark ||
-      oldDelegate.wood != wood;
+      oldDelegate.light != light || oldDelegate.dark != dark;
 }

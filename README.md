@@ -229,26 +229,30 @@ giderse eski veri geri konur.
 
 - **Tema** — koyu, açık ya da sistemi izle.
 - **Dil** — sistem, Türkçe, İngilizce.
-- **Tahta renkleri** — Hazır tahta yoktur: açık ve koyu kare rengini
-  100 renklik paletten kendin seçersin, tahta da o iki renkten çizilir.
-  Üstteki önizleme gerçek tahtanın aynısıdır (taşlar ve kare adları
-  dâhil), böylece seçimini anında görürsün. İstersen **ahşap dokusu**
-  anahtarıyla seçtiğin renklerin üstüne hafif bir damar bindirirsin.
+- **Tahta görünümü** — 32 seçenek:
+  - **12 düz renk** (kahve, yeşil, turnuva, mavi, gri, arduvaz, kum,
+    mor, fildişi, gül, deniz yeşili, gece mavisi) — görsel dosyası
+    yoktur, doğrudan çizilir, her ölçüde keskin çıkar.
+  - **3 ahşap** (koyu ahşap, ceviz, meşe) — bu proje için üretildi.
+  - **17 doku**: dört ahşap, iki akçaağaç, mermer, mavi mermer, taş,
+    metal, deri, kanvas, zeytin, yeşil plastik, pembe piramit, mor
+    çizgi ve horsey.
 - **Taş takımı** — 16 seçenek: Chessnut, RhosGFX, Fantasy, Spatial,
   Celtic, Kiwen Suwi, Firi, Totoy, Papercut, Cburnett, Merida, Mono,
   Letter, Pirouetti, Pixel, MPChess.
-- **Kare adlarını göster** — koordinatların rengi seçtiğin renklerden
-  gelir: yazı, üzerinde durduğu karenin karşıt rengini alır. İki rengi
-  birbirine çok yakın seçersen yazı kaybolmasın diye karşıtlık ölçülür
-  ve gerekirse siyah ya da beyaza düşülür.
+- **Kare adlarını göster** — koordinatların rengi seçtiğin tahtadan
+  gelir: yazı, üzerinde durduğu karenin karşıt rengini alır. Taş ve
+  mermer gibi iki kare rengi birbirine yakın olan tahtalarda yazı
+  kaybolmasın diye karşıtlık ölçülür ve gerekirse siyah ya da beyaza
+  düşülür.
 - Yasal hamle göstergeleri, son hamle vurgusu, hamle animasyonu,
   değerlendirme çubuğu.
 - **Bugün çözülen sayısı** — bulmaca listelerinde günlük sayacı gösterir.
 - Hamle sesleri.
 - **Veri** — yedek alma ve geri yükleme (yukarıya bakın).
 
-Seçtiğin renkler ve taş takımı yalnızca oyun tahtasında değil, bulmaca
-ve oyun listelerindeki küçük önizlemelerde de kullanılır.
+Seçtiğin tahta ve taş takımı yalnızca oyun tahtasında değil, bulmaca ve
+oyun listelerindeki küçük önizlemelerde de kullanılır.
 
 ---
 

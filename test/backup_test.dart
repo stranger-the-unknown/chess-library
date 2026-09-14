@@ -68,8 +68,7 @@ Future<void> _seed() async {
   );
 
   SettingsService.instance.pieceSet = 'celtic';
-  SettingsService.instance.boardLight = 0xFFD8E8E6;
-  SettingsService.instance.boardDark = 0xFF74A09B;
+  SettingsService.instance.boardTheme = 'teal';
 }
 
 void main() {
@@ -125,8 +124,7 @@ void main() {
       expect(openings.first.variation, 'Najdorf');
 
       expect(SettingsService.instance.pieceSet, 'celtic');
-      expect(SettingsService.instance.boardLight, 0xFFD8E8E6);
-      expect(SettingsService.instance.boardDark, 0xFF74A09B);
+      expect(SettingsService.instance.boardTheme, 'teal');
     });
 
     test('boş cihazın yedeği de geçerlidir', () async {
