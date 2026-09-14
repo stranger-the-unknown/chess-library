@@ -9,6 +9,14 @@ import 'puzzle_service.dart';
 import 'settings_service.dart';
 import 'storage_service.dart';
 
+/// Veri kökten değiştiğinde artan sayaç.
+///
+/// Ana ekranlar bir `IndexedStack` içinde canlı kalıyor: sekme
+/// değiştirmek `initState`'i yeniden çalıştırmaz. Yedek geri
+/// yüklendiğinde bu sayaç artar, kabuk da sayfaları sıfırdan kurar;
+/// yoksa geri yükleme çalıştığı hâlde ekranda eski veri kalıyordu.
+final ValueNotifier<int> dataVersion = ValueNotifier<int>(0);
+
 /// İçe aktarma biçimi.
 enum ImportMode {
   /// Var olan veriyi silip yedektekiyle değiştirir. Cihaz değiştirirken
@@ -243,6 +251,9 @@ class BackupService {
     PuzzleService.instance.resetCache();
     OpeningService.instance.resetCache();
     await SettingsService.instance.load();
+    // Açık ekranlar kendi verilerini `initState` içinde okuyor; sayaç
+    // artınca kabuk onları yeniden kurar.
+    dataVersion.value++;
   }
 
   // -------------------------------------------------------------------

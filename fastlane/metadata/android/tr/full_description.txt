@@ -38,4 +38,4 @@ Altı taş takımı, on iki tahta görünümü. Kare adlarının rengi seçtiği
 tahtadan gelir, böylece her yerde okunur kalır. Tahtalar PNG olarak
 kaydedilebilir.
 
-Arayüz dilleri: Türkçe, İngilizce, İspanyolca, Almanca, Fransızca.
+Arayüz dilleri: Türkçe, İngilizce.

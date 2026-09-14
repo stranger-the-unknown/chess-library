@@ -6,4 +6,4 @@ First release for Android and Windows.
 - Your own puzzle lists: paste FENs or import a text file
 - Opening lines you add yourself, checked against the rules
 - Six piece sets, twelve board styles
-- Turkish, English, Spanish, German and French
+- Turkish and English

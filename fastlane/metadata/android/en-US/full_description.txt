@@ -38,4 +38,4 @@ Six piece sets and twelve board styles. Square coordinates take their colour
 from the board you choose, so they stay readable everywhere. Boards can be
 saved as PNG images.
 
-Interface languages: Turkish, English, Spanish, German, French.
+Interface languages: Turkish, English.

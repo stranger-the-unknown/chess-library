@@ -36,7 +36,15 @@ Future<void> _pump(WidgetTester tester, PuzzleCollection collection) async {
   // Türkçe aramak için dil tam ekrandan önce sabitlenir.
   Strings.language = AppLanguage.turkish;
   await tester.pumpWidget(
-    MaterialApp(home: PuzzleListScreen(collection: collection)),
+    MaterialApp(
+      // Aynı testte birden çok liste açılıyor. Anahtar verilmezse
+      // Flutter var olan State'i koruyor, initState yeniden çalışmıyor
+      // ve ekranda bir önceki listenin verisi kalıyor.
+      home: PuzzleListScreen(
+        key: ValueKey<String>(collection.id),
+        collection: collection,
+      ),
+    ),
   );
   await tester.pumpAndSettle();
 }
@@ -125,14 +133,30 @@ void main() {
     expect(_numbersOnScreen(tester), ['#2', '#4']);
   });
 
-  testWidgets('sonuç süzgeçleri yalnızca oyun sonu listesinde görünür', (
+  testWidgets('sonuç süzgeçleri iki koşul birden sağlanınca görünür', (
     tester,
   ) async {
+    // Süzgeçlerin işe yaraması için hem listenin oyun sonu listesi
+    // olması hem de sonucu işaretli en az bir bulmaca bulunması
+    // gerekiyor; biri eksikken gösterilirlerse hiçbir şey bulamıyor ve
+    // bozukmuş gibi duruyorlar.
     final normal = await _seed();
     await _pump(tester, normal);
-    expect(find.text('Beyaz kazanır'), findsNothing);
+    expect(find.text('Beyaz kazanır'), findsNothing,
+        reason: 'oyun sonu olmayan listede görünmemeli');
+
+    final endgameWithoutTags = await _seed(isEndgame: true);
+    await _pump(tester, endgameWithoutTags);
+    expect(find.text('Beyaz kazanır'), findsNothing,
+        reason: 'işaretli bulmaca yokken görünmemeli');
 
     final endgame = await _seed(isEndgame: true);
+    await PuzzleService.instance.importFens(
+      endgame,
+      '${_fens[0]}|beyaz-kazanir\n'
+      '${_fens[1]}|beraberlik\n'
+      '${_fens[2]}|siyah-kazanir',
+    );
     await _pump(tester, endgame);
     expect(find.text('Beyaz kazanır'), findsOneWidget);
     expect(find.text('Beraberlik'), findsOneWidget);

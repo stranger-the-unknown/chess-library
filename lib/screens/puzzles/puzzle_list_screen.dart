@@ -150,6 +150,16 @@ class _PuzzleListScreenState extends State<PuzzleListScreen> {
   /// Bir bulmacanın süzgeçten bağımsız, listedeki asıl numarası.
   int _numberOf(Puzzle puzzle) => _numbers[puzzle.id] ?? 0;
 
+  /// Listede sonucu işaretlenmiş en az bir bulmaca var mı?
+  ///
+  /// Yoksa sonuç süzgeçleri hiçbir şey bulamaz; gösterilirlerse
+  /// "süzgeç çalışmıyor" gibi görünür. Bir bulmacanın sonucu satır
+  /// menüsünden işaretlenince ya da etiketli bir dosya alınınca
+  /// süzgeçler kendiliğinden belirir.
+  bool get _hasOutcomes => _all.any(
+        (p) => p.marksWhiteWin || p.marksDraw || p.marksBlackWin,
+      );
+
   // -------------------------------------------------------------------------
   // İşlemler
   // -------------------------------------------------------------------------
@@ -527,7 +537,7 @@ class _PuzzleListScreenState extends State<PuzzleListScreen> {
                     _filterChip(t('puzzles.filterCustom'), _Filter.custom),
                     // Sonuç süzgeçleri yalnızca oyun sonu listelerinde
                     // anlamlı; başka listelerde yer kaplamasınlar.
-                    if (widget.collection.isEndgame) ...[
+                    if (widget.collection.isEndgame && _hasOutcomes) ...[
                       _filterChip(
                         t('puzzles.filterWhiteWin'),
                         _Filter.whiteWin,

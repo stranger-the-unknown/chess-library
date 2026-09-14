@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../l10n/app_strings.dart';
+import '../services/backup_service.dart';
 import '../widgets/cursors.dart';
 import '../widgets/responsive.dart';
 import 'home_screen.dart';
@@ -14,6 +15,9 @@ import 'settings_screen.dart';
 /// Dar ekranlarda (telefon) altta gezinme çubuğu, geniş pencerelerde
 /// (masaüstü) solda gezinme rayı kullanılır. Sayfalar bir [IndexedStack]
 /// içinde canlı kalır; sekme değiştirince yeniden yüklenmezler.
+///
+/// Bunun tek istisnası yedekten geri yükleme: veri kökten değiştiği için
+/// sayfalar sıfırdan kurulur ([dataVersion]).
 class HomeShell extends StatefulWidget {
   final int initialIndex;
 
@@ -60,7 +64,15 @@ class _HomeShellState extends State<HomeShell> {
 
   @override
   Widget build(BuildContext context) {
-    final pages = IndexedStack(index: _index, children: _pages);
+    final pages = ValueListenableBuilder<int>(
+      valueListenable: dataVersion,
+      // Anahtar değişince sayfalar atılıp yeniden kurulur; her biri
+      // verisini `initState` içinde yeniden okur.
+      builder: (context, version, _) => KeyedSubtree(
+        key: ValueKey<int>(version),
+        child: IndexedStack(index: _index, children: _pages),
+      ),
+    );
 
     if (Layout.isWide(context)) {
       final scheme = Theme.of(context).colorScheme;

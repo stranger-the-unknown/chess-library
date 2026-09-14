@@ -6,4 +6,4 @@ Android ve Windows için ilk yayın.
 - Kendi bulmaca listeleriniz: FEN yapıştırın ya da metin dosyası alın
 - Kendi eklediğiniz, kurallara göre denetlenen açılış varyantları
 - Altı taş takımı, on iki tahta görünümü
-- Türkçe, İngilizce, İspanyolca, Almanca ve Fransızca
+- Türkçe ve İngilizce
