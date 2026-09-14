@@ -1,14 +1,12 @@
 import 'dart:ui' show PlatformDispatcher;
 
-import 'app_strings_de.dart';
-import 'app_strings_es.dart';
-import 'app_strings_fr.dart';
+import 'package:flutter/foundation.dart' show visibleForTesting;
 
 /// Uygulamanın desteklediği diller.
 ///
 /// Sıra kalıcıdır: tercih [SettingsService] içinde sıra numarası olarak
 /// saklandığı için yeni diller yalnızca sona eklenmelidir.
-enum AppLanguage { system, turkish, english, spanish, german, french }
+enum AppLanguage { system, turkish, english }
 
 /// Basit, bağımlılıksız yerelleştirme.
 ///
@@ -28,9 +26,6 @@ class Strings {
   static const Map<String, Map<String, String>> _tables = {
     'tr': _tr,
     'en': _en,
-    'es': esStrings,
-    'de': deStrings,
-    'fr': frStrings,
   };
 
   /// Etkin dil kodu.
@@ -43,12 +38,6 @@ class Strings {
         return 'tr';
       case AppLanguage.english:
         return 'en';
-      case AppLanguage.spanish:
-        return 'es';
-      case AppLanguage.german:
-        return 'de';
-      case AppLanguage.french:
-        return 'fr';
       case AppLanguage.system:
         final device = PlatformDispatcher.instance.locale.languageCode;
         return _tables.containsKey(device) ? device : 'en';
@@ -56,6 +45,16 @@ class Strings {
   }
 
   static bool get isTurkish => code == 'tr';
+
+  /// Bir dilin anahtar kümesi (yalnızca testler için).
+  @visibleForTesting
+  static Set<String> debugKeys(String code) =>
+      (_tables[code] ?? const <String, String>{}).keys.toSet();
+
+  /// Bir dildeki ham metin (yalnızca testler için).
+  @visibleForTesting
+  static String debugValue(String code, String key) =>
+      _tables[code]?[key] ?? '';
 
   static String get(String key, [Map<String, Object?>? args]) {
     // Bir dilde eksik anahtar olursa İngilizceye düşülür; hiçbir ekranda
@@ -73,6 +72,17 @@ class Strings {
   // -------------------------------------------------------------------------
 
   static const Map<String, String> _tr = {
+    'openings.noValidMove': 'Geçerli hamle bulunamadı.',
+    'openings.editVariation': 'Varyantı düzenle',
+    'openings.edited': 'Varyant güncellendi.',
+    'openings.importFile': 'Metin dosyasından al',
+    'openings.exportFile': 'Metin dosyası olarak ver',
+    'openings.importing': 'Varyantlar ekleniyor...',
+    'openings.imported': '{count} varyant eklendi.',
+    'openings.exported': '{count} varyant dosyaya yazıldı.',
+    'openings.exportEmpty': 'Verilecek varyant yok.',
+    'common.deleteNote': 'Notu sil',
+    'common.noteDeleted': 'Not silindi.',
     // Genel
     // Ürün adı çevrilmez: uygulama simgesinin etiketi ve pencere
     // başlığı da 'Chess Library'. Yalnızca alt başlık dile uyar.
@@ -412,10 +422,6 @@ class Strings {
     'openings.variationHint': 'örn. Breyer Varyantı',
     'openings.moves': 'Hamleler (SAN veya PGN)',
     'openings.movesHint': '1. e4 e5 2. Nf3 Nc6 3. Bb5 a6',
-    'openings.addOwnHint':
-        'Kitaptaki varyantları buraya yazarak kendi çalışma listeni '
-            'oluşturabilirsin. Hamleler kurallara göre doğrulanır.',
-    'openings.noValidMove': 'Geçerli hamle bulunamadı.',
     'openings.added': '{count} hamlelik varyant eklendi.',
     'openings.deleteVariation': 'Varyantı sil',
     'openings.deleteMessage': '"{name}" silinsin mi?',
@@ -453,9 +459,6 @@ class Strings {
     'settings.languageSystem': 'Sistem dili',
     'settings.languageTurkish': 'Türkçe',
     'settings.languageEnglish': 'İngilizce',
-    'settings.languageSpanish': 'İspanyolca',
-    'settings.languageGerman': 'Almanca',
-    'settings.languageFrench': 'Fransızca',
     'settings.boardTheme': 'Tahta görünümü',
     'settings.pieceSet': 'Taş takımı',
     'settings.coordinates': 'Kare adlarını göster',
@@ -467,9 +470,6 @@ class Strings {
     'settings.evalBarSub': 'Analiz açıkken tahtanın yanında',
     'settings.soundSection': 'Ses ve dokunma',
     'settings.sound': 'Hamle sesleri',
-    'settings.haptics': 'Titreşim',
-    'settings.engineSection': 'Motor',
-    'settings.defaultDifficulty': 'Varsayılan zorluk',
     'settings.about': 'Hakkında',
     'settings.aboutText':
         'Sürüm 2.0 · Motor tamamen cihazda çalışır, internet gerektirmez.',
@@ -490,6 +490,18 @@ class Strings {
   };
 
   static const Map<String, String> _en = {
+    'openings.noValidMove': 'No legal move was found.',
+    'openings.editVariation': 'Edit line',
+    'openings.edited': 'Line updated.',
+    'openings.importFile': 'Import from text file',
+    'openings.exportFile': 'Export as text file',
+    'openings.importing': 'Adding lines...',
+    'openings.imported': '{count} lines added.',
+    'openings.exported': 'Wrote {count} lines to the file.',
+    'openings.exportEmpty': 'There are no lines to export.',
+    'common.deleteNote': 'Delete note',
+    'common.noteDeleted': 'Note deleted.',
+    'editor.applyFen': 'Apply',
     'app.title': 'Chess Library',
     'app.subtitle': 'Read your games, solve puzzles, play the engine',
     'common.cancel': 'Cancel',
@@ -812,10 +824,6 @@ class Strings {
     'openings.variationHint': 'e.g. Breyer Variation',
     'openings.moves': 'Moves (SAN or PGN)',
     'openings.movesHint': '1. e4 e5 2. Nf3 Nc6 3. Bb5 a6',
-    'openings.addOwnHint':
-        'Type the lines from your book here to build your own study list. '
-            'Moves are validated against the rules.',
-    'openings.noValidMove': 'No legal move was found.',
     'openings.added': 'Added a {count}-move line.',
     'openings.deleteVariation': 'Delete line',
     'openings.deleteMessage': 'Delete "{name}"?',
@@ -851,9 +859,6 @@ class Strings {
     'settings.languageSystem': 'System language',
     'settings.languageTurkish': 'Turkish',
     'settings.languageEnglish': 'English',
-    'settings.languageSpanish': 'Spanish',
-    'settings.languageGerman': 'German',
-    'settings.languageFrench': 'French',
     'settings.boardTheme': 'Board style',
     'settings.pieceSet': 'Piece set',
     'settings.coordinates': 'Show square names',
@@ -865,9 +870,6 @@ class Strings {
     'settings.evalBarSub': 'Next to the board while analysis is on',
     'settings.soundSection': 'Sound and haptics',
     'settings.sound': 'Move sounds',
-    'settings.haptics': 'Vibration',
-    'settings.engineSection': 'Engine',
-    'settings.defaultDifficulty': 'Default difficulty',
     'settings.about': 'About',
     'settings.aboutText':
         'Version 2.0 · The engine runs entirely on your device, no internet '

@@ -1,26 +1,32 @@
 import 'package:flutter/material.dart';
 
 import '../models/chess_engine.dart' as engine;
+import '../services/settings_service.dart';
 import 'piece_widget.dart';
 
-/// Bulmaca listelerinde kullanılan küçük, etkileşimsiz tahta önizlemesi.
+/// Bulmaca ve oyun listelerinde kullanılan küçük, etkileşimsiz tahta.
 ///
-/// Liste binlerce satır olabildiği için burada tahta görseli yerine iki
-/// renkli kareler çizilir; bu, kaydırmayı belirgin biçimde hızlandırır.
+/// Kareler görsel yerine doğrudan çizilir: liste binlerce satır olabilir
+/// ve her satırda bir görsel çözmek kaydırmayı belirgin biçimde yavaşlatır.
+///
+/// Renkler **seçili tahtadan**, taşlar **seçili takımdan** gelir; böylece
+/// önizleme oyun tahtasıyla aynı görünür. Ahşap tahtalarda dokunun yerine
+/// o tahtanın temsilî iki rengi kullanılır.
 class MiniBoard extends StatelessWidget {
   final String fen;
   final double size;
   final bool flipped;
+
+  /// Belirtilmezse ayarlardaki tahta kullanılır.
+  final String? boardTheme;
 
   const MiniBoard({
     super.key,
     required this.fen,
     this.size = 64,
     this.flipped = false,
+    this.boardTheme,
   });
-
-  static const Color _light = Color(0xFFEBD3AE);
-  static const Color _dark = Color(0xFFB07E58);
 
   @override
   Widget build(BuildContext context) {
@@ -31,6 +37,9 @@ class MiniBoard extends StatelessWidget {
       game = null;
     }
 
+    final theme = boardTheme ?? SettingsService.instance.boardTheme;
+    final (light, dark) = BoardAssets.squareColors(theme);
+
     final square = size / 8;
     return ClipRRect(
       borderRadius: BorderRadius.circular(6),
@@ -39,7 +48,10 @@ class MiniBoard extends StatelessWidget {
         height: size,
         child: Stack(
           children: [
-            CustomPaint(size: Size(size, size), painter: _MiniSquaresPainter()),
+            CustomPaint(
+              size: Size(size, size),
+              painter: _MiniSquaresPainter(Color(light), Color(dark)),
+            ),
             if (game != null)
               for (int i = 0; i < 64; i++)
                 if (game.board[i] != null)
@@ -58,15 +70,26 @@ class MiniBoard extends StatelessWidget {
 }
 
 class _MiniSquaresPainter extends CustomPainter {
+  final Color light;
+  final Color dark;
+
+  const _MiniSquaresPainter(this.light, this.dark);
+
   @override
   void paint(Canvas canvas, Size size) {
-    final square = size.width / 8;
+    final cellW = size.width / 8;
+    final cellH = size.height / 8;
     final paint = Paint();
     for (int row = 0; row < 8; row++) {
       for (int col = 0; col < 8; col++) {
-        paint.color = (row + col) % 2 == 0 ? MiniBoard._light : MiniBoard._dark;
+        paint.color = (row + col) % 2 == 0 ? light : dark;
         canvas.drawRect(
-          Rect.fromLTWH(col * square, row * square, square, square),
+          Rect.fromLTRB(
+            col * cellW,
+            row * cellH,
+            (col + 1) * cellW,
+            (row + 1) * cellH,
+          ),
           paint,
         );
       }
@@ -74,5 +97,6 @@ class _MiniSquaresPainter extends CustomPainter {
   }
 
   @override
-  bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
+  bool shouldRepaint(covariant _MiniSquaresPainter oldDelegate) =>
+      oldDelegate.light != light || oldDelegate.dark != dark;
 }

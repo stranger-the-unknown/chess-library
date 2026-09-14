@@ -103,12 +103,14 @@ class PuzzleService {
   Future<PuzzleCollection> createCollection(
     String name, {
     String? description,
+    bool isEndgame = false,
   }) async {
     final all = await collections();
     final collection = PuzzleCollection(
       id: 'u_${DateTime.now().microsecondsSinceEpoch}',
       name: name,
       description: description,
+      isEndgame: isEndgame,
     );
     all.add(collection);
     await _saveCollections();
@@ -473,10 +475,59 @@ class PuzzleService {
   Future<void> markSolved(String puzzleId, {bool solved = true}) async {
     final progress = await _loadProgress();
     final entry = progress.putIfAbsent(puzzleId, PuzzleProgress.new);
+    final now = DateTime.now();
     entry
       ..solved = solved
-      ..lastAttempt = DateTime.now();
+      ..lastAttempt = now
+      // Çözüldü işareti kalkarsa tarih de silinir; yoksa "bugün çözülen"
+      // sayısı çözülmemiş bir bulmacayı saymaya devam ederdi.
+      ..solvedAt = solved ? now : null;
     await _saveProgress();
+  }
+
+  /// Listenin oyun sonu işaretini değiştirir.
+  Future<void> setEndgame(String collectionId, bool value) async {
+    final all = await collections();
+    final index = all.indexWhere((c) => c.id == collectionId);
+    if (index == -1) return;
+    all[index].isEndgame = value;
+    await _saveCollections();
+  }
+
+  /// Verilen bulmacaları toplu olarak çözüldü/çözülmedi işaretler.
+  ///
+  /// Aralık işaretlemede tek tek `markSolved` çağırmak her seferinde
+  /// diske yazardı; burada tek yazma yapılır.
+  Future<int> markManySolved(
+    Iterable<String> puzzleIds, {
+    required bool solved,
+  }) async {
+    final progress = await _loadProgress();
+    final now = DateTime.now();
+    int changed = 0;
+    for (final id in puzzleIds) {
+      final entry = progress.putIfAbsent(id, PuzzleProgress.new);
+      if (entry.solved == solved) continue;
+      entry
+        ..solved = solved
+        ..lastAttempt = now
+        ..solvedAt = solved ? now : null;
+      changed++;
+    }
+    if (changed > 0) await _saveProgress();
+    return changed;
+  }
+
+  /// Bir listede **bugün** (yerel 00:00'dan beri) çözülen bulmaca sayısı.
+  Future<int> solvedToday(PuzzleCollection collection) async {
+    final puzzles = await puzzlesOf(collection);
+    final progress = await _loadProgress();
+    final today = DateTime.now();
+    int count = 0;
+    for (final puzzle in puzzles) {
+      if (progress[puzzle.id]?.solvedOn(today) == true) count++;
+    }
+    return count;
   }
 
   Future<void> registerAttempt(String puzzleId) async {

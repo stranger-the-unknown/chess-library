@@ -13,6 +13,7 @@ import '../services/settings_service.dart';
 import '../widgets/app_dialogs.dart';
 import '../widgets/piece_widget.dart';
 import '../widgets/cursors.dart';
+import '../widgets/board_background.dart';
 
 /// Pozisyon düzenleyici.
 ///
@@ -333,14 +334,13 @@ class _BoardEditorScreenState extends State<BoardEditorScreen> {
                   borderRadius: BorderRadius.circular(10),
                   child: Stack(
                     children: [
+                      // Ortak zemin bileşeni: düz tahtalar çizilir, ahşap
+                      // olanlar görselden gelir. Buraya doğrudan
+                      // `Image.asset` yazmak, görsel dosyası olmayan düz
+                      // tahtalarda tahtayı görünmez bırakıyordu.
                       Positioned.fill(
-                        child: Image.asset(
-                          BoardAssets.boardPath(
-                            SettingsService.instance.boardTheme,
-                          ),
-                          fit: BoxFit.fill,
-                          errorBuilder: (context, error, stack) =>
-                              ColoredBox(color: scheme.surfaceContainerHigh),
+                        child: BoardBackground(
+                          board: SettingsService.instance.boardTheme,
                         ),
                       ),
                       for (int i = 0; i < 64; i++)

@@ -25,7 +25,6 @@ class SettingsService extends ChangeNotifier {
 
   // Davranış
   bool _soundEnabled = true;
-  bool _hapticsEnabled = true;
   bool _confirmMoves = false;
   int _engineLevel = 2;
   bool _showEvaluationBar = true;
@@ -39,7 +38,6 @@ class SettingsService extends ChangeNotifier {
   bool get highlightLastMove => _highlightLastMove;
   bool get animateMoves => _animateMoves;
   bool get soundEnabled => _soundEnabled;
-  bool get hapticsEnabled => _hapticsEnabled;
   bool get confirmMoves => _confirmMoves;
   int get engineLevel => _engineLevel;
   bool get showEvaluationBar => _showEvaluationBar;
@@ -71,7 +69,6 @@ class SettingsService extends ChangeNotifier {
         prefs.getBool('highlightLastMove') ?? _highlightLastMove;
     _animateMoves = prefs.getBool('animateMoves') ?? _animateMoves;
     _soundEnabled = prefs.getBool('soundEnabled') ?? _soundEnabled;
-    _hapticsEnabled = prefs.getBool('hapticsEnabled') ?? _hapticsEnabled;
     _confirmMoves = prefs.getBool('confirmMoves') ?? _confirmMoves;
     _engineLevel = prefs.getInt('engineLevel') ?? _engineLevel;
     _showEvaluationBar =
@@ -139,12 +136,6 @@ class SettingsService extends ChangeNotifier {
   set soundEnabled(bool value) {
     _soundEnabled = value;
     _set('soundEnabled', value);
-    notifyListeners();
-  }
-
-  set hapticsEnabled(bool value) {
-    _hapticsEnabled = value;
-    _set('hapticsEnabled', value);
     notifyListeners();
   }
 
@@ -294,60 +285,9 @@ class BoardAssets {
     'marble': 'Marble',
   };
 
-  static const Map<String, String> _labelsEs = {
-    'purple': 'Morado',
-    'ivory': 'Marfil',
-    'walnut': 'Nogal',
-    'oak': 'Roble',
-    'dark_wood': 'Madera oscura',
-    'brown': 'Marrón',
-    'tournament': 'Torneo',
-    'green': 'Verde',
-    'blue': 'Azul',
-    'gray': 'Gris',
-    'slate': 'Pizarra',
-    'sand': 'Arena',
-    'marble': 'Mármol',
-  };
-
-  static const Map<String, String> _labelsDe = {
-    'purple': 'Violett',
-    'ivory': 'Elfenbein',
-    'walnut': 'Nussbaum',
-    'oak': 'Eiche',
-    'dark_wood': 'Dunkles Holz',
-    'brown': 'Braun',
-    'tournament': 'Turnier',
-    'green': 'Grün',
-    'blue': 'Blau',
-    'gray': 'Grau',
-    'slate': 'Schiefer',
-    'sand': 'Sand',
-    'marble': 'Marmor',
-  };
-
-  static const Map<String, String> _labelsFr = {
-    'purple': 'Violet',
-    'ivory': 'Ivoire',
-    'walnut': 'Noyer',
-    'oak': 'Chêne',
-    'dark_wood': 'Bois foncé',
-    'brown': 'Brun',
-    'tournament': 'Tournoi',
-    'green': 'Vert',
-    'blue': 'Bleu',
-    'gray': 'Gris',
-    'slate': 'Ardoise',
-    'sand': 'Sable',
-    'marble': 'Marbre',
-  };
-
   static const Map<String, Map<String, String>> _labelTables = {
     'tr': _labels,
     'en': _labelsEn,
-    'es': _labelsEs,
-    'de': _labelsDe,
-    'fr': _labelsFr,
   };
 
   /// Taş takımı adları özel isimdir; hiçbir dilde çevrilmez.

@@ -5,7 +5,6 @@ import '../widgets/responsive.dart';
 
 import '../l10n/app_strings.dart';
 import '../models/chess_engine.dart' as engine;
-import '../services/engine/engine_service.dart';
 import '../services/settings_service.dart';
 import '../widgets/piece_widget.dart';
 import '../widgets/cursors.dart';
@@ -74,9 +73,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   subtitle: Text(switch (_settings.language) {
                     AppLanguage.turkish => t('settings.languageTurkish'),
                     AppLanguage.english => t('settings.languageEnglish'),
-                    AppLanguage.spanish => t('settings.languageSpanish'),
-                    AppLanguage.german => t('settings.languageGerman'),
-                    AppLanguage.french => t('settings.languageFrench'),
                     AppLanguage.system => t('settings.languageSystem'),
                   }),
                   trailing: const Icon(Icons.chevron_right_rounded),
@@ -167,26 +163,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   value: _settings.soundEnabled,
                   onChanged: (value) => _settings.soundEnabled = value,
                 ),
-                SwitchListTile(
-                  secondary: const Icon(Icons.vibration_rounded),
-                  title: Text(t('settings.haptics')),
-                  value: _settings.hapticsEnabled,
-                  onChanged: (value) => _settings.hapticsEnabled = value,
-                ),
-              ]),
-              const SizedBox(height: 16),
-              _section(t('settings.engineSection')),
-              _card([
-                ListTile(
-                  leading: const Icon(Icons.memory_rounded),
-                  title: Text(t('settings.defaultDifficulty')),
-                  subtitle: Text(
-                    '${EngineLevel.all[_settings.engineLevel].name} · '
-                    '~${EngineLevel.all[_settings.engineLevel].approximateElo} Elo',
-                  ),
-                  trailing: const Icon(Icons.chevron_right_rounded),
-                  onTap: _pickLevel,
-                ),
               ]),
               const SizedBox(height: 16),
               _section(t('settings.about')),
@@ -248,9 +224,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 (AppLanguage.system, 'settings.languageSystem'),
                 (AppLanguage.turkish, 'settings.languageTurkish'),
                 (AppLanguage.english, 'settings.languageEnglish'),
-                (AppLanguage.spanish, 'settings.languageSpanish'),
-                (AppLanguage.german, 'settings.languageGerman'),
-                (AppLanguage.french, 'settings.languageFrench'),
               ])
                 ListTile(
                   leading: Icon(
@@ -434,40 +407,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
               );
             },
           ),
-        ),
-      ),
-    );
-    if (mounted) setState(() {});
-  }
-
-  Future<void> _pickLevel() async {
-    await showModalBottomSheet<void>(
-      context: context,
-      builder: (sheetContext) => StatefulBuilder(
-        builder: (context, setSheetState) => ListView(
-          shrinkWrap: true,
-          padding: const EdgeInsets.symmetric(vertical: 12),
-          children: [
-            for (int i = 0; i < EngineLevel.all.length; i++)
-              ListTile(
-                leading: Icon(
-                  _settings.engineLevel == i
-                      ? Icons.radio_button_checked_rounded
-                      : Icons.radio_button_unchecked_rounded,
-                  color: _settings.engineLevel == i
-                      ? Theme.of(context).colorScheme.primary
-                      : Theme.of(context).colorScheme.onSurfaceVariant,
-                ),
-                title: Text(
-                  '${EngineLevel.all[i].name} · ~${EngineLevel.all[i].approximateElo} Elo',
-                ),
-                subtitle: Text(EngineLevel.all[i].description),
-                onTap: () {
-                  _settings.engineLevel = i;
-                  setSheetState(() {});
-                },
-              ),
-          ],
         ),
       ),
     );

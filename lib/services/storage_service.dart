@@ -147,6 +147,43 @@ class StorageService extends ChangeNotifier {
     await _save();
   }
 
+  /// Bir oyunun favori durumunu değiştirir; yeni durumu döner.
+  Future<bool> toggleGameFavorite(String playlistId, String gameId) async {
+    final playlists = await loadPlaylists();
+    final index = playlists.indexWhere((p) => p.id == playlistId);
+    if (index == -1) return false;
+    final games = playlists[index].games;
+    final gameIndex = games.indexWhere((g) => g.id == gameId);
+    if (gameIndex == -1) return false;
+    games[gameIndex].favorite = !games[gameIndex].favorite;
+    await _save();
+    return games[gameIndex].favorite;
+  }
+
+  /// Verilen oyunları toplu olarak okundu/okunmadı işaretler.
+  ///
+  /// Aralık işaretlemede tek tek çağırmak her seferinde tüm listeleri
+  /// yeniden kodlayıp diske yazardı; burada tek yazma yapılır.
+  Future<int> markManyRead(
+    String playlistId,
+    Iterable<String> gameIds, {
+    required bool read,
+  }) async {
+    final playlists = await loadPlaylists();
+    final index = playlists.indexWhere((p) => p.id == playlistId);
+    if (index == -1) return 0;
+    final wanted = gameIds.toSet();
+    int changed = 0;
+    for (final game in playlists[index].games) {
+      if (!wanted.contains(game.id)) continue;
+      if (game.read == read) continue;
+      game.read = read;
+      changed++;
+    }
+    if (changed > 0) await _save();
+    return changed;
+  }
+
   Future<void> deleteGame(String playlistId, String gameId) async {
     final playlists = await loadPlaylists();
     final index = playlists.indexWhere((p) => p.id == playlistId);

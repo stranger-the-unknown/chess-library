@@ -48,32 +48,33 @@ class SoundService {
     tenSeconds,
   ];
 
-  final Map<String, AudioPlayer> _players = {};
+  /// Her ses kendi hazırlık Future'ını taşır.
+  ///
+  /// Eskiden on iki dosya sırayla yükleniyor ve "hazır" bayrağı ancak
+  /// hepsi bitince kalkıyordu; uygulamanın ilk açılışında ilk hamle bu
+  /// pencereye denk geldiğinde ses duyulmuyordu. Artık her ses bağımsız
+  /// hazırlanır ve `play()` yalnızca **kendi** dosyasını bekler, hepsini
+  /// değil. Aynı ses için ikinci bir yükleme de başlamaz.
+  final Map<String, Future<AudioPlayer?>> _players = {};
 
-  /// Yükleme bitene kadar bekleyenler bu Future'a bağlanır; böylece
-  /// hazırlık sırasında gelen ilk hamle sesi kaybolmaz ve aynı anda iki
-  /// yükleme başlamaz.
-  Future<void>? _loading;
-  bool _ready = false;
-
-  Future<void> init() {
-    if (_ready) return Future<void>.value();
-    return _loading ??= _load();
-  }
-
-  Future<void> _load() async {
-    for (final name in _names) {
+  Future<AudioPlayer?> _playerFor(String name) {
+    return _players.putIfAbsent(name, () async {
       try {
         final player = AudioPlayer();
         await player.setAsset('assets/sounds/$name.mp3');
-        _players[name] = player;
+        return player;
       } catch (_) {
-        // Ses dosyası yüklenemezse uygulama sessiz çalışmaya devam eder.
+        // Ses dosyası yüklenemezse o ses sessiz kalır, uygulama sürer.
+        return null;
       }
-    }
-    _ready = true;
-    _loading = null;
+    });
   }
+
+  /// Bütün sesleri önceden hazırlar (uygulama açılışında çağrılır).
+  ///
+  /// Paralel yüklenir: sırayla yüklemek ilk hamleye kadar geçen süreyi
+  /// gereksiz yere uzatıyordu.
+  Future<void> init() => Future.wait(_names.map(_playerFor));
 
   /// Testler için: çalınan her sesin adını bildirir.
   ///
@@ -85,16 +86,20 @@ class SoundService {
   Future<void> play(String name) async {
     if (!SettingsService.instance.soundEnabled) return;
     debugOnPlay?.call(name);
-    if (!_ready) {
-      await init();
-      // Yükleme uzun sürdüyse ses artık güncel değildir; yine de çal.
-    }
-    final player = _players[name];
+
+    // Yalnızca bu sesin hazır olmasını bekler; diğerleri hâlâ
+    // yükleniyor olabilir.
+    final player = await _playerFor(name);
     if (player == null) return;
+
     try {
-      // Aynı ses üst üste gelirse baştan başlat.
+      // Başa sarma yalnızca gerektiğinde yapılır. Yeni yüklenmiş bir
+      // oynatıcı zaten başta durur; oradaki gereksiz `seek` bazı
+      // platformlarda ilk çalmayı yutuyordu.
       if (player.playing) await player.pause();
-      await player.seek(Duration.zero);
+      if (player.position > Duration.zero) {
+        await player.seek(Duration.zero);
+      }
       unawaited(player.play());
     } catch (_) {
       // Oynatma hatası oyun akışını bölmemeli.
@@ -106,7 +111,6 @@ class SoundService {
   }
 
   void _vibrate({bool strong = false}) {
-    if (!SettingsService.instance.hapticsEnabled) return;
     if (strong) {
       HapticFeedback.mediumImpact();
     } else {
@@ -200,11 +204,17 @@ class SoundService {
   /// Süre uyarısı (zamanlı bulmaca modu).
   void playTenSeconds() => play(tenSeconds);
 
-  void dispose() {
-    for (final player in _players.values) {
-      player.dispose();
-    }
+  Future<void> dispose() async {
+    // Hazırlığı süren oynatıcılar da kapatılmalı; yoksa yükleme bitince
+    // ortada sahipsiz bir oynatıcı kalır.
+    final pending = _players.values.toList();
     _players.clear();
-    _ready = false;
+    for (final future in pending) {
+      try {
+        (await future)?.dispose();
+      } catch (_) {
+        // Kapatma hatası önemsiz.
+      }
+    }
   }
 }

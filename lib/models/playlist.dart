@@ -16,6 +16,9 @@ class SavedGame {
   /// Kullanıcı bu oyunu okuduğunu/çalıştığını işaretledi mi?
   bool read;
 
+  /// Favorilere eklendi mi?
+  bool favorite;
+
   SavedGame({
     String? id,
     required this.name,
@@ -27,6 +30,7 @@ class SavedGame {
     this.black,
     this.note,
     this.read = false,
+    this.favorite = false,
   }) : id = id ?? 'g_${DateTime.now().microsecondsSinceEpoch}';
 
   int get moveCount => uciMoves.length;
@@ -42,6 +46,7 @@ class SavedGame {
         if (black != null) 'black': black,
         if (note != null) 'note': note,
         if (read) 'read': true,
+        if (favorite) 'favorite': true,
       };
 
   factory SavedGame.fromJson(Map<String, dynamic> json) => SavedGame(
@@ -56,6 +61,7 @@ class SavedGame {
         black: json['black'] as String?,
         note: json['note'] as String?,
         read: json['read'] as bool? ?? false,
+        favorite: json['favorite'] as bool? ?? false,
       );
 }
 

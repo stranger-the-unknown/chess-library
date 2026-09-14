@@ -37,6 +37,15 @@ class Puzzle {
 
   bool get hasSolution => solution.isNotEmpty;
 
+  /// Oyun sonu bulmacalarında hedef: kazanç mı, beraberlik mi?
+  ///
+  /// Etiketlerden okunur; hem Türkçe hem İngilizce yazım tanınır.
+  bool get marksWhiteWin =>
+      tags.contains('beyaz-kazanir') || tags.contains('white-wins');
+  bool get marksDraw => tags.contains('beraberlik') || tags.contains('draw');
+  bool get marksBlackWin =>
+      tags.contains('siyah-kazanir') || tags.contains('black-wins');
+
   /// Çözümün kaç hamlede mat ettiği (yarım hamle sayısından).
   int get mateInMoves => (solution.length + 1) ~/ 2;
 
@@ -69,6 +78,15 @@ class Puzzle {
       'savunma': 'tag.defence',
       'az-tas': 'tag.fewPieces',
       'gecerken-alma': 'tag.enPassant',
+      // Oyun sonu listelerinde hedefi belirten etiketler. Hem Türkçe hem
+      // İngilizce yazım kabul edilir ki elle hazırlanan dosyalarda
+      // kullanıcı hangisini yazarsa yazsın tanınsın.
+      'beyaz-kazanir': 'tag.whiteWins',
+      'white-wins': 'tag.whiteWins',
+      'beraberlik': 'tag.draw',
+      'draw': 'tag.draw',
+      'siyah-kazanir': 'tag.blackWins',
+      'black-wins': 'tag.blackWins',
     };
     final key = known[tag];
     return key == null ? tag : t(key);
@@ -157,20 +175,35 @@ class PuzzleProgress {
   int attempts;
   DateTime? lastAttempt;
 
+  /// Bulmacanın **çözüldü** olarak işaretlendiği an.
+  ///
+  /// [lastAttempt] her denemede güncellendiği için "bugün kaç tane
+  /// çözdüm" sorusuna cevap veremez; bunun için ayrı tutulur.
+  DateTime? solvedAt;
+
   PuzzleProgress({
     this.solved = false,
     this.favorite = false,
     this.attempts = 0,
     this.lastAttempt,
+    this.solvedAt,
   });
 
   bool get isEmpty => !solved && !favorite && attempts == 0;
+
+  /// Verilen günün yerel 00:00'ından sonra mı çözüldü?
+  bool solvedOn(DateTime day) {
+    final at = solvedAt;
+    if (!solved || at == null) return false;
+    return at.year == day.year && at.month == day.month && at.day == day.day;
+  }
 
   Map<String, dynamic> toJson() => {
         's': solved,
         'f': favorite,
         'a': attempts,
         if (lastAttempt != null) 'd': lastAttempt!.millisecondsSinceEpoch,
+        if (solvedAt != null) 'sd': solvedAt!.millisecondsSinceEpoch,
       };
 
   factory PuzzleProgress.fromJson(Map<String, dynamic> json) => PuzzleProgress(
@@ -180,6 +213,9 @@ class PuzzleProgress {
         lastAttempt: json['d'] == null
             ? null
             : DateTime.fromMillisecondsSinceEpoch(json['d'] as int),
+        solvedAt: json['sd'] == null
+            ? null
+            : DateTime.fromMillisecondsSinceEpoch(json['sd'] as int),
       );
 }
 
@@ -197,6 +233,14 @@ class PuzzleCollection {
   /// Hazır listelerde varlık dosyasının yolu, kullanıcı listelerinde `null`.
   final String? assetPath;
 
+  /// Bu liste oyun sonu bulmacalarından mı oluşuyor?
+  ///
+  /// İşaretliyse listede "beyaz kazanır / beraberlik / siyah kazanır"
+  /// süzgeçleri görünür. Oyun sonlarında hedefin kazanç mı beraberlik mi
+  /// olduğu pozisyondan anlaşılmadığı için bu ayrım işe yarar; diğer
+  /// listelerde yer kaplamasın diye gizlenir.
+  bool isEndgame;
+
   bool get isBuiltIn => assetPath != null;
 
   /// Yalnızca kullanıcı listelerinde dolu olur.
@@ -207,6 +251,7 @@ class PuzzleCollection {
     required this.name,
     this.description,
     this.assetPath,
+    this.isEndgame = false,
     List<Puzzle>? puzzles,
   }) : puzzles = puzzles ?? <Puzzle>[];
 
@@ -215,6 +260,7 @@ class PuzzleCollection {
         'name': name,
         if (description != null) 'description': description,
         if (assetPath != null) 'asset': assetPath,
+        if (isEndgame) 'endgame': true,
         'puzzles': puzzles.map((p) => p.toJson()).toList(),
       };
 
@@ -224,6 +270,7 @@ class PuzzleCollection {
         name: json['name'] as String,
         description: json['description'] as String?,
         assetPath: json['asset'] as String?,
+        isEndgame: json['endgame'] as bool? ?? false,
         puzzles: (json['puzzles'] as List? ?? [])
             .map((e) => Puzzle.fromJson(Map<String, dynamic>.from(e as Map)))
             .toList(),

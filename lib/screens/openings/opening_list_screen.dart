@@ -8,6 +8,8 @@ import '../../services/opening_service.dart';
 import '../../theme/app_theme.dart';
 import '../../widgets/app_dialogs.dart';
 import 'opening_study_screen.dart';
+import 'package:flutter/services.dart';
+import '../../services/text_file_service.dart';
 
 /// Açılış kütüphanesi: aileye göre gruplanmış varyantlar.
 class OpeningListScreen extends StatefulWidget {
@@ -80,15 +82,27 @@ class _OpeningListScreenState extends State<OpeningListScreen> {
     await _load();
   }
 
-  Future<void> _addOwn() async {
-    final familyController = TextEditingController();
-    final nameController = TextEditingController();
-    final movesController = TextEditingController();
+  Future<void> _addOwn() => _openEditor();
+
+  /// Varyant ekleme ve düzenleme aynı formu kullanır.
+  ///
+  /// [existing] verildiğinde alanlar dolu gelir ve kaydetme düzenleme
+  /// yapar; verilmediğinde yeni varyant eklenir.
+  Future<void> _openEditor({Opening? existing}) async {
+    final editing = existing != null;
+    final familyController =
+        TextEditingController(text: existing?.family ?? '');
+    final nameController =
+        TextEditingController(text: existing?.variation ?? '');
+    final movesController =
+        TextEditingController(text: existing?.sanMoves.join(' ') ?? '');
 
     final saved = await showDialog<bool>(
       context: context,
       builder: (dialogContext) => AlertDialog(
-        title: Text(t('openings.addOwn')),
+        title: Text(
+          editing ? t('openings.editVariation') : t('openings.addOwn'),
+        ),
         content: SingleChildScrollView(
           child: Column(
             mainAxisSize: MainAxisSize.min,
@@ -119,11 +133,6 @@ class _OpeningListScreenState extends State<OpeningListScreen> {
                   hintText: t('openings.movesHint'),
                 ),
               ),
-              const SizedBox(height: 8),
-              Text(
-                t('openings.addOwnHint'),
-                style: const TextStyle(fontSize: 11.5),
-              ),
             ],
           ),
         ),
@@ -134,13 +143,30 @@ class _OpeningListScreenState extends State<OpeningListScreen> {
           ),
           ElevatedButton(
             onPressed: () => Navigator.pop(dialogContext, true),
-            child: Text(t('common.add')),
+            child: Text(editing ? t('common.save') : t('common.add')),
           ),
         ],
       ),
     );
 
     if (saved != true || !mounted) return;
+
+    if (editing) {
+      final ok = await _service.editCustom(
+        id: existing.id,
+        family: familyController.text.trim(),
+        variation: nameController.text.trim(),
+        moveText: movesController.text,
+      );
+      if (!mounted) return;
+      if (!ok) {
+        AppDialogs.snack(context, t('openings.noValidMove'));
+        return;
+      }
+      await _load();
+      if (mounted) AppDialogs.snack(context, t('openings.edited'));
+      return;
+    }
 
     final opening = await _service.addFromSan(
       family: familyController.text.trim(),
@@ -159,6 +185,49 @@ class _OpeningListScreenState extends State<OpeningListScreen> {
         t('openings.added', {'count': opening.sanMoves.length}),
       );
     }
+  }
+
+  Future<void> _importFromFile() async {
+    final picked = await TextFileService.pick();
+    if (picked == null) {
+      if (mounted) AppDialogs.snack(context, t('puzzles.fileEmpty'));
+      return;
+    }
+    if (!mounted) return;
+    final added = await AppDialogs.runWithProgress<int>(
+      context,
+      message: t('openings.importing'),
+      task: (report) => _service.importText(
+        picked.content,
+        onProgress: (done, total) => report(total == 0 ? 0 : done / total),
+      ),
+    );
+    await _load();
+    if (mounted) {
+      AppDialogs.snack(context, t('openings.imported', {'count': added}));
+    }
+  }
+
+  Future<void> _exportToFile() async {
+    if (_all.isEmpty) {
+      AppDialogs.snack(context, t('openings.exportEmpty'));
+      return;
+    }
+    final text = await _service.exportText();
+    if (!mounted) return;
+    String? path;
+    try {
+      path = await TextFileService.save(t('openings.title'), text);
+    } catch (_) {
+      path = null;
+    }
+    if (!mounted) return;
+    if (path == null) {
+      await Clipboard.setData(ClipboardData(text: text));
+      if (mounted) AppDialogs.snack(context, t('puzzles.exportFallback'));
+      return;
+    }
+    AppDialogs.snack(context, t('openings.exported', {'count': _all.length}));
   }
 
   Future<void> _deleteCustom(Opening opening) async {
@@ -200,6 +269,28 @@ class _OpeningListScreenState extends State<OpeningListScreen> {
             tooltip: t('openings.addOwn'),
             icon: const Icon(Icons.add_rounded),
             onPressed: _addOwn,
+          ),
+          PopupMenuButton<String>(
+            onSelected: (value) {
+              if (value == 'import') _importFromFile();
+              if (value == 'export') _exportToFile();
+            },
+            itemBuilder: (context) => [
+              PopupMenuItem(
+                value: 'import',
+                child: ListTile(
+                  leading: const Icon(Icons.file_open_outlined),
+                  title: Text(t('openings.importFile')),
+                ),
+              ),
+              PopupMenuItem(
+                value: 'export',
+                child: ListTile(
+                  leading: const Icon(Icons.ios_share_rounded),
+                  title: Text(t('openings.exportFile')),
+                ),
+              ),
+            ],
           ),
         ],
         bottom: PreferredSize(
@@ -355,8 +446,6 @@ class _OpeningListScreenState extends State<OpeningListScreen> {
                 ListTile(
                   dense: true,
                   onTap: () => _open(opening),
-                  onLongPress:
-                      opening.custom ? () => _deleteCustom(opening) : null,
                   leading: Container(
                     padding: const EdgeInsets.symmetric(
                       horizontal: 7,
@@ -402,6 +491,33 @@ class _OpeningListScreenState extends State<OpeningListScreen> {
                           Icons.check_circle_rounded,
                           size: 16,
                           color: scheme.success,
+                        ),
+                      if (opening.custom)
+                        PopupMenuButton<String>(
+                          padding: EdgeInsets.zero,
+                          icon: const Icon(Icons.more_vert_rounded, size: 18),
+                          onSelected: (value) {
+                            if (value == 'edit') {
+                              _openEditor(existing: opening);
+                            }
+                            if (value == 'delete') _deleteCustom(opening);
+                          },
+                          itemBuilder: (context) => [
+                            PopupMenuItem(
+                              value: 'edit',
+                              child: ListTile(
+                                leading: const Icon(Icons.edit_outlined),
+                                title: Text(t('openings.editVariation')),
+                              ),
+                            ),
+                            PopupMenuItem(
+                              value: 'delete',
+                              child: ListTile(
+                                leading: const Icon(Icons.delete_outline),
+                                title: Text(t('openings.deleteVariation')),
+                              ),
+                            ),
+                          ],
                         ),
                     ],
                   ),
