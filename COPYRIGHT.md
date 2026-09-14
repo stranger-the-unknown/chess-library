@@ -38,8 +38,8 @@ AGPLv3+ lisanslı taş takımlarını da kapsayabilmektir.
 değiştirilmiş bir sürümü dağıtan kişi onu da AGPLv3 ile dağıtmak
 zorundadır.
 
-2.x ve 3.0.0 sürümleri MIT olarak yayımlanmıştı; o sürümleri alanların
-hakları değişmez. Lisans değişikliği 3.1.0 ve sonrası için geçerlidir.
+2.x sürümleri MIT olarak yayımlanmıştı; o sürümleri alanların hakları
+değişmez. Lisans değişikliği 3.0.0 ve sonrası için geçerlidir.
 
 ---
 
