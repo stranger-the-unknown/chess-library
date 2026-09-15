@@ -1,0 +1,30 @@
+Version 4.0.0
+
+Analysis
+- Batch analysis: pick games from a list, start a quick or deep analysis
+  and leave the phone. The screen stays on while it works, so it is best
+  done on charge.
+- Two new lists at the top: the last 100 deep analyses and the last 100
+  quick ones, newest first. They cannot be deleted or renamed.
+- Opening a saved analysis no longer re-runs the engine.
+- Marking an analysis read or favourite also marks the original game.
+
+Game lists
+- Both player names now fit on the card, and the date is shown when the
+  PGN has one.
+- "Game details" in the row menu: event, site, round, ECO.
+- Sorting can be reversed.
+- Number range filter: show only games in a given range.
+- The read count now appears on the list card.
+
+Fixes
+- The last row of a list could sit under the phone's navigation bar.
+- Marking one game as read could mark a different game; imported games
+  shared ids. Existing lists are repaired on startup.
+- App sounds stopped your music without letting it resume; they now mix.
+- Typing a single digit in search returned unrelated results.
+- Filters stay put instead of scrolling when they fit.
+
+Other
+- "Reset all data" in settings.
+- The window opens maximised on Windows.

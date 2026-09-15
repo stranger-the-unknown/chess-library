@@ -1,0 +1,31 @@
+Sürüm 4.0.0
+
+Analiz
+- Oyunları seçip toplu analiz: listeden istediklerini işaretle, hızlı ya
+  da derin analizi başlat ve telefonu bırak. Analiz sırasında ekran açık
+  kalıyor; şarjda yapmak iyi olur.
+- İki yeni liste en üstte: son 100 derin analiz ve son 100 hızlı analiz.
+  En yeni kayıt başta. Silinemez, yeniden adlandırılamaz.
+- Kaydedilmiş bir analizi açınca motor yeniden çalışmıyor.
+- Analiz kaydını okundu ya da favori yapmak asıl oyunu da işaretliyor.
+
+Oyun listeleri
+- Kartta iki oyuncunun adı da tam görünüyor ve PGN'de varsa tarih yazıyor.
+- Satır menüsünde "Oyun bilgileri": turnuva, yer, tur, ECO.
+- Sıralama tersine çevrilebiliyor.
+- Numara aralığı süzgeci: yalnızca belirli aralıktaki oyunlar.
+- Okunan sayısı artık listeye girmeden kartta görünüyor.
+
+Düzeltmeler
+- Listelerin son satırı telefonun gezinme çubuğunun altında kalmıyordu,
+  düzeldi.
+- Bir oyunu okundu işaretleyince listedeki başka bir oyun işaretlenebiliyordu;
+  kimlikler çakışıyordu. Mevcut listeler açılışta onarılıyor.
+- Uygulama sesi müziği durdurup geri döndürmüyordu; artık müziğin üstüne
+  karışıyor.
+- Aramaya tek haneli sayı yazınca alakasız sonuçlar çıkıyordu.
+- Süzgeçler ekrana sığdığında sabit duruyor, kaydırmak gerekmiyor.
+
+Diğer
+- Ayarlarda "tüm verileri sıfırla".
+- Windows'ta pencere büyütülmüş açılıyor.

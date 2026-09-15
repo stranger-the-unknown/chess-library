@@ -99,13 +99,25 @@ ilgili paket güncellenirse kaldırılabilirler.
   artımlı derleme önbelleğinin bozulmasına karşı eklendi. Sorun
   yaşamıyorsanız kaldırabilirsiniz.
 
-## Kod düzeni üzerine iki not
+## Kod düzeni üzerine notlar
 
 - Motor `lib/services/engine/` altında ve Flutter'dan bağımsız, saf
   Dart'tır; `engine_service.dart` onu bir `Isolate` içinde çalıştırır.
 - Masaüstü yerleşim sınırları tek yerde toplanmıştır:
   `lib/widgets/responsive.dart` (tahta en fazla 520, içerik en fazla 760,
   geniş pencere eşiği 900).
+- **Analiz kayıtları ayrı bir anahtarda** tutulur
+  (`analysis_lists_v1`). İki sebeple: yedeğe girmemeleri gerekiyor ve
+  "tüm verileri sıfırla" onları da götürmeli. Ayrı anahtar ikisini de
+  kendiliğinden sağlıyor. `StorageService.loadPlaylists()` yalnızca
+  kullanıcı listelerini döndürür; analiz listeleri `loadAnalysisLists()`
+  ile okunur, kimliğe göre arama `playlistById()` ile yapılır.
+- **Sürüm tek yerde**: `lib/services/settings_service.dart` içindeki
+  `appVersionName`. `pubspec.yaml`, kurulum betiği ve uygulama içindeki
+  "Hakkında" metni bununla karşılaştırılır ve `test/l10n_test.dart`
+  üçünün tutarlılığını zorunlu kılar.
+- **Ekran kilidi** yalnızca toplu analiz sürerken alınır ve her durumda
+  (`finally`) bırakılır. Bırakılmazsa ekran sonsuza kadar açık kalır.
 
 ---
 

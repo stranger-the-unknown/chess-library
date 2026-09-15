@@ -220,9 +220,47 @@ taşıma, silme.
 - Listedeki oyunlar numaralandırılır; arama numara (`#42`), oyun adı,
   oyuncu, sonuç ve not üzerinde çalışır.
 - **Okundu işareti**: tek tek, tümü birden ya da **numara aralığı vererek**
-  işaretleme; "okunmamış / okunan" süzgeci ve başlıkta okunma oranı.
+  işaretleme; "okunmamış / okunan" süzgeci. Okunan sayısı listeye girmeden
+  kartta görünür.
 - **Favoriler**: satırdaki yıldızla işaretlenir, kendi süzgeci vardır.
+- **Sıralama** başlıktaki okla tersine çevrilir; süzgeç değişince
+  varsayılana döner.
+- **Aralık göster**: listeyi belirli bir numara aralığına daraltır, üstteki
+  şeritten kapatılır.
+- Kartta iki oyuncunun adı da tam görünür; PGN'de tarih varsa yazılır (tam
+  tarih yoksa yalnızca yıl, yıl da yoksa hiçbir şey).
+- Satır menüsündeki **oyun bilgileri** PGN başlıklarını gösterir: turnuva,
+  yer, tur, ECO, derece.
 - Oyunlara not düşebilir, notu sonradan silebilirsin.
+
+### Toplu analiz
+
+Başlık menüsünden **analiz için oyun seç** dersen satırlar işaretlenebilir
+hâle gelir. İstediklerini seçip **hızlı** ya da **derin** analizi
+başlatırsın; oyunlar teker teker incelenir, sen başında beklemezsin.
+Analiz sürerken ekran açık kalır — şarjda yapmak iyi olur. İlerleme
+listeler sekmesinin üstünde görünür ve oradan iptal edilebilir.
+
+Her oyun bittiğinde kaydedilir. Uygulama yarıda kapanırsa o ana kadar
+bitenler durur; yalnızca kalanlar yapılmamış olur.
+
+### Analiz listeleri
+
+Listelerin en üstünde iki liste vardır: **son derin analizler** ve **son
+hızlı analizler**. Her biri en fazla yüz kayıt tutar, en yeni kayıt başta
+olur ve yüzü aşınca en eski düşer. Bu iki liste silinemez, yeniden
+adlandırılamaz; diğer liste özelliklerinin hepsi çalışır.
+
+Kaydedilmiş bir analizi açtığında motor yeniden çalışmaz. Aynı oyunu
+tekrar analiz edersen eski kayıt silinmez, yeni bir kayıt eklenir — liste
+bir analiz geçmişidir.
+
+Bir analiz kaydını okundu ya da favori yaparsan asıl oyun da işaretlenir.
+Tersi olmaz: bir oyunun birden çok analizi olabildiği için hangisinin
+güncelleneceği belirsiz olurdu.
+
+Analiz kayıtları **yedeğe girmez**; cihaza özeldir ve gerekirse yeniden
+üretilebilir. "Tüm verileri sıfırla" onları da siler.
 
 ---
 
