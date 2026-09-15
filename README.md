@@ -182,6 +182,11 @@ alsan da yerinde kalır.
 birlikte ilerlemeni ve notlarını da siler. Geri alınamaz, kaç varyantın
 gideceği sorulur.
 
+**Tüm verileri sıfırla** — Ayarlar → Yedekleme altında, kırmızı yazılı.
+Listeler, bulmacalar, açılışlar, ilerleme ve ayarların hepsini siler ve
+onay ister; geri alınamaz. Android uygulamayı kaldırıp yeniden kurunca
+eski veriyi Drive'dan geri getirdiği için sıfırdan başlamanın yolu bu.
+
 **Metin dosyası** — Açılış listesi başlık menüsünden dosyaya verilir ve
 dosyadan alınır. Aynı dosya ikinci kez alındığında listede zaten bulunan
 hamle dizileri atlanır, hiçbir şey ikiye katlanmaz; kaç tanesinin

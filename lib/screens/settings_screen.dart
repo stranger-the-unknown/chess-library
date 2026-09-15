@@ -191,6 +191,22 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   trailing: const Icon(Icons.chevron_right_rounded),
                   onTap: _importBackup,
                 ),
+                // Geri dönüşü olmayan tek işlem; rengiyle de belli olsun.
+                ListTile(
+                  leading: Icon(
+                    Icons.delete_forever_outlined,
+                    color: scheme.error,
+                  ),
+                  title: Text(
+                    t('backup.wipe'),
+                    style: TextStyle(
+                      color: scheme.error,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                  subtitle: Text(t('backup.wipeHint')),
+                  onTap: _wipeAll,
+                ),
               ]),
               const SizedBox(height: 16),
               _section(t('settings.about')),
@@ -247,6 +263,22 @@ class _SettingsScreenState extends State<SettingsScreen> {
   }
 
   // ------------------------------------------------------------ yedekleme
+
+  Future<void> _wipeAll() async {
+    final confirmed = await AppDialogs.confirm(
+      context,
+      title: t('backup.wipe'),
+      message: t('backup.wipeMessage'),
+      confirmLabel: t('backup.wipeConfirm'),
+      destructive: true,
+    );
+    if (!confirmed || !mounted) return;
+
+    final count = await BackupService.instance.wipeAll();
+    if (!mounted) return;
+    setState(() {});
+    AppDialogs.snack(context, t('backup.wiped', {'count': count}));
+  }
 
   Future<void> _exportBackup() async {
     final text = await AppDialogs.runWithProgress<String>(

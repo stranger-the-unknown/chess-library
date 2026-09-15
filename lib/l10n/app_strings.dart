@@ -101,6 +101,15 @@ class Strings {
     'backup.exportHint': 'Listeler, bulmacalar, açılışlar ve ayarlar tek dosyaya yazılır.',
     'backup.import': 'Yedekten geri yükle',
     'backup.importHint': 'Başka bir cihazda alınmış yedeği bu cihaza taşır.',
+    'backup.wipe': 'Tüm verileri sıfırla',
+    'backup.wipeHint':
+        'Listeler, bulmacalar, açılışlar, ilerlemen ve ayarların silinir',
+    'backup.wipeMessage':
+        'Oyun listelerin, bulmacaların, açılışların, bütün ilerlemen ve '
+        'ayarların silinecek. Bu işlem geri alınamaz. Saklamak istediğin '
+        'bir şey varsa önce vazgeçip yedek al.',
+    'backup.wipeConfirm': 'Hepsini sil',
+    'backup.wiped': 'Bütün veriler silindi.',
     'backup.preparing': 'Yedek hazırlanıyor...',
     'backup.reading': 'Dosya okunuyor...',
     'backup.applying': 'Veriler yazılıyor...',
@@ -594,6 +603,15 @@ class Strings {
     'backup.exportHint': 'Lists, puzzles, openings and settings are written to a single file.',
     'backup.import': 'Restore from backup',
     'backup.importHint': 'Brings a backup taken on another device to this one.',
+    'backup.wipe': 'Reset all data',
+    'backup.wipeHint':
+        'Lists, puzzles, openings, your progress and settings are deleted',
+    'backup.wipeMessage':
+        'Your game lists, puzzles, openings, all your progress and your '
+        'settings will be deleted. This cannot be undone. If there is '
+        'anything you want to keep, cancel and take a backup first.',
+    'backup.wipeConfirm': 'Delete everything',
+    'backup.wiped': 'All data deleted.',
     'backup.preparing': 'Preparing backup...',
     'backup.reading': 'Reading file...',
     'backup.applying': 'Writing data...',

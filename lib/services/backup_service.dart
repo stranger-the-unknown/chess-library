@@ -246,6 +246,22 @@ class BackupService {
 
   /// Açık ekranların eski veriyi göstermemesi için bütün önbellekleri
   /// boşaltır ve ayarları yeniden okur.
+  /// Uygulamanın sakladığı her şeyi siler.
+  ///
+  /// Android'in otomatik yedeklemesi, uygulamayı kaldırıp yeniden
+  /// kurunca eski veriyi geri getiriyor; kullanıcının "sıfırdan başlama"
+  /// yolu bu yüzden uygulamanın içinde olmalı.
+  ///
+  /// Tek tek anahtar silmek yerine hepsi siliniyor: ileride eklenen bir
+  /// anahtar unutulursa yarım temizlenmiş bir durum kalırdı.
+  Future<int> wipeAll() async {
+    final prefs = await SharedPreferences.getInstance();
+    final count = prefs.getKeys().length;
+    await prefs.clear();
+    await reloadServices();
+    return count;
+  }
+
   Future<void> reloadServices() async {
     StorageService.instance.resetCache();
     PuzzleService.instance.resetCache();
