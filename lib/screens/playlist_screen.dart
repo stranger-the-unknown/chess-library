@@ -239,8 +239,16 @@ class _PlaylistScreenState extends State<PlaylistScreen> {
                                       ),
                                       const SizedBox(height: 2),
                                       Text(
-                                        t('lists.gameCount', {
+                                        // Okunan sayısı listeye girmeden
+                                        // görünsün; eskiden listenin
+                                        // içindeki süzgeç şeridindeydi ve
+                                        // orada hem yer kaplıyordu hem de
+                                        // ancak girince görülüyordu.
+                                        t('lists.gameCountRead', {
                                           'count': playlist.games.length,
+                                          'read': playlist.games
+                                              .where((g) => g.read)
+                                              .length,
                                         }),
                                         style: TextStyle(
                                           fontSize: 12.5,

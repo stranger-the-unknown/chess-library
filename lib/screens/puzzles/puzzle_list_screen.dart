@@ -2,6 +2,7 @@ import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
 
+import '../../widgets/filter_strip.dart';
 import '../../widgets/responsive.dart';
 
 import '../../l10n/app_strings.dart';
@@ -517,34 +518,49 @@ class _PuzzleListScreenState extends State<PuzzleListScreen> {
                   ),
                 ),
               ),
-              SizedBox(
-                height: 44,
-                child: ListView(
-                  scrollDirection: Axis.horizontal,
-                  padding: const EdgeInsets.symmetric(horizontal: 12),
-                  children: [
-                    _filterChip(t('puzzles.filterAll'), _Filter.all),
-                    _filterChip(t('puzzles.filterUnsolved'), _Filter.unsolved),
-                    _filterChip(t('puzzles.filterSolved'), _Filter.solved),
-                    _filterChip(
-                      t('puzzles.filterFavorites'),
-                      _Filter.favorites,
+              FilterStrip(
+                options: [
+                  FilterOption(
+                    label: t('puzzles.filterAll'),
+                    selected: _filter == _Filter.all,
+                    onTap: () => _selectFilter(_Filter.all),
+                  ),
+                  FilterOption(
+                    label: t('puzzles.filterUnsolved'),
+                    selected: _filter == _Filter.unsolved,
+                    onTap: () => _selectFilter(_Filter.unsolved),
+                  ),
+                  FilterOption(
+                    label: t('puzzles.filterSolved'),
+                    selected: _filter == _Filter.solved,
+                    onTap: () => _selectFilter(_Filter.solved),
+                  ),
+                  FilterOption(
+                    label: t('puzzles.filterFavorites'),
+                    selected: _filter == _Filter.favorites,
+                    onTap: () => _selectFilter(_Filter.favorites),
+                  ),
+                  // Sonuç süzgeçleri yalnızca oyun sonu listelerinde
+                  // anlamlı; başka listelerde yer kaplamasınlar. Yedi çip
+                  // sığmadığı için şerit orada kaydırmalı oluyor.
+                  if (widget.collection.isEndgame && _hasOutcomes) ...[
+                    FilterOption(
+                      label: t('puzzles.filterWhiteWin'),
+                      selected: _filter == _Filter.whiteWin,
+                      onTap: () => _selectFilter(_Filter.whiteWin),
                     ),
-                    // Sonuç süzgeçleri yalnızca oyun sonu listelerinde
-                    // anlamlı; başka listelerde yer kaplamasınlar.
-                    if (widget.collection.isEndgame && _hasOutcomes) ...[
-                      _filterChip(
-                        t('puzzles.filterWhiteWin'),
-                        _Filter.whiteWin,
-                      ),
-                      _filterChip(t('puzzles.filterDraw'), _Filter.draw),
-                      _filterChip(
-                        t('puzzles.filterBlackWin'),
-                        _Filter.blackWin,
-                      ),
-                    ],
+                    FilterOption(
+                      label: t('puzzles.filterDraw'),
+                      selected: _filter == _Filter.draw,
+                      onTap: () => _selectFilter(_Filter.draw),
+                    ),
+                    FilterOption(
+                      label: t('puzzles.filterBlackWin'),
+                      selected: _filter == _Filter.blackWin,
+                      onTap: () => _selectFilter(_Filter.blackWin),
+                    ),
                   ],
-                ),
+                ],
               ),
             ],
           ),
@@ -592,17 +608,6 @@ class _PuzzleListScreenState extends State<PuzzleListScreen> {
     });
   }
 
-  Widget _filterChip(String label, _Filter value) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 4),
-      child: ChoiceChip(
-        mouseCursor: kClickable,
-        label: Text(label),
-        selected: _filter == value,
-        onSelected: (_) => _selectFilter(value),
-      ),
-    );
-  }
 
   Widget _empty(ColorScheme scheme) {
     return Center(

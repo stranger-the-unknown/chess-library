@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../widgets/filter_strip.dart';
 import '../widgets/responsive.dart';
 
 import 'package:flutter/services.dart';
@@ -340,7 +341,6 @@ class _PlaylistDetailScreenState extends State<PlaylistDetailScreen> {
     final scheme = Theme.of(context).colorScheme;
     final playlist = _playlist;
     final total = playlist?.games.length ?? 0;
-    final readCount = playlist?.games.where((g) => g.read).length ?? 0;
     final visible = _visible;
 
     return Scaffold(
@@ -412,37 +412,29 @@ class _PlaylistDetailScreenState extends State<PlaylistDetailScreen> {
                         ),
                       ),
                     ),
-                    SizedBox(
-                      height: 44,
-                      child: ListView(
-                        scrollDirection: Axis.horizontal,
-                        padding: const EdgeInsets.symmetric(horizontal: 12),
-                        children: [
-                          _filterChip(t('puzzles.filterAll'), _GameFilter.all),
-                          _filterChip(
-                            t('lists.filterUnread'),
-                            _GameFilter.unread,
-                          ),
-                          _filterChip(t('lists.filterRead'), _GameFilter.read),
-                          _filterChip(
-                            t('common.onlyFavorites'),
-                            _GameFilter.favorites,
-                          ),
-                          Padding(
-                            padding: const EdgeInsets.only(left: 8, top: 10),
-                            child: Text(
-                              t('lists.readRatio', {
-                                'read': readCount,
-                                'total': total,
-                              }),
-                              style: TextStyle(
-                                fontSize: 12,
-                                color: scheme.onSurfaceVariant,
-                              ),
-                            ),
-                          ),
-                        ],
-                      ),
+                    FilterStrip(
+                      options: [
+                        FilterOption(
+                          label: t('puzzles.filterAll'),
+                          selected: _filter == _GameFilter.all,
+                          onTap: () => _selectFilter(_GameFilter.all),
+                        ),
+                        FilterOption(
+                          label: t('lists.filterUnread'),
+                          selected: _filter == _GameFilter.unread,
+                          onTap: () => _selectFilter(_GameFilter.unread),
+                        ),
+                        FilterOption(
+                          label: t('lists.filterRead'),
+                          selected: _filter == _GameFilter.read,
+                          onTap: () => _selectFilter(_GameFilter.read),
+                        ),
+                        FilterOption(
+                          label: t('common.favorites'),
+                          selected: _filter == _GameFilter.favorites,
+                          onTap: () => _selectFilter(_GameFilter.favorites),
+                        ),
+                      ],
                     ),
                   ],
                 ),
@@ -479,16 +471,9 @@ class _PlaylistDetailScreenState extends State<PlaylistDetailScreen> {
     );
   }
 
-  Widget _filterChip(String label, _GameFilter value) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 4),
-      child: ChoiceChip(
-        mouseCursor: kClickable,
-        label: Text(label),
-        selected: _filter == value,
-        onSelected: (_) => setState(() => _filter = value),
-      ),
-    );
+  void _selectFilter(_GameFilter value) {
+    if (_filter == value) return;
+    setState(() => _filter = value);
   }
 
   Widget _emptyState(ColorScheme scheme) {
