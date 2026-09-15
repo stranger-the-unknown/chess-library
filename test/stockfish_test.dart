@@ -2,7 +2,10 @@ import 'dart:io';
 
 import 'package:flutter_test/flutter_test.dart';
 
+import 'package:chess_pgn_reader/models/chess_engine.dart' as rules;
+import 'package:chess_pgn_reader/models/move_entry.dart';
 import 'package:chess_pgn_reader/services/engine/engine_service.dart';
+import 'package:chess_pgn_reader/services/game_review.dart';
 import 'package:chess_pgn_reader/services/engine/stockfish_engine.dart';
 
 /// Stockfish adaptörünü gerçek motorla sınar.
@@ -98,6 +101,38 @@ void main() {
           .bestMoveForLevel(fen, EngineLevel.all.last);
       expect(strong.bestMoveUci, 'f3f7');
     });
+
+    test('oyun incelemesi vahim hatayı yakalar', () async {
+      // Scholar's mate: 3...Nf6?? veziri f7'ye davet ediyor. İnceleme bu
+      // hamleyi vahim hata saymalı. Eski motor 6-8 yarım hamlelik
+      // görüşüyle bu tür etiketleri bazen kaçırıyordu.
+      const moves = ['e4', 'e5', 'Bc4', 'Nc6', 'Qh5', 'Nf6', 'Qxf7'];
+      final board = rules.ChessGame();
+      final history = <MoveEntry>[];
+      for (final san in moves) {
+        final move = board.allLegalMoves().firstWhere(
+            (m) => board.sanFor(m).replaceAll(RegExp(r'[+#]'), '') == san);
+        final text = board.sanFor(move);
+        board.makeMove(move);
+        history.add(MoveEntry(move: move, san: text, fenAfter: board.fen));
+      }
+
+      final watch = Stopwatch()..start();
+      final review = await GameReviewer().review(history);
+      watch.stop();
+
+      expect(review.moves, hasLength(moves.length));
+      final blunder = review.moves[5]; // 3...Nf6
+      expect(blunder.quality, MoveQuality.blunder,
+          reason: 'mat yedirten hamle vahim hata olmalı');
+      // Siyahın doğruluğu beyazınkinden belirgin düşük olmalı.
+      expect(review.blackAccuracy, lessThan(review.whiteAccuracy));
+
+      stdout.writeln('inceleme · ${history.length + 1} pozisyon · '
+          '${watch.elapsedMilliseconds} ms · '
+          'beyaz %${review.whiteAccuracy.toStringAsFixed(0)} · '
+          'siyah %${review.blackAccuracy.toStringAsFixed(0)}');
+    }, timeout: const Timeout(Duration(minutes: 2)));
   },
       skip: _enabled
           ? false
