@@ -15,8 +15,10 @@ dilidir.
 
 ## Oyna
 
-**Motora karşı oyna** — Zorluğu altı kademeden seçersin (yaklaşık 600–2300
-Elo). Rengini beyaz, siyah ya da **rastgele** belirleyebilirsin. İstersen
+**Motora karşı oyna** — Zorluğu altı kademeden seçersin (yaklaşık 800–2850
+Elo). Motor **Stockfish 17**; üst dört kademe Stockfish'in kendi
+`UCI_Elo` ayarıyla o dereceye sabitlenir, en alttaki iki kademe daha da
+zayıf olsun diye `Skill Level` ve sığ aramayla kısılır. Rengini beyaz, siyah ya da **rastgele** belirleyebilirsin. İstersen
 normal diziliş yerine **kendi kurduğun pozisyondan** başlarsın.
 
 **PGN yükle** — Bir dosyadan ya da panodan yapıştırarak. Bir dosyada

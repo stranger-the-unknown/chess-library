@@ -559,9 +559,9 @@ class Strings {
     'level.3.name': 'İleri',
     'level.3.desc': 'Ciddi bir rakip',
     'level.4.name': 'Uzman',
-    'level.4.desc': 'Taktiksel olarak keskin',
+    'level.4.desc': 'Taktiksel olarak keskin, hatayı affetmez',
     'level.5.name': 'Usta',
-    'level.5.desc': 'Tam güç; cihaz ne kadar hızlıysa o kadar güçlü',
+    'level.5.desc': 'Usta seviyesi; ciddi hata yapmaz',
   };
 
   static const Map<String, String> _en = {
@@ -1032,9 +1032,9 @@ class Strings {
     'level.3.name': 'Advanced',
     'level.3.desc': 'A serious opponent',
     'level.4.name': 'Expert',
-    'level.4.desc': 'Tactically sharp',
+    'level.4.desc': 'Tactically sharp, punishes mistakes',
     'level.5.name': 'Master',
-    'level.5.desc': 'Full strength; as strong as your device allows',
+    'level.5.desc': 'Master level; does not blunder',
   };
 }
 
