@@ -5,6 +5,8 @@ import '../widgets/responsive.dart';
 import '../l10n/app_strings.dart';
 import '../models/chess_engine.dart' as engine;
 import '../models/move_entry.dart';
+import '../models/stored_review.dart';
+import '../services/analysis_queue.dart';
 import '../services/game_review.dart';
 import '../services/sound_service.dart';
 import '../theme/app_theme.dart';
@@ -17,11 +19,19 @@ class GameReviewScreen extends StatefulWidget {
   final String? startFen;
   final String title;
 
+  /// Daha önce yapılmış ve kaydedilmiş analiz.
+  ///
+  /// Varsa motor hiç çalıştırılmıyor; kullanıcı analiz listesindeki bir
+  /// kaydı açtığında beklemesin diye. Kayıt oyunun hamleleriyle
+  /// uyuşmuyorsa yeniden analiz edilir.
+  final StoredReview? saved;
+
   const GameReviewScreen({
     super.key,
     required this.history,
     this.startFen,
     this.title = '',
+    this.saved,
   });
 
   @override
@@ -34,6 +44,10 @@ class _GameReviewScreenState extends State<GameReviewScreen> {
   int _total = 0;
   bool _deep = false;
   bool _running = false;
+
+  /// Kullanıcı kayıtlı analizi görmezden gelip yeniden analiz
+  /// istedi mi?
+  bool _reanalysed = false;
   bool _flipped = false;
   int _cursor = 0;
 
@@ -44,6 +58,23 @@ class _GameReviewScreenState extends State<GameReviewScreen> {
   }
 
   Future<void> _run() async {
+    final saved = widget.saved;
+    if (saved != null && !_reanalysed) {
+      final restored = fromStoredReview(
+        saved,
+        widget.history,
+        startFen: widget.startFen,
+      );
+      if (restored != null) {
+        setState(() {
+          _review = restored;
+          _running = false;
+          _deep = saved.deep;
+        });
+        return;
+      }
+    }
+
     setState(() {
       _running = true;
       _review = null;
@@ -126,7 +157,12 @@ class _GameReviewScreenState extends State<GameReviewScreen> {
                 _deep ? Icons.flash_on_rounded : Icons.travel_explore_rounded,
               ),
               onPressed: () {
-                setState(() => _deep = !_deep);
+                // Kullanıcı derinliği değiştirdiyse kayıtlı analiz artık
+                // istediği şey değil; motor yeniden çalışır.
+                setState(() {
+                  _deep = !_deep;
+                  _reanalysed = true;
+                });
                 _run();
               },
             ),

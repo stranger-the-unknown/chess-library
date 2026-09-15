@@ -102,6 +102,7 @@ class _PlaylistDetailScreenState extends State<PlaylistDetailScreen> {
           initialResult: game.result,
           whiteName: game.white,
           blackName: game.black,
+          savedReview: game.review,
         ),
       ),
     );

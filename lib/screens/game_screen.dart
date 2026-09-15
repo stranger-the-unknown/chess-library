@@ -9,6 +9,7 @@ import 'package:flutter/services.dart';
 import '../l10n/app_strings.dart';
 import '../models/chess_engine.dart' as engine;
 import '../models/move_entry.dart';
+import '../models/stored_review.dart';
 import '../models/pgn_parser.dart';
 import '../models/playlist.dart';
 import '../services/engine/engine_service.dart';
@@ -53,6 +54,9 @@ class GameScreen extends StatefulWidget {
   final String? whiteName;
   final String? blackName;
 
+  /// Bu oyun bir analiz kaydıysa, kaydedilmiş inceleme.
+  final StoredReview? savedReview;
+
   const GameScreen({
     super.key,
     this.mode = GameMode.analysis,
@@ -65,6 +69,7 @@ class GameScreen extends StatefulWidget {
     this.engineLevelIndex,
     this.whiteName,
     this.blackName,
+    this.savedReview,
   });
 
   @override
@@ -317,6 +322,7 @@ class _GameScreenState extends State<GameScreen> {
       context,
       MaterialPageRoute(
         builder: (_) => GameReviewScreen(
+          saved: widget.savedReview,
           history: List<MoveEntry>.from(_history),
           startFen: _startFen == engine.ChessGame().fen ? null : _startFen,
         ),

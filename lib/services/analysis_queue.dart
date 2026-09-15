@@ -201,6 +201,63 @@ StoredReview toStoredReview(GameReview review, {required bool deep}) {
   );
 }
 
+/// Kaydedilmiş incelemeyi yeniden kurar.
+///
+/// Hamlelerin kendisi oyunda duruyor; kayıtta yalnızca motorun
+/// söyledikleri var. Motorun önerdiği hamlenin SAN karşılığı da
+/// kaydedilmiyor, pozisyondan yeniden üretiliyor — aynı bilgiyi iki kez
+/// saklamak yerine.
+///
+/// Kayıt ile oyunun hamleleri uyuşmuyorsa (kayıt bozulmuşsa) null döner;
+/// çağıran yeniden analiz eder.
+GameReview? fromStoredReview(
+  StoredReview stored,
+  List<MoveEntry> history, {
+  String? startFen,
+}) {
+  if (stored.moves.length != history.length) return null;
+
+  final position = startFen == null
+      ? engine.ChessGame()
+      : engine.ChessGame.fromFen(startFen);
+  final moves = <ReviewedMove>[];
+
+  for (int i = 0; i < history.length; i++) {
+    final saved = stored.moves[i];
+    final mover = position.sideToMove;
+
+    String bestSan = saved.bestMoveUci;
+    final best = position.moveFromUci(saved.bestMoveUci);
+    if (best != null) bestSan = position.sanFor(best);
+
+    moves.add(
+      ReviewedMove(
+        index: i,
+        entry: history[i],
+        mover: mover,
+        bestScoreCp: saved.bestScoreCp,
+        playedScoreCp: saved.playedScoreCp,
+        bestMoveUci: saved.bestMoveUci,
+        bestMoveSan: bestSan,
+        quality: MoveQuality.values[
+            saved.quality.clamp(0, MoveQuality.values.length - 1)],
+        accuracy: saved.accuracy,
+      ),
+    );
+
+    final played = position.moveFromUci(history[i].move.uci);
+    if (played == null) return null;
+    position.makeMove(played);
+  }
+
+  return GameReview(
+    moves: moves,
+    whiteAccuracy: stored.whiteAccuracy,
+    blackAccuracy: stored.blackAccuracy,
+    startFen: startFen ?? engine.ChessGame().fen,
+  );
+}
+
 class _Job {
   final String playlistId;
   final SavedGame game;

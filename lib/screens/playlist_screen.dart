@@ -7,6 +7,7 @@ import 'package:flutter/services.dart';
 import '../l10n/app_strings.dart';
 import '../models/playlist.dart';
 import '../services/pgn_import_service.dart';
+import '../services/analysis_queue.dart';
 import '../services/storage_service.dart';
 import '../widgets/app_dialogs.dart';
 import 'playlist_detail_screen.dart';
@@ -183,7 +184,21 @@ class _PlaylistScreenState extends State<PlaylistScreen> {
           ),
         ],
       ),
-      body: _loading
+      body: ListenableBuilder(
+        // Kuyruk ilerledikçe şerit kendini tazelesin.
+        listenable: AnalysisQueue.instance,
+        builder: (context, _) => Column(
+          children: [
+            if (AnalysisQueue.instance.isRunning) _queueBanner(scheme),
+            Expanded(child: _body(scheme)),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _body(ColorScheme scheme) {
+    return _loading
           ? const Center(child: CircularProgressIndicator())
           : _playlists.isEmpty
               ? _empty(scheme)
@@ -313,7 +328,61 @@ class _PlaylistScreenState extends State<PlaylistScreen> {
                       );
                     },
                   ),
+                );
+  }
+
+  /// Toplu analiz sürerken görünen ilerleme şeridi.
+  ///
+  /// Listeler sekmesinde duruyor: kullanıcı analizi başlatıp başka yere
+  /// gidiyor, işin sürdüğünü bir yerde görmesi gerekiyor.
+  Widget _queueBanner(ColorScheme scheme) {
+    final queue = AnalysisQueue.instance;
+    return Container(
+      width: double.infinity,
+      color: scheme.secondaryContainer,
+      padding: const EdgeInsets.fromLTRB(16, 8, 8, 8),
+      child: Row(
+        children: [
+          const SizedBox(
+            width: 16,
+            height: 16,
+            child: CircularProgressIndicator(strokeWidth: 2),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  t('analysis.progress', {
+                    'done': queue.done,
+                    'total': queue.total,
+                  }),
+                  style: TextStyle(
+                    fontSize: 12.5,
+                    fontWeight: FontWeight.w600,
+                    color: scheme.onSecondaryContainer,
+                  ),
                 ),
+                if (queue.current != null)
+                  Text(
+                    queue.current!,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: TextStyle(
+                      fontSize: 11.5,
+                      color: scheme.onSecondaryContainer,
+                    ),
+                  ),
+              ],
+            ),
+          ),
+          TextButton(
+            onPressed: queue.cancel,
+            child: Text(t('common.cancel')),
+          ),
+        ],
+      ),
     );
   }
 
