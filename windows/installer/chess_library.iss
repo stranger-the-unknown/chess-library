@@ -51,9 +51,6 @@ Name: "desktopicon"; Description: "{cm:CreateDesktopIcon}"; \
 ; Bunlardan biri eksik olursa uygulama açılmaz.
 Source: "{#BuildDir}\{#AppExeName}"; DestDir: "{app}"; Flags: ignoreversion
 Source: "{#BuildDir}\*.dll"; DestDir: "{app}"; Flags: ignoreversion skipifsourcedoesntexist
-; Stockfish'in NNUE degerlendirme aglari. Motor bunlari kendi
-; kutuphanesinin yaninda ariyor; eksikse motor hic acilmiyor.
-Source: "{#BuildDir}\*.nnue"; DestDir: "{app}"; Flags: ignoreversion skipifsourcedoesntexist
 Source: "{#BuildDir}\data\*"; DestDir: "{app}\data"; \
     Flags: ignoreversion recursesubdirs createallsubdirs
 ; Lisans ve atıf belgeleri kurulumla birlikte gitsin.

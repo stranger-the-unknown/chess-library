@@ -127,7 +127,7 @@ class _PuzzleSolveScreenState extends State<PuzzleSolveScreen> {
 
     final baseline = await EngineService.instance.analyze(
       _puzzle.fen,
-      depth: 30,
+      depth: 14,
       movetimeMs: 1800,
     );
     if (token != _loadToken || !mounted) return;
@@ -242,7 +242,7 @@ class _PuzzleSolveScreenState extends State<PuzzleSolveScreen> {
       final allowedMoves = (remaining + 1) ~/ 2;
       final reply = await EngineService.instance.analyze(
         after.fen,
-        depth: 30,
+        depth: 12,
         movetimeMs: 1200,
       );
       final userMate = reply.mateIn == null ? null : -reply.mateIn!;
@@ -259,7 +259,7 @@ class _PuzzleSolveScreenState extends State<PuzzleSolveScreen> {
 
     final reply = await EngineService.instance.analyze(
       after.fen,
-      depth: 30,
+      depth: 13,
       movetimeMs: 1400,
     );
 
@@ -284,7 +284,7 @@ class _PuzzleSolveScreenState extends State<PuzzleSolveScreen> {
     if (uci == null) {
       final result = await EngineService.instance.analyze(
         fen,
-        depth: 24,
+        depth: 10,
         movetimeMs: 900,
       );
       uci = result.bestMoveUci;

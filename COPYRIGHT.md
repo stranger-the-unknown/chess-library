@@ -43,23 +43,6 @@ değişmez. Lisans değişikliği 3.0.0 ve sonrası için geçerlidir.
 
 ---
 
-## Satranç motoru
-
-Uygulama **Stockfish 17**'yi içinde taşır ve motora karşı oyun ile oyun
-incelemesini onunla yapar. Stockfish'in telif hakkı Stockfish
-geliştiricilerine aittir ve **GPLv3** ile dağıtılır:
-<https://github.com/official-stockfish/Stockfish>
-
-GPLv3 ile AGPLv3 bir arada kullanılabilir; bu yüzden Stockfish'i
-uygulamanın içinde dağıtmak lisans açısından sorun yaratmaz. Bu, birleşik
-eserin özgür yazılım olarak kalmasını gerektirir — zaten öyle.
-
-Stockfish'in NNUE değerlendirme ağları (`nn-*.nnue`) derleme sırasında
-Stockfish projesinin sunucusundan indirilir ve aynı lisans altındadır.
-
-Motor 3.0.0'a kadar bu proje için sıfırdan Dart ile yazılmıştı; o kod
-depo geçmişinde duruyor.
-
 ## Varlıklar
 
 Taş takımlarının çizeni ve lisansı [ASSETS.md](ASSETS.md) içinde tek tek
