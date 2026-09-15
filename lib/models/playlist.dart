@@ -1,3 +1,5 @@
+import 'stored_review.dart';
+
 /// Kaydedilmiş bir oyun.
 class SavedGame {
   /// Kimlik sayacı.
@@ -27,6 +29,20 @@ class SavedGame {
   /// Favorilere eklendi mi?
   bool favorite;
 
+  /// Bu kayıt bir analiz kaydıysa, incelemenin kendisi.
+  ///
+  /// Yalnızca analiz listelerindeki kopyalarda dolu olur.
+  StoredReview? review;
+
+  /// Analiz kaydının kopyalandığı asıl oyun ve listesi.
+  ///
+  /// Tek yönlü bağ için: analiz listesinde okundu/favori işaretlenince
+  /// asıl oyun da işaretlenir. Tersi yapılmıyor — bir oyunun birden çok
+  /// analizi olabildiği için hangisinin güncelleneceği belirsiz olurdu.
+  /// Asıl oyun silinmişse bağ sessizce boşa düşer.
+  final String? sourceGameId;
+  final String? sourcePlaylistId;
+
   /// PGN başlıkları (Event, Site, Date, Round, ECO, Elo ...).
   ///
   /// Ad, oyuncular ve sonuç ayrı alanlarda tutuluyor çünkü listede
@@ -48,6 +64,9 @@ class SavedGame {
     this.read = false,
     this.favorite = false,
     Map<String, String>? tags,
+    this.review,
+    this.sourceGameId,
+    this.sourcePlaylistId,
   })  : tags = tags ?? const <String, String>{},
         id = id ??
             'g_${DateTime.now().microsecondsSinceEpoch}_${_sequence++}';
@@ -87,6 +106,9 @@ class SavedGame {
         if (read) 'read': true,
         if (favorite) 'favorite': true,
         if (tags.isNotEmpty) 'tags': tags,
+        if (review != null) 'review': review!.toJson(),
+        if (sourceGameId != null) 'srcGame': sourceGameId,
+        if (sourcePlaylistId != null) 'srcList': sourcePlaylistId,
       };
 
   factory SavedGame.fromJson(Map<String, dynamic> json) => SavedGame(
@@ -106,6 +128,13 @@ class SavedGame {
               (key, value) => MapEntry('$key', '$value'),
             ) ??
             const <String, String>{},
+        review: json['review'] == null
+            ? null
+            : StoredReview.fromJson(
+                Map<String, dynamic>.from(json['review'] as Map),
+              ),
+        sourceGameId: json['srcGame'] as String?,
+        sourcePlaylistId: json['srcList'] as String?,
       );
 }
 

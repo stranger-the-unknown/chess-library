@@ -5,6 +5,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 import '../l10n/app_strings.dart';
 import '../models/playlist.dart';
+import '../models/stored_review.dart';
 
 /// Oyun listelerini cihazda saklar.
 ///
@@ -21,13 +22,31 @@ class StorageService extends ChangeNotifier {
   static const _key = 'playlists_v2';
   static const _legacyKey = 'playlists';
 
+  /// Analiz listeleri ayrı anahtarda.
+  ///
+  /// İki sebeple: yedeğe girmemeleri gerekiyor (yüz oyunun hamle hamle
+  /// değerlendirmesi yedeği gereksiz şişirirdi) ve uygulamayı sıfırlama
+  /// onları da götürmeli. Ayrı anahtar ikisini de kendiliğinden
+  /// sağlıyor; tek anahtarda olsalardı her iki yerde de elle ayıklamak
+  /// gerekirdi.
+  static const analysisKey = 'analysis_lists_v1';
+
+  /// Silinemeyen analiz listelerinin kimlikleri.
+  static const deepListId = 'sys_deep';
+  static const quickListId = 'sys_quick';
+
+  /// Her analiz listesinde tutulan en fazla kayıt sayısı.
+  static const analysisLimit = 100;
+
   List<Playlist>? _cache;
+  List<Playlist>? _analysisCache;
 
   /// Bellekteki önbelleği boşaltır ve açık ekranları uyarır.
   ///
   /// Yedek geri yüklendiğinde ve testlerde soğuk başlangıç için kullanılır.
   void resetCache() {
     _cache = null;
+    _analysisCache = null;
     notifyListeners();
   }
 
@@ -67,6 +86,12 @@ class StorageService extends ChangeNotifier {
     return changed;
   }
 
+  /// Kullanıcının kendi listeleri.
+  ///
+  /// Analiz listeleri buraya **girmiyor**. Uygulamanın her yerinde
+  /// "listeler" kullanıcının listeleri demek; analiz listelerini de bu
+  /// listeye katmak, sayan/silen/yeniden adlandıran her yeri bir anda
+  /// yanlış hale getirirdi.
   Future<List<Playlist>> loadPlaylists() async {
     if (_cache != null) return _cache!;
     final prefs = await SharedPreferences.getInstance();
@@ -76,7 +101,7 @@ class StorageService extends ChangeNotifier {
       _cache = (jsonDecode(raw) as List)
           .map((e) => Playlist.fromJson(Map<String, dynamic>.from(e as Map)))
           .toList();
-      if (_repairDuplicateIds(_cache!)) await _save();
+      if (_repairDuplicateIds(_cache!)) await _save(notify: false);
       return _cache!;
     }
 
@@ -86,13 +111,46 @@ class StorageService extends ChangeNotifier {
       _cache = (jsonDecode(legacy) as List)
           .map((e) => Playlist.fromJson(Map<String, dynamic>.from(e as Map)))
           .toList();
-      await _save();
+      await _save(notify: false);
       await prefs.remove(_legacyKey);
       return _cache!;
     }
 
     _cache = <Playlist>[];
     return _cache!;
+  }
+
+  /// Silinemeyen analiz listeleri: önce derin, sonra hızlı.
+  ///
+  /// Her zaman ikisi de vardır; eksikse boş olarak kurulur.
+  Future<List<Playlist>> loadAnalysisLists() async {
+    if (_analysisCache != null) return _analysisCache!;
+    final prefs = await SharedPreferences.getInstance();
+    final lists = <Playlist>[];
+    final raw = prefs.getString(analysisKey);
+    if (raw != null) {
+      lists.addAll((jsonDecode(raw) as List)
+          .map((e) => Playlist.fromJson(Map<String, dynamic>.from(e as Map))));
+    }
+    for (final id in const [deepListId, quickListId]) {
+      if (!lists.any((p) => p.id == id)) lists.add(Playlist(id: id, name: id));
+    }
+    lists.sort((a, b) => a.id == deepListId ? -1 : 1);
+    _analysisCache = lists;
+    return _analysisCache!;
+  }
+
+  /// Kimliğine göre liste; analiz listeleri de bulunur.
+  Future<Playlist?> playlistById(String id) async {
+    if (isSystemList(id)) {
+      final lists = await loadAnalysisLists();
+      return lists.firstWhere((p) => p.id == id);
+    }
+    final lists = await loadPlaylists();
+    for (final playlist in lists) {
+      if (playlist.id == id) return playlist;
+    }
+    return null;
   }
 
   Future<void> _save({bool notify = true}) async {
@@ -103,6 +161,19 @@ class StorageService extends ChangeNotifier {
     );
     if (notify) notifyListeners();
   }
+
+  Future<void> _saveAnalysis({bool notify = true}) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString(
+      analysisKey,
+      jsonEncode(_analysisCache!.map((p) => p.toJson()).toList()),
+    );
+    if (notify) notifyListeners();
+  }
+
+  /// Bu liste kullanıcının silemeyeceği bir analiz listesi mi?
+  static bool isSystemList(String id) =>
+      id == deepListId || id == quickListId;
 
   Future<Playlist> createPlaylist(String name) async {
     final playlists = await loadPlaylists();
@@ -169,16 +240,89 @@ class StorageService extends ChangeNotifier {
   }
 
   /// Bir oyunun "okundu" işaretini değiştirir ve yeni değeri döner.
-  Future<bool> toggleGameRead(String playlistId, String gameId) async {
-    final playlists = await loadPlaylists();
-    final index = playlists.indexWhere((p) => p.id == playlistId);
-    if (index == -1) return false;
-    final games = playlists[index].games;
-    final gameIndex = games.indexWhere((g) => g.id == gameId);
-    if (gameIndex == -1) return false;
-    games[gameIndex].read = !games[gameIndex].read;
+  /// Bir analiz sonucunu ilgili listenin başına ekler.
+  ///
+  /// En yeni kayıt her zaman başta; liste [analysisLimit] kaydı aşınca
+  /// en eski düşer. Aynı oyun tekrar analiz edilirse eskisi silinmez,
+  /// yeni bir kayıt olarak eklenir — liste bir analiz geçmişi, bir
+  /// oyun kümesi değil. Eskisini silmek "neden kayboldu" sorusunu ve
+  /// hangi kaydın güncelleneceği belirsizliğini doğururdu.
+  Future<void> addAnalysis({
+    required SavedGame source,
+    required String sourcePlaylistId,
+    required StoredReview review,
+  }) async {
+    final lists = await loadAnalysisLists();
+    final target = lists.firstWhere(
+      (p) => p.id == (review.deep ? deepListId : quickListId),
+    );
+
+    target.games.insert(
+      0,
+      SavedGame(
+        name: source.name,
+        uciMoves: List<String>.from(source.uciMoves),
+        createdAt: DateTime.now(),
+        result: source.result,
+        startFen: source.startFen,
+        white: source.white,
+        black: source.black,
+        tags: source.tags,
+        review: review,
+        sourceGameId: source.id,
+        sourcePlaylistId: sourcePlaylistId,
+      ),
+    );
+    if (target.games.length > analysisLimit) {
+      target.games.removeRange(analysisLimit, target.games.length);
+    }
+    await _saveAnalysis();
+  }
+
+  /// Listedeki oyunu bulur; analiz listeleri de aranır.
+  Future<SavedGame?> _findGame(String playlistId, String gameId) async {
+    final playlist = await playlistById(playlistId);
+    if (playlist == null) return null;
+    for (final game in playlist.games) {
+      if (game.id == gameId) return game;
+    }
+    return null;
+  }
+
+  /// Değişikliği doğru anahtara yazar.
+  Future<void> _persist(String playlistId) =>
+      isSystemList(playlistId) ? _saveAnalysis() : _save();
+
+  /// Analiz kaydındaki işareti asıl oyuna da yansıtır (tek yönlü).
+  ///
+  /// Kaynak oyun silinmiş, taşınmış ya da hiç yoksa sessizce geçilir —
+  /// analiz kaydının kendi işareti yine de duruyor. Ters yön bilerek
+  /// yapılmıyor: bir oyunun birden çok analizi olabilir, hangisinin
+  /// güncelleneceği belirsiz olurdu.
+  Future<void> _mirrorToSource(
+    SavedGame game, {
+    bool? read,
+    bool? favorite,
+  }) async {
+    final listId = game.sourcePlaylistId;
+    final gameId = game.sourceGameId;
+    if (listId == null || gameId == null) return;
+    if (isSystemList(listId)) return;
+
+    final source = await _findGame(listId, gameId);
+    if (source == null) return;
+    if (read != null) source.read = read;
+    if (favorite != null) source.favorite = favorite;
     await _save();
-    return games[gameIndex].read;
+  }
+
+  Future<bool> toggleGameRead(String playlistId, String gameId) async {
+    final game = await _findGame(playlistId, gameId);
+    if (game == null) return false;
+    game.read = !game.read;
+    await _persist(playlistId);
+    await _mirrorToSource(game, read: game.read);
+    return game.read;
   }
 
   /// Listedeki tüm oyunları okundu / okunmadı yapar.
@@ -194,15 +338,12 @@ class StorageService extends ChangeNotifier {
 
   /// Bir oyunun favori durumunu değiştirir; yeni durumu döner.
   Future<bool> toggleGameFavorite(String playlistId, String gameId) async {
-    final playlists = await loadPlaylists();
-    final index = playlists.indexWhere((p) => p.id == playlistId);
-    if (index == -1) return false;
-    final games = playlists[index].games;
-    final gameIndex = games.indexWhere((g) => g.id == gameId);
-    if (gameIndex == -1) return false;
-    games[gameIndex].favorite = !games[gameIndex].favorite;
-    await _save();
-    return games[gameIndex].favorite;
+    final game = await _findGame(playlistId, gameId);
+    if (game == null) return false;
+    game.favorite = !game.favorite;
+    await _persist(playlistId);
+    await _mirrorToSource(game, favorite: game.favorite);
+    return game.favorite;
   }
 
   /// Verilen oyunları toplu olarak okundu/okunmadı işaretler.

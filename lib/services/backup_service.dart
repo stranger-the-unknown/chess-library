@@ -101,11 +101,20 @@ class BackupService {
   ///
   /// [onProgress] 0 ile 1 arasında ilerleme bildirir; büyük veride
   /// ekranın donmaması için arada olay döngüsüne dönülür.
+  /// Yedeğe girmeyen anahtarlar.
+  ///
+  /// Analiz kayıtları cihaza özeldir: yüz oyunun hamle hamle
+  /// değerlendirmesi yedeği gereksiz şişirirdi ve başka cihazda yeniden
+  /// üretilebilir. Geri yüklerken de dokunulmuyor, yoksa cihazdaki
+  /// analizler yedekteki eskisiyle ezilirdi.
+  static const Set<String> _notBackedUp = {StorageService.analysisKey};
+
   Future<String> exportAll({ValueChanged<double>? onProgress}) async {
     onProgress?.call(0);
     final prefs = await SharedPreferences.getInstance();
 
-    final keys = prefs.getKeys().toList()..sort();
+    final keys = prefs.getKeys().where((k) => !_notBackedUp.contains(k)).toList()
+      ..sort();
     final data = <String, Object?>{};
     for (int i = 0; i < keys.length; i++) {
       final value = prefs.get(keys[i]);
@@ -209,6 +218,7 @@ class BackupService {
     try {
       if (mode == ImportMode.replace) {
         for (final key in previous.keys) {
+          if (_notBackedUp.contains(key)) continue;
           await prefs.remove(key);
         }
       }
