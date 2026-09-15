@@ -2,8 +2,8 @@ Chess Library, tamamen cihazınızda çalışan bir satranç uygulamasıdır. He
 yok, ağ erişimi yok, takip yok — hiçbir veri telefonunuzdan çıkmaz.
 
 <b>Oyna</b>
-Yerleşik motora karşı altı zorluk kademesinde oynayın (yaklaşık 600–2300
-Elo). Rengi siz seçin ya da rastgele bırakın; normal dizilişten veya kendi
+Yerleşik motora karşı altı zorluk kademesinde oynayın, acemiden ustaya.
+Rengi siz seçin ya da rastgele bırakın; normal dizilişten veya kendi
 kurduğunuz pozisyondan başlayın. Motor ayrı bir iş parçacığında çalışır,
 tahta akıcı kalır.
 

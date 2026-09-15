@@ -15,8 +15,8 @@ dilidir.
 
 ## Oyna
 
-**Motora karşı oyna** — Zorluğu altı kademeden seçersin (yaklaşık 600–2300
-Elo). Rengini beyaz, siyah ya da **rastgele** belirleyebilirsin. İstersen
+**Motora karşı oyna** — Zorluğu altı kademeden seçersin: acemiden ustaya,
+her kademenin ne kadar hata yaptığı kısaca yazıyor. Rengini beyaz, siyah ya da **rastgele** belirleyebilirsin. İstersen
 normal diziliş yerine **kendi kurduğun pozisyondan** başlarsın.
 
 **PGN yükle** — Bir dosyadan ya da panodan yapıştırarak. Bir dosyada

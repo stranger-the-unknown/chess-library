@@ -360,8 +360,7 @@ class HomeScreen extends StatelessWidget {
                             : scheme.onSurfaceVariant,
                       ),
                       title: Text(
-                        '${EngineLevel.all[i].name}  ·  ~'
-                        '${EngineLevel.all[i].approximateElo} Elo',
+                        EngineLevel.all[i].name,
                         style: const TextStyle(fontSize: 14),
                       ),
                       subtitle: Text(

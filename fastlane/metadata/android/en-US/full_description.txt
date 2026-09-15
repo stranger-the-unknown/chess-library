@@ -2,8 +2,8 @@ Chess Library is a chess app that works entirely on your device. There is no
 account, no network access and no tracking — nothing ever leaves your phone.
 
 <b>Play</b>
-Play against a built-in engine with six difficulty levels (roughly 600–2300
-Elo). Pick your colour, or let it be random, and start from the normal setup
+Play against a built-in engine with six difficulty levels, from beginner to
+master. Pick your colour, or let it be random, and start from the normal setup
 or from a position you build yourself. The engine runs in a separate thread,
 so the board stays smooth.
 

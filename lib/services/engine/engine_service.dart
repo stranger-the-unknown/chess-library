@@ -19,14 +19,12 @@ class EngineLevel {
   final int depth;
   final int movetimeMs;
   final int skill;
-  final int approximateElo;
 
   const EngineLevel({
     required this.index,
     required this.depth,
     required this.movetimeMs,
     required this.skill,
-    required this.approximateElo,
   });
 
   String get name => t('level.$index.name');
@@ -39,42 +37,36 @@ class EngineLevel {
       depth: 1,
       movetimeMs: 150,
       skill: 2,
-      approximateElo: 600,
     ),
     EngineLevel(
       index: 1,
       depth: 2,
       movetimeMs: 300,
       skill: 5,
-      approximateElo: 900,
     ),
     EngineLevel(
       index: 2,
       depth: 4,
       movetimeMs: 700,
       skill: 9,
-      approximateElo: 1300,
     ),
     EngineLevel(
       index: 3,
       depth: 6,
       movetimeMs: 1400,
       skill: 13,
-      approximateElo: 1700,
     ),
     EngineLevel(
       index: 4,
       depth: 9,
       movetimeMs: 2500,
       skill: 17,
-      approximateElo: 2000,
     ),
     EngineLevel(
       index: 5,
       depth: 20,
       movetimeMs: 5000,
       skill: 20,
-      approximateElo: 2300,
     ),
   ];
 }
