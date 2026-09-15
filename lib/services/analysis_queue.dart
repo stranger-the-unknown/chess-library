@@ -1,4 +1,5 @@
 import 'package:flutter/foundation.dart';
+import 'package:wakelock_plus/wakelock_plus.dart';
 
 import '../models/chess_engine.dart' as engine;
 import '../models/move_entry.dart';
@@ -21,9 +22,36 @@ import 'storage_service.dart';
 /// Sınır: iş uygulama açıkken sürüyor. Telefon uykuya geçerse Android
 /// uygulamayı askıya alabilir ve kuyruk orada durur; uygulama yeniden
 /// açıldığında kalanlar yeniden başlatılabilir.
+/// Ekranı açık tutma; testlerde yerine sahtesi konabilsin diye ayrı.
+abstract class ScreenLock {
+  Future<void> enable();
+  Future<void> disable();
+}
+
+class _WakelockScreenLock implements ScreenLock {
+  const _WakelockScreenLock();
+
+  @override
+  Future<void> enable() => WakelockPlus.enable();
+
+  @override
+  Future<void> disable() => WakelockPlus.disable();
+}
+
 class AnalysisQueue extends ChangeNotifier {
   static final AnalysisQueue instance = AnalysisQueue._();
   AnalysisQueue._();
+
+  /// Analiz sürerken ekranı açık tutar.
+  ///
+  /// Telefon uykuya geçerse Android uygulamayı askıya alır ve kuyruk
+  /// orada durur; kullanıcı da "telefonu bırakıp gel" diyemez. Kilit
+  /// **her durumda** bırakılmalı — bırakılmazsa ekran sonsuza kadar
+  /// açık kalır, bu eklentiyi kullanan uygulamaların en sık hatası
+  /// budur. Bu yüzden `finally` içinde bırakılıyor ve testle
+  /// denetleniyor.
+  @visibleForTesting
+  ScreenLock screenLock = const _WakelockScreenLock();
 
   final List<_Job> _jobs = <_Job>[];
   bool _running = false;
@@ -78,7 +106,32 @@ class AnalysisQueue extends ChangeNotifier {
     _running = true;
     _cancelled = false;
     notifyListeners();
+    try {
+      await screenLock.enable();
+    } catch (error) {
+      // Ekran kilidi kurulamazsa analiz yine de yapılsın.
+      debugPrint('Ekran açık tutulamadı: $error');
+    }
 
+    try {
+      await _process();
+    } finally {
+      try {
+        await screenLock.disable();
+      } catch (error) {
+        debugPrint('Ekran kilidi bırakılamadı: $error');
+      }
+      _running = false;
+      _current = null;
+      if (_jobs.isEmpty) {
+        _done = 0;
+        _total = 0;
+      }
+      notifyListeners();
+    }
+  }
+
+  Future<void> _process() async {
     while (_jobs.isNotEmpty && !_cancelled) {
       final job = _jobs.removeAt(0);
       _current = job.game.name;
@@ -104,14 +157,6 @@ class AnalysisQueue extends ChangeNotifier {
       _done++;
       notifyListeners();
     }
-
-    _running = false;
-    _current = null;
-    if (_jobs.isEmpty) {
-      _done = 0;
-      _total = 0;
-    }
-    notifyListeners();
   }
 
   /// Kayıtlı hamlelerden inceleme için gereken geçmişi kurar.

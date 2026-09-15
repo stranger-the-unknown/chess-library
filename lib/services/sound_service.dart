@@ -60,7 +60,14 @@ class SoundService {
   Future<AudioPlayer?> _playerFor(String name) {
     return _players.putIfAbsent(name, () async {
       try {
-        final player = AudioPlayer();
+        // Ses odağı istenmiyor.
+        //
+        // Varsayılan davranışta just_audio **kalıcı** ses odağı alıyor;
+        // bu, çalan müziğe "artık sus" demek oluyor ve müzik uygulaması
+        // hamle sesi bitince geri dönmüyor. Hamle sesleri kısa arayüz
+        // sesleri: müziğin üstüne karışmaları gerekiyor, onu
+        // durdurmaları değil.
+        final player = AudioPlayer(handleAudioSessionActivation: false);
         await player.setAsset('assets/sounds/$name.mp3');
         return player;
       } catch (_) {

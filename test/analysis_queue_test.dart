@@ -29,8 +29,75 @@ Future<Playlist> _seed(List<SavedGame> games) async {
   return playlist;
 }
 
+/// Ekran kilidinin gerçekten alınıp bırakıldığını izleyen sahte.
+class _FakeLock implements ScreenLock {
+  int enabled = 0;
+  int disabled = 0;
+  bool failOnEnable = false;
+
+  @override
+  Future<void> enable() async {
+    enabled++;
+    if (failOnEnable) throw StateError('ekran kilidi yok');
+  }
+
+  @override
+  Future<void> disable() async => disabled++;
+}
+
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
+
+  late _FakeLock lock;
+  setUp(() {
+    lock = _FakeLock();
+    AnalysisQueue.instance.screenLock = lock;
+  });
+
+  group('Ekran kilidi', () {
+    test('analiz sürerken alınıyor, bitince bırakılıyor', () async {
+      final games = [_game('Bir')];
+      final playlist = await _seed(games);
+
+      await AnalysisQueue.instance.enqueue(
+        playlistId: playlist.id,
+        games: games,
+        deep: false,
+      );
+
+      expect(lock.enabled, 1);
+      expect(lock.disabled, 1, reason: 'kilit bırakılmadı, ekran açık kalır');
+    }, timeout: const Timeout(Duration(minutes: 5)));
+
+    test('kilit kurulamazsa analiz yine de yapılıyor', () async {
+      lock.failOnEnable = true;
+      final games = [_game('Bir')];
+      final playlist = await _seed(games);
+
+      await AnalysisQueue.instance.enqueue(
+        playlistId: playlist.id,
+        games: games,
+        deep: false,
+      );
+
+      final quick = (await StorageService.instance.loadAnalysisLists()).last;
+      expect(quick.games, hasLength(1));
+      expect(lock.disabled, 1, reason: 'yine de bırakılmalı');
+    }, timeout: const Timeout(Duration(minutes: 5)));
+
+    test('bozuk oyunda da kilit bırakılıyor', () async {
+      final games = [_game('Bozuk', moves: const ['zzzz'])];
+      final playlist = await _seed(games);
+
+      await AnalysisQueue.instance.enqueue(
+        playlistId: playlist.id,
+        games: games,
+        deep: false,
+      );
+
+      expect(lock.disabled, 1);
+    }, timeout: const Timeout(Duration(minutes: 5)));
+  });
 
   test('seçilen oyunlar sırayla analiz edilip kaydediliyor', () async {
     final games = [_game('Bir'), _game('İki')];
