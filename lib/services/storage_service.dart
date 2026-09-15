@@ -31,6 +31,42 @@ class StorageService extends ChangeNotifier {
     notifyListeners();
   }
 
+  /// Çakışan oyun kimliklerini onarır; bir şey değiştiyse true döner.
+  ///
+  /// Kimlik eskiden yalnızca zaman damgasından üretiliyordu ve bir PGN
+  /// dosyasından alınan oyunlar aynı mikrosaniyeye denk gelip aynı
+  /// kimliği alıyordu. Sonucu görünürdü: bir oyunu okundu işaretleyince
+  /// listedeki başka bir oyun işaretleniyordu.
+  ///
+  /// Yeni kimlik vermek güvenli: okundu, favori ve not oyunun kendi
+  /// içinde duruyor, ayrı bir eşlemede değil.
+  bool _repairDuplicateIds(List<Playlist> playlists) {
+    bool changed = false;
+    final seen = <String>{};
+    for (final playlist in playlists) {
+      for (int i = 0; i < playlist.games.length; i++) {
+        final game = playlist.games[i];
+        if (seen.add(game.id)) continue;
+        playlist.games[i] = SavedGame(
+          name: game.name,
+          uciMoves: game.uciMoves,
+          createdAt: game.createdAt,
+          result: game.result,
+          startFen: game.startFen,
+          white: game.white,
+          black: game.black,
+          note: game.note,
+          read: game.read,
+          favorite: game.favorite,
+          tags: game.tags,
+        );
+        seen.add(playlist.games[i].id);
+        changed = true;
+      }
+    }
+    return changed;
+  }
+
   Future<List<Playlist>> loadPlaylists() async {
     if (_cache != null) return _cache!;
     final prefs = await SharedPreferences.getInstance();
@@ -40,6 +76,7 @@ class StorageService extends ChangeNotifier {
       _cache = (jsonDecode(raw) as List)
           .map((e) => Playlist.fromJson(Map<String, dynamic>.from(e as Map)))
           .toList();
+      if (_repairDuplicateIds(_cache!)) await _save();
       return _cache!;
     }
 

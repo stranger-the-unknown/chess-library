@@ -38,6 +38,8 @@ class _PlaylistDetailScreenState extends State<PlaylistDetailScreen> {
   bool _loading = true;
   String _query = '';
   _GameFilter _filter = _GameFilter.all;
+  /// Liste kitaptaki sırayla gelir; ok bunu tersine çevirir.
+  bool _descending = false;
 
   /// Oyun kimliği -> listedeki sıra numarası (1'den başlar). Süzgeç
   /// uygulansa da numara değişmez, böylece "#42" ile aranabilir.
@@ -233,7 +235,7 @@ class _PlaylistDetailScreenState extends State<PlaylistDetailScreen> {
     final games = _playlist?.games ?? const <SavedGame>[];
     final query = foldForSearch(_query);
 
-    return games.where((game) {
+    final matched = games.where((game) {
       switch (_filter) {
         case _GameFilter.unread:
           if (game.read) return false;
@@ -249,15 +251,13 @@ class _PlaylistDetailScreenState extends State<PlaylistDetailScreen> {
       }
       if (query.isEmpty) return true;
 
-      // "42" ya da "#42" -> sıra numarası
-      final number = _numbers[game.id];
-      if (number != null) {
-        final digits = query.replaceAll('#', '');
-        if (digits.isNotEmpty &&
-            int.tryParse(digits) != null &&
-            '$number'.startsWith(digits)) {
-          return true;
-        }
+      // Yalnızca rakam yazıldıysa arama sıra numarasıyla sınırlı kalır.
+      // Eskiden metne de bakılıyordu ve "1" yazınca adında 1 geçen her
+      // oyun çıkıyordu; kullanıcı 1 ile başlayan numaraları arıyordu.
+      final digits = query.replaceAll('#', '');
+      if (digits.isNotEmpty && int.tryParse(digits) != null) {
+        final number = _numbers[game.id];
+        return number != null && '$number'.startsWith(digits);
       }
 
       final haystack = <String>[
@@ -269,6 +269,91 @@ class _PlaylistDetailScreenState extends State<PlaylistDetailScreen> {
       ];
       return haystack.any((value) => foldForSearch(value).contains(query));
     }).toList();
+    return _descending ? matched.reversed.toList() : matched;
+  }
+
+  /// PGN başlıklarını okunur bir pencerede gösterir.
+  ///
+  /// Turnuva, yer, tarih, tur, ECO gibi bilgiler PGN'de duruyordu ama
+  /// hiçbir yerde görünmüyordu.
+  Future<void> _showInfo(SavedGame game) async {
+    // Bilinen başlıklar önce ve tanıdık sırayla; gerisi alfabetik.
+    const order = [
+      'Event',
+      'Site',
+      'Date',
+      'Round',
+      'White',
+      'Black',
+      'Result',
+      'ECO',
+      'Opening',
+      'WhiteElo',
+      'BlackElo',
+      'TimeControl',
+    ];
+    final tags = Map<String, String>.from(game.tags);
+    final rows = <MapEntry<String, String>>[
+      for (final key in order)
+        if ((tags.remove(key) ?? '').trim().isNotEmpty ||
+            (game.tags[key] ?? '').trim().isNotEmpty)
+          MapEntry(key, game.tags[key]!),
+      ...(tags.entries.toList()..sort((a, b) => a.key.compareTo(b.key))),
+    ]..removeWhere((e) => e.value.trim().isEmpty || e.value.trim() == '?');
+
+    if (!mounted) return;
+    final scheme = Theme.of(context).colorScheme;
+    await showDialog<void>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: Text(t('lists.gameInfo')),
+        content: rows.isEmpty
+            ? Text(t('lists.gameInfoEmpty'))
+            : SizedBox(
+                width: 360,
+                child: SingleChildScrollView(
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      for (final row in rows)
+                        Padding(
+                          padding: const EdgeInsets.only(bottom: 8),
+                          child: Row(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              SizedBox(
+                                width: 110,
+                                child: Text(
+                                  row.key,
+                                  style: TextStyle(
+                                    fontSize: 13,
+                                    fontWeight: FontWeight.w600,
+                                    color: scheme.onSurfaceVariant,
+                                  ),
+                                ),
+                              ),
+                              Expanded(
+                                child: SelectableText(
+                                  row.value,
+                                  style: const TextStyle(fontSize: 13),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                    ],
+                  ),
+                ),
+              ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(dialogContext),
+            child: Text(t('common.close')),
+          ),
+        ],
+      ),
+    );
   }
 
   Future<void> _toggleRead(SavedGame game) async {
@@ -347,6 +432,17 @@ class _PlaylistDetailScreenState extends State<PlaylistDetailScreen> {
       appBar: AppBar(
         title: Text(playlist?.name ?? t('game.list')),
         actions: [
+          IconButton(
+            tooltip: _descending
+                ? t('puzzles.sortOldest')
+                : t('puzzles.sortNewest'),
+            icon: Icon(
+              _descending
+                  ? Icons.arrow_downward_rounded
+                  : Icons.arrow_upward_rounded,
+            ),
+            onPressed: () => setState(() => _descending = !_descending),
+          ),
           IconButton(
             tooltip: t('pgn.importIntoList'),
             icon: const Icon(Icons.file_open_outlined),
@@ -471,9 +567,16 @@ class _PlaylistDetailScreenState extends State<PlaylistDetailScreen> {
     );
   }
 
+  /// Süzgeci değiştirir ve sıralamayı varsayılana döndürür.
+  ///
+  /// Ters sıralama çoğunlukla tek bir bakış için açılıyor; süzgeç
+  /// değişince o iş bitmiş oluyor. Bulmaca listesindeki kuralla aynı.
   void _selectFilter(_GameFilter value) {
     if (_filter == value) return;
-    setState(() => _filter = value);
+    setState(() {
+      _filter = value;
+      _descending = false;
+    });
   }
 
   Widget _emptyState(ColorScheme scheme) {
@@ -540,6 +643,8 @@ class _PlaylistDetailScreenState extends State<PlaylistDetailScreen> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
+                    // Oyuncular alt alta: tek satıra sığdırmaya
+                    // çalışınca siyahın adı kırpılıyordu.
                     Row(
                       children: [
                         Text(
@@ -553,7 +658,7 @@ class _PlaylistDetailScreenState extends State<PlaylistDetailScreen> {
                         const SizedBox(width: 6),
                         Expanded(
                           child: Text(
-                            game.name,
+                            game.white ?? game.name,
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis,
                             style: TextStyle(
@@ -567,8 +672,30 @@ class _PlaylistDetailScreenState extends State<PlaylistDetailScreen> {
                         ),
                       ],
                     ),
+                    if (game.white != null && game.black != null)
+                      Padding(
+                        padding: const EdgeInsets.only(left: 18, top: 1),
+                        child: Text(
+                          game.black!,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: TextStyle(
+                            fontSize: 15,
+                            fontWeight: FontWeight.w600,
+                            color: game.read
+                                ? scheme.onSurfaceVariant
+                                : scheme.onSurface,
+                          ),
+                        ),
+                      ),
                     const SizedBox(height: 4),
-                    Row(
+                    // Wrap, Row değil: tarih eklendikten sonra dar
+                    // ekranlarda satır taşıyordu. Sığmayan parça alta
+                    // iniyor, kırpılmıyor.
+                    Wrap(
+                      spacing: 8,
+                      runSpacing: 2,
+                      crossAxisAlignment: WrapCrossAlignment.center,
                       children: [
                         Text(
                           t('lists.moveCount', {'count': game.moveCount}),
@@ -577,12 +704,18 @@ class _PlaylistDetailScreenState extends State<PlaylistDetailScreen> {
                             color: scheme.onSurfaceVariant,
                           ),
                         ),
-                        if (game.result != null) ...[
-                          const SizedBox(width: 8),
-                          _resultChip(game.result!, scheme),
-                        ],
-                        if (game.startFen != null) ...[
-                          const SizedBox(width: 8),
+                        if (game.result != null) _resultChip(game.result!, scheme),
+                        // PGN'de tarih varsa; eksikse yalnızca yıl, yıl
+                        // da yoksa hiç yazılmıyor.
+                        if (game.displayDate != null)
+                          Text(
+                            game.displayDate!,
+                            style: TextStyle(
+                              fontSize: 12,
+                              color: scheme.onSurfaceVariant,
+                            ),
+                          ),
+                        if (game.startFen != null)
                           Text(
                             t('lists.customPosition'),
                             style: TextStyle(
@@ -590,7 +723,6 @@ class _PlaylistDetailScreenState extends State<PlaylistDetailScreen> {
                               color: scheme.secondary,
                             ),
                           ),
-                        ],
                       ],
                     ),
                   ],
@@ -610,6 +742,9 @@ class _PlaylistDetailScreenState extends State<PlaylistDetailScreen> {
                       break;
                     case 'rename':
                       _rename(game);
+                      break;
+                    case 'info':
+                      _showInfo(game);
                       break;
                     case 'pgn':
                       _copyPgn(game);
@@ -646,6 +781,10 @@ class _PlaylistDetailScreenState extends State<PlaylistDetailScreen> {
                       value: 'deleteNote',
                       child: Text(t('common.deleteNote')),
                     ),
+                  PopupMenuItem(
+                    value: 'info',
+                    child: Text(t('lists.gameInfo')),
+                  ),
                   PopupMenuItem(value: 'pgn', child: Text(t('game.copyPgn'))),
                   PopupMenuItem(
                     value: 'move',

@@ -90,6 +90,7 @@ class PgnImportService {
         startFen: game.startFen,
         white: game.white == '?' ? null : game.white,
         black: game.black == '?' ? null : game.black,
+        tags: game.headers,
         note: game.subtitle.isEmpty ? null : game.subtitle,
       );
 }
