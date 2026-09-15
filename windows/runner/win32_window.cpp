@@ -150,7 +150,10 @@ bool Win32Window::Create(const std::wstring& title,
 }
 
 bool Win32Window::Show() {
-  return ShowWindow(window_handle_, SW_SHOWNORMAL);
+  // Pencere buyutulmus acilir: tahta ve yan panel birlikte rahat
+  // sigsin diye. Tam ekran (kenarliksiz) degil; baslik cubugu kalir,
+  // kullanici isterse kucultebilir.
+  return ShowWindow(window_handle_, SW_SHOWMAXIMIZED);
 }
 
 // static
