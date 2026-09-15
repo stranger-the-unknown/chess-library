@@ -87,13 +87,16 @@ class GameReview {
 /// işaret değiştirilmiş değerlendirmesi ise gerçekte oynanan hamlenin
 /// sonucunu verir. Böylece N hamle için N+1 analiz yeterlidir.
 class GameReviewer {
+  // Derinlik artık emniyet supabı; asıl sınır süre. Stockfish 400
+  // ms'de ortalama 18 yarım hamle görüyor, eski 12 tavanı kazancı
+  // boğuyordu.
   /// Hızlı inceleme ayarları.
   static const int quickMovetimeMs = 400;
-  static const int quickDepth = 12;
+  static const int quickDepth = 30;
 
   /// Derin inceleme ayarları.
   static const int deepMovetimeMs = 1200;
-  static const int deepDepth = 16;
+  static const int deepDepth = 40;
 
   /// Mat skorlarını grafikte taşmasın diye sınırlar.
   static const int _cap = 1200;

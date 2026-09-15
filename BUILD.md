@@ -101,8 +101,19 @@ ilgili paket güncellenirse kaldırılabilirler.
 
 ## Kod düzeni üzerine iki not
 
-- Motor `lib/services/engine/` altında ve Flutter'dan bağımsız, saf
-  Dart'tır; `engine_service.dart` onu bir `Isolate` içinde çalıştırır.
+- Motor **Stockfish 17**'dir ve `stockfish_chess_engine` paketiyle
+  uygulamanın içine derlenir; ağ bağlantısı gerektirmez.
+  `lib/services/engine/stockfish_engine.dart` onu UCI üzerinden
+  konuşturur, `engine_service.dart` ise uygulamanın geri kalanına tek bir
+  yüz gösterir — motor bir gün yine değişirse değişecek yer orasıdır.
+- **Derleme sırasında internet gerekir**: NNUE değerlendirme ağları
+  (`nn-*.nnue`) derleme sırasında indirilir. Windows'ta ağ dosyaları
+  çalıştırılabilir dosyanın yanına konur ve kurulum paketine girer;
+  Android'de küçük ağ doğrudan `.so` içine gömülür.
+- Kural motoru (`lib/models/chess_engine.dart`) ayrı bir şeydir ve
+  yerinde durur: hamle üretimi, yasallık, SAN ve FEN ondan gelir. Ayrıca
+  Stockfish'e giden her pozisyonu doğrular; paket kural dışı pozisyonda
+  çöküyor.
 - Masaüstü yerleşim sınırları tek yerde toplanmıştır:
   `lib/widgets/responsive.dart` (tahta en fazla 520, içerik en fazla 760,
   geniş pencere eşiği 900).

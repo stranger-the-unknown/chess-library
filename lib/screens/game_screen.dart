@@ -345,7 +345,7 @@ class _GameScreenState extends State<GameScreen> {
 
     final result = await EngineService.instance.analyze(
       fen,
-      depth: 16,
+      depth: 40,
       movetimeMs: 1200,
       onProgress: (partial) {
         if (token != _analysisToken || !mounted) return;
@@ -406,7 +406,7 @@ class _GameScreenState extends State<GameScreen> {
     setState(() => _thinking = true);
     final result = await EngineService.instance.analyze(
       _game.fen,
-      depth: 12,
+      depth: 30,
       movetimeMs: 1200,
     );
     if (!mounted) return;
