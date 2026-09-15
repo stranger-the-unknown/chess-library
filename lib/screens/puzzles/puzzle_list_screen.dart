@@ -563,7 +563,13 @@ class _PuzzleListScreenState extends State<PuzzleListScreen> {
               ? _empty(scheme)
               : ContentWidth(
                   child: ListView.builder(
-                    padding: const EdgeInsets.fromLTRB(12, 8, 12, 90),
+                    key: const Key('puzzleList'),
+                    padding: EdgeInsets.fromLTRB(
+                      12,
+                      8,
+                      12,
+                      90 + MediaQuery.viewPaddingOf(context).bottom,
+                    ),
                     itemCount: visible.length,
                     itemBuilder: (context, index) =>
                         _puzzleTile(visible[index], scheme),

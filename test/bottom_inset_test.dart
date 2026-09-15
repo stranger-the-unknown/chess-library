@@ -3,30 +3,33 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import 'package:chess_pgn_reader/l10n/app_strings.dart';
+import 'package:chess_pgn_reader/models/pgn_parser.dart';
 import 'package:chess_pgn_reader/screens/home_screen.dart';
 import 'package:chess_pgn_reader/screens/openings/opening_visibility_screen.dart';
+import 'package:chess_pgn_reader/screens/playlist_detail_screen.dart';
 import 'package:chess_pgn_reader/screens/puzzles/puzzle_list_screen.dart';
 import 'package:chess_pgn_reader/screens/settings_screen.dart';
 import 'package:chess_pgn_reader/services/opening_service.dart';
+import 'package:chess_pgn_reader/services/pgn_import_service.dart';
 import 'package:chess_pgn_reader/services/puzzle_service.dart';
 import 'package:chess_pgn_reader/services/settings_service.dart';
+import 'package:chess_pgn_reader/services/storage_service.dart';
 
-/// Telefonun gezinme çubuğu ekranın altından yer kapıyor. Alt sayfaların
-/// son satırı oraya denk gelirse tıklanamıyor; bu, uygulamada en sık
-/// tekrarlayan arayüz hatası oldu.
+/// Telefonun gezinme çubuğu ekranın altından yer kapıyor. Bir listenin son
+/// satırı oraya denk gelirse tıklanamıyor.
 ///
-/// Burada boşluk ölçülmüyor, **çizilen yer** ölçülüyor: son öğenin alt
-/// kenarı sistem payının içine giriyor mu. Hangi yolla (SafeArea, elle
-/// padding) halledildiği fark etmez, sonuç denetlenir.
+/// Burada boşluk değil **çizilen yer** ölçülüyor: liste gerçekten sonuna
+/// kadar kaydırılıp son satırın alt kenarına bakılıyor. Kaydırmanın sona
+/// vardığı ayrıca doğrulanıyor — sona varmayan bir kaydırma testi hiçbir
+/// şey kanıtlamaz, bu dosyanın ilk hâli tam da bu yüzden hatayı
+/// yakalayamıyordu.
 
 const double _inset = 48;
 const Size _screen = Size(420, 900);
+double get _safeBottom => _screen.height - _inset;
 
 Future<void> _pump(WidgetTester tester, Widget screen) async {
-  SharedPreferences.setMockInitialValues({});
-  await SettingsService.instance.load();
   Strings.language = AppLanguage.turkish;
-
   tester.view.devicePixelRatio = 1;
   tester.view.physicalSize = _screen;
   tester.view.viewPadding = const FakeViewPadding(bottom: _inset);
@@ -36,19 +39,38 @@ Future<void> _pump(WidgetTester tester, Widget screen) async {
   await tester.pumpAndSettle();
 }
 
-/// Sayfadaki son öğe sistem payının üstünde kalmalı.
+/// Ekrandaki dikey listenin alt boşluğu.
+///
+/// Kaydırıp çizilen yeri ölçmek daha doğrudan olurdu ama testte listeyi
+/// güvenilir biçimde sona kadar kaydırmak kırılgan çıktı. Alt boşluk,
+/// düzeltmenin uygulandığı yerin ta kendisi: sistem payını içermezse son
+/// satır gezinme çubuğunun altında kalıyor.
+EdgeInsets _listPadding(WidgetTester tester, Finder list) {
+  final widget = tester.widget(list);
+  return ((widget as dynamic).padding as EdgeInsets?) ?? EdgeInsets.zero;
+}
+
 void _expectAboveNavigationBar(WidgetTester tester, Finder last, String what) {
   final rect = tester.getRect(last);
   expect(
     rect.bottom,
-    lessThanOrEqualTo(_screen.height - _inset),
+    lessThanOrEqualTo(_safeBottom),
     reason: '$what gezinme çubuğunun altına taşıyor '
-        '(${rect.bottom.toStringAsFixed(0)} > ${_screen.height - _inset})',
+        '(${rect.bottom.toStringAsFixed(0)} > '
+        '${_safeBottom.toStringAsFixed(0)})',
   );
 }
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
+
+  setUp(() async {
+    SharedPreferences.setMockInitialValues({});
+    StorageService.instance.resetCache();
+    PuzzleService.instance.resetCache();
+    OpeningService.instance.resetCache();
+    await SettingsService.instance.load();
+  });
 
   tearDown(() {
     Strings.language = AppLanguage.system;
@@ -60,100 +82,109 @@ void main() {
     view.resetPadding();
   });
 
-  testWidgets('motora karşı oyna sayfası', (tester) async {
-    await _pump(tester, const HomeScreen());
-    await tester.tap(find.text('Motora karşı oyna'));
-    await tester.pumpAndSettle();
+  group('Alt sayfalar', () {
+    testWidgets('motora karşı oyna', (tester) async {
+      await _pump(tester, const HomeScreen());
+      await tester.tap(find.text('Motora karşı oyna'));
+      await tester.pumpAndSettle();
 
-    // Sayfanın en altındaki düğme: başlat.
-    final start = find.widgetWithText(ElevatedButton, 'Başla');
-    expect(start, findsOneWidget);
-    _expectAboveNavigationBar(tester, start, 'başlat düğmesi');
+      final start = find.widgetWithText(ElevatedButton, 'Başla');
+      expect(start, findsOneWidget);
+      _expectAboveNavigationBar(tester, start, 'başlat düğmesi');
+    });
+
+    testWidgets('dil seçici', (tester) async {
+      await _pump(tester, const SettingsScreen());
+      await tester.tap(find.text('Dil'));
+      await tester.pumpAndSettle();
+
+      final tiles = find.descendant(
+        of: find.byType(BottomSheet),
+        matching: find.byType(ListTile),
+      );
+      expect(tiles, findsWidgets);
+      _expectAboveNavigationBar(tester, tiles.last, 'son dil satırı');
+    });
+
+    testWidgets('tahta seçici', (tester) async {
+      await _pump(tester, const SettingsScreen());
+      await tester.tap(find.text('Tahta görünümü'));
+      await tester.pumpAndSettle();
+
+      final grid = find.descendant(
+        of: find.byType(BottomSheet),
+        matching: find.byType(GridView),
+      );
+      final padding = (tester.widget(grid) as GridView).padding as EdgeInsets;
+      expect(padding.bottom, greaterThanOrEqualTo(_inset));
+    });
+
+    testWidgets('taş seçici', (tester) async {
+      await _pump(tester, const SettingsScreen());
+      await tester.tap(find.text('Taş takımı'));
+      await tester.pumpAndSettle();
+
+      final list = find.descendant(
+        of: find.byType(BottomSheet),
+        matching: find.byType(ListView),
+      );
+      final padding = (tester.widget(list) as ListView).padding as EdgeInsets;
+      expect(padding.bottom, greaterThanOrEqualTo(_inset));
+    });
   });
 
-  testWidgets('dil seçici', (tester) async {
-    await _pump(tester, const SettingsScreen());
-    await tester.tap(find.text('Dil'));
-    await tester.pumpAndSettle();
+  group('Tam ekran listeler', () {
+    void expectInsetAware(WidgetTester tester, String key, String what) {
+      // Liste anahtarla bulunuyor: süzgeç şeridi de bir ListView olduğu
+      // için tür üzerinden aramak hangi listeye baktığımızı belirsiz
+      // bırakıyordu.
+      final list = find.byKey(Key(key));
+      expect(list, findsOneWidget, reason: '$what listesi bulunamadı');
+      final padding = _listPadding(tester, list);
+      expect(
+        padding.bottom,
+        greaterThanOrEqualTo(_inset),
+        reason: '$what listesinin alt boşluğu sistem payını içermiyor '
+            '(${padding.bottom.toStringAsFixed(0)} < $_inset)',
+      );
+    }
 
-    final tiles = find.descendant(
-      of: find.byType(BottomSheet),
-      matching: find.byType(ListTile),
-    );
-    expect(tiles, findsWidgets);
-    _expectAboveNavigationBar(tester, tiles.last, 'son dil satırı');
-  });
+    testWidgets('oyun listesi', (tester) async {
+      final playlist = await StorageService.instance.createPlaylist('Deneme');
+      final pgn = List.generate(6, (i) => '''
+[Event "Oyun ${i + 1}"]
+[White "Beyaz ${i + 1}"]
+[Black "Siyah ${i + 1}"]
+[Result "1-0"]
 
-  testWidgets('tahta seçici', (tester) async {
-    await _pump(tester, const SettingsScreen());
-    await tester.tap(find.text('Tahta görünümü'));
-    await tester.pumpAndSettle();
+1. e4 e5 1-0
+''').join();
+      await PgnImportService.addToList(playlist.id, PgnParser.parseAll(pgn));
 
-    final grid = find.descendant(
-      of: find.byType(BottomSheet),
-      matching: find.byType(GridView),
-    );
-    final padding = (tester.widget(grid) as GridView).padding as EdgeInsets;
-    expect(padding.bottom, greaterThanOrEqualTo(_inset),
-        reason: 'tahta ızgarasının alt boşluğu sistem payını içermeli');
-  });
+      await _pump(tester, PlaylistDetailScreen(playlistId: playlist.id));
+      expectInsetAware(tester, 'gameList', 'oyun');
+    });
 
-  testWidgets('taş seçici', (tester) async {
-    await _pump(tester, const SettingsScreen());
-    await tester.tap(find.text('Taş takımı'));
-    await tester.pumpAndSettle();
+    testWidgets('bulmaca listesi', (tester) async {
+      final collection =
+          await PuzzleService.instance.createCollection('Deneme');
+      await PuzzleService.instance.importFens(
+        collection,
+        List.generate(6, (i) => '8/8/3k4/8/8/8/6Q1/7K w - - 0 ${i + 1}')
+            .join('\n'),
+      );
 
-    final list = find.descendant(
-      of: find.byType(BottomSheet),
-      matching: find.byType(ListView),
-    );
-    final padding = (tester.widget(list) as ListView).padding as EdgeInsets;
-    expect(padding.bottom, greaterThanOrEqualTo(_inset),
-        reason: 'taş listesinin alt boşluğu sistem payını içermeli');
-  });
+      await _pump(tester, PuzzleListScreen(collection: collection));
+      expectInsetAware(tester, 'puzzleList', 'bulmaca');
+    });
 
-  // Tam ekran açılan liste ekranlarında altta gezinme çubuğu yok; son
-  // satır doğrudan telefonun tuşlarının üstüne denk geliyor. Alt
-  // sayfalardan farklı olarak bunlarda hiçbir pay hesabı yoktu.
+    testWidgets('gizli açılışlar', (tester) async {
+      await OpeningService.instance.importText(
+        List.generate(6, (i) => 'Aile ${i + 1}|Ana Hat|e4 e5 Nf3').join('\n'),
+      );
 
-  testWidgets('bulmaca listesinin son satırı', (tester) async {
-    SharedPreferences.setMockInitialValues({});
-    PuzzleService.instance.resetCache();
-    await SettingsService.instance.load();
-    final collection =
-        await PuzzleService.instance.createCollection('Deneme');
-    await PuzzleService.instance.importFens(
-      collection,
-      List.generate(
-        30,
-        (i) => '8/8/3k4/8/8/8/6Q1/7K w - - 0 ${i + 1}',
-      ).join('\n'),
-    );
-
-    await _pump(tester, PuzzleListScreen(collection: collection));
-    final list = find.byType(ListView).last;
-    await tester.drag(list, const Offset(0, -4000));
-    await tester.pumpAndSettle();
-
-    final rows = find.descendant(of: list, matching: find.byType(InkWell));
-    expect(rows, findsWidgets);
-    _expectAboveNavigationBar(tester, rows.last, 'son bulmaca satırı');
-  });
-
-  testWidgets('gizli açılışlar ekranının son satırı', (tester) async {
-    SharedPreferences.setMockInitialValues({});
-    OpeningService.instance.resetCache();
-    await SettingsService.instance.load();
-    await OpeningService.instance.importText(
-      List.generate(30, (i) => 'Aile $i|Ana Hat|e4 e5 Nf3').join('\n'),
-    );
-
-    await _pump(tester, const OpeningVisibilityScreen());
-    await tester.drag(find.byType(ListView), const Offset(0, -4000));
-    await tester.pumpAndSettle();
-
-    final rows = find.byType(CheckboxListTile);
-    expect(rows, findsWidgets);
-    _expectAboveNavigationBar(tester, rows.last, 'son başlık satırı');
+      await _pump(tester, const OpeningVisibilityScreen());
+      expectInsetAware(tester, 'visibilityList', 'başlık');
+    });
   });
 }

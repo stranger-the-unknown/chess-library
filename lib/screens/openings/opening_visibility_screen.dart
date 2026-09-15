@@ -195,6 +195,10 @@ class _OpeningVisibilityScreenState extends State<OpeningVisibilityScreen> {
                     ),
                     Expanded(
                       child: ListView.builder(
+                        key: const Key('visibilityList'),
+                        padding: EdgeInsets.only(
+                          bottom: 16 + MediaQuery.viewPaddingOf(context).bottom,
+                        ),
                         itemCount: listed.length,
                         itemBuilder: (context, index) {
                           final family = listed[index];

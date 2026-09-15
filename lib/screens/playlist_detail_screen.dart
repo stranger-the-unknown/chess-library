@@ -461,7 +461,15 @@ class _PlaylistDetailScreenState extends State<PlaylistDetailScreen> {
                     )
                   : ContentWidth(
                       child: ListView.separated(
-                        padding: const EdgeInsets.fromLTRB(16, 8, 16, 28),
+                        key: const Key('gameList'),
+                        // Telefonun gezinme çubuğu ekranın altından yer
+                        // kapıyor; son satır oraya denk gelirse tıklanamıyor.
+                        padding: EdgeInsets.fromLTRB(
+                          16,
+                          8,
+                          16,
+                          28 + MediaQuery.viewPaddingOf(context).bottom,
+                        ),
                         itemCount: visible.length,
                         separatorBuilder: (_, __) => const SizedBox(height: 8),
                         itemBuilder: (context, index) =>
