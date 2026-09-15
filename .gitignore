@@ -54,3 +54,6 @@ app.*.map.json
 
 # Kurulum dosyasi ciktisi
 /windows/installer/output/
+
+# Kotlin derleyicisinin bıraktığı oturum ve hata günlükleri.
+android/.kotlin/
