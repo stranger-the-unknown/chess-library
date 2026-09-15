@@ -10,16 +10,25 @@ class RangeDialog extends StatefulWidget {
   final int min;
   final int max;
   final String hint;
-  final String markLabel;
-  final String unmarkLabel;
+  /// İşaretleme seçenekleri; verilmezse pencere yalnızca aralık sorar.
+  ///
+  /// Aynı pencere iki iş görüyor: bir aralığı okundu/çözüldü işaretlemek
+  /// ve yalnızca o aralığı listelemek. İkincisinde işaretleme seçeneği
+  /// anlamsız olduğu için gizleniyor.
+  final String? markLabel;
+  final String? unmarkLabel;
+
+  /// Pencerenin başlığı.
+  final String title;
 
   const RangeDialog({
     super.key,
     required this.min,
     required this.max,
     required this.hint,
-    required this.markLabel,
-    required this.unmarkLabel,
+    required this.title,
+    this.markLabel,
+    this.unmarkLabel,
   });
 
   @override
@@ -54,7 +63,7 @@ class _RangeDialogState extends State<RangeDialog> {
   @override
   Widget build(BuildContext context) {
     return AlertDialog(
-      title: Text(t('puzzles.markRange')),
+      title: Text(widget.title),
       content: Column(
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -104,16 +113,19 @@ class _RangeDialogState extends State<RangeDialog> {
                 style: TextStyle(color: Theme.of(context).colorScheme.error),
               ),
             ),
-          const SizedBox(height: 16),
-          SegmentedButton<bool>(
-            showSelectedIcon: false,
-            segments: [
-              ButtonSegment(value: true, label: Text(widget.markLabel)),
-              ButtonSegment(value: false, label: Text(widget.unmarkLabel)),
-            ],
-            selected: {_mark},
-            onSelectionChanged: (value) => setState(() => _mark = value.first),
-          ),
+          if (widget.markLabel != null && widget.unmarkLabel != null) ...[
+            const SizedBox(height: 16),
+            SegmentedButton<bool>(
+              showSelectedIcon: false,
+              segments: [
+                ButtonSegment(value: true, label: Text(widget.markLabel!)),
+                ButtonSegment(value: false, label: Text(widget.unmarkLabel!)),
+              ],
+              selected: {_mark},
+              onSelectionChanged: (value) =>
+                  setState(() => _mark = value.first),
+            ),
+          ],
         ],
       ),
       actions: [

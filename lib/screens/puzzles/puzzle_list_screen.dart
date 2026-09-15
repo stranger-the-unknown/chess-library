@@ -63,6 +63,9 @@ class _PuzzleListScreenState extends State<PuzzleListScreen> {
   /// sırayı gösterir.
   bool _descending = false;
 
+  /// Yalnızca bu numara aralığındaki bulmacalar listelenir; null ise hepsi.
+  (int, int)? _range;
+
   /// Bugün (yerel gece yarısından beri) çözülen bulmaca sayısı.
   int _solvedToday = 0;
 
@@ -129,6 +132,13 @@ class _PuzzleListScreenState extends State<PuzzleListScreen> {
           break;
         case _Filter.all:
           break;
+      }
+      final range = _range;
+      if (range != null) {
+        final number = _numbers[puzzle.id];
+        if (number == null || number < range.$1 || number > range.$2) {
+          return false;
+        }
       }
       if (query.isEmpty) return true;
       return puzzleMatches(puzzle, query, number: _numbers[puzzle.id]);
@@ -316,12 +326,34 @@ class _PuzzleListScreenState extends State<PuzzleListScreen> {
   ///
   /// Numaralar süzgeçten bağımsızdır: kullanıcı ekranda gördüğü numarayı
   /// yazar, hangi süzgeç açık olursa olsun aynı bulmacalar işaretlenir.
+  /// Listeyi bir numara aralığına daraltır.
+  Future<void> _pickRange() async {
+    if (_all.isEmpty) return;
+    final numbers = _all.map((p) => _numbers[p.id] ?? 0).toList()..sort();
+
+    final result = await showDialog<(int, int, bool)>(
+      context: context,
+      builder: (dialogContext) => RangeDialog(
+        title: t('puzzles.showRange'),
+        min: numbers.first,
+        max: numbers.last,
+        hint: t('puzzles.rangeHint', {
+          'min': numbers.first,
+          'max': numbers.last,
+        }),
+      ),
+    );
+    if (result == null || !mounted) return;
+    setState(() => _range = (result.$1, result.$2));
+  }
+
   Future<void> _markRange() async {
     if (_all.isEmpty) return;
     final numbers = _all.map(_numberOf).toList()..sort();
     final result = await showDialog<(int, int, bool)>(
       context: context,
       builder: (dialogContext) => RangeDialog(
+        title: t('puzzles.markRange'),
         min: numbers.first,
         max: numbers.last,
         hint: t('puzzles.rangeHint', {
@@ -453,6 +485,7 @@ class _PuzzleListScreenState extends State<PuzzleListScreen> {
               if (value == 'importFile') _importFromFile();
               if (value == 'export') _exportPuzzles();
               if (value == 'range') _markRange();
+              if (value == 'showRange') _pickRange();
             },
             itemBuilder: (context) => [
               PopupMenuItem(
@@ -488,6 +521,13 @@ class _PuzzleListScreenState extends State<PuzzleListScreen> {
                 child: ListTile(
                   leading: const Icon(Icons.done_all_rounded),
                   title: Text(t('puzzles.markRange')),
+                ),
+              ),
+              PopupMenuItem(
+                value: 'showRange',
+                child: ListTile(
+                  leading: const Icon(Icons.filter_list_rounded),
+                  title: Text(t('puzzles.showRange')),
                 ),
               ),
             ],
@@ -575,9 +615,13 @@ class _PuzzleListScreenState extends State<PuzzleListScreen> {
             ),
       body: _loading
           ? const Center(child: CircularProgressIndicator())
-          : visible.isEmpty
-              ? _empty(scheme)
-              : ContentWidth(
+          : Column(
+              children: [
+                if (_range != null) _rangeBanner(scheme),
+                Expanded(
+                  child: visible.isEmpty
+                      ? _empty(scheme)
+                      : ContentWidth(
                   child: ListView.builder(
                     key: const Key('puzzleList'),
                     padding: EdgeInsets.fromLTRB(
@@ -587,10 +631,45 @@ class _PuzzleListScreenState extends State<PuzzleListScreen> {
                       90 + MediaQuery.viewPaddingOf(context).bottom,
                     ),
                     itemCount: visible.length,
-                    itemBuilder: (context, index) =>
-                        _puzzleTile(visible[index], scheme),
-                  ),
+                          itemBuilder: (context, index) =>
+                              _puzzleTile(visible[index], scheme),
+                        ),
+                      ),
                 ),
+              ],
+            ),
+    );
+  }
+
+  /// Aralık süzgeci açıkken görünen şerit.
+  ///
+  /// Olmasaydı kullanıcı kısalmış listeye bakıp sebebini anlamaz ve
+  /// süzgeci kapatmanın yolunu bulamazdı.
+  Widget _rangeBanner(ColorScheme scheme) {
+    final range = _range!;
+    return Container(
+      width: double.infinity,
+      color: scheme.secondaryContainer,
+      padding: const EdgeInsets.fromLTRB(16, 6, 8, 6),
+      child: Row(
+        children: [
+          Expanded(
+            child: Text(
+              t('puzzles.rangeActive', {'from': range.$1, 'to': range.$2}),
+              style: TextStyle(
+                fontSize: 12.5,
+                color: scheme.onSecondaryContainer,
+              ),
+            ),
+          ),
+          IconButton(
+            tooltip: t('common.clearSelection'),
+            icon: const Icon(Icons.close_rounded, size: 18),
+            color: scheme.onSecondaryContainer,
+            onPressed: () => setState(() => _range = null),
+          ),
+        ],
+      ),
     );
   }
 

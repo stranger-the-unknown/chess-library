@@ -41,6 +41,9 @@ class _PlaylistDetailScreenState extends State<PlaylistDetailScreen> {
   /// Liste kitaptaki sırayla gelir; ok bunu tersine çevirir.
   bool _descending = false;
 
+  /// Yalnızca bu numara aralığındaki oyunlar listelenir; null ise hepsi.
+  (int, int)? _range;
+
   /// Oyun kimliği -> listedeki sıra numarası (1'den başlar). Süzgeç
   /// uygulansa da numara değişmez, böylece "#42" ile aranabilir.
   final Map<String, int> _numbers = {};
@@ -236,6 +239,13 @@ class _PlaylistDetailScreenState extends State<PlaylistDetailScreen> {
     final query = foldForSearch(_query);
 
     final matched = games.where((game) {
+      final range = _range;
+      if (range != null) {
+        final number = _numbers[game.id];
+        if (number == null || number < range.$1 || number > range.$2) {
+          return false;
+        }
+      }
       switch (_filter) {
         case _GameFilter.unread:
           if (game.read) return false;
@@ -379,6 +389,28 @@ class _PlaylistDetailScreenState extends State<PlaylistDetailScreen> {
   ///
   /// Numaralar süzgeçten bağımsızdır; kullanıcı satırda gördüğü numarayı
   /// yazar.
+  /// Listeyi bir numara aralığına daraltır.
+  Future<void> _pickRange() async {
+    final games = _playlist?.games ?? const <SavedGame>[];
+    if (games.isEmpty) return;
+    final numbers = games.map((g) => _numbers[g.id] ?? 0).toList()..sort();
+
+    final result = await showDialog<(int, int, bool)>(
+      context: context,
+      builder: (dialogContext) => RangeDialog(
+        title: t('lists.showRange'),
+        min: numbers.first,
+        max: numbers.last,
+        hint: t('lists.rangeHint', {
+          'min': numbers.first,
+          'max': numbers.last,
+        }),
+      ),
+    );
+    if (result == null || !mounted) return;
+    setState(() => _range = (result.$1, result.$2));
+  }
+
   Future<void> _markRange() async {
     final games = _playlist?.games ?? const <SavedGame>[];
     if (games.isEmpty) return;
@@ -387,6 +419,7 @@ class _PlaylistDetailScreenState extends State<PlaylistDetailScreen> {
     final result = await showDialog<(int, int, bool)>(
       context: context,
       builder: (dialogContext) => RangeDialog(
+        title: t('lists.markRange'),
         min: numbers.first,
         max: numbers.last,
         hint: t('lists.rangeHint', {
@@ -458,6 +491,7 @@ class _PlaylistDetailScreenState extends State<PlaylistDetailScreen> {
               if (value == 'allRead') _setAllRead(true);
               if (value == 'allUnread') _setAllRead(false);
               if (value == 'range') _markRange();
+              if (value == 'showRange') _pickRange();
             },
             itemBuilder: (context) => [
               PopupMenuItem(
@@ -471,6 +505,10 @@ class _PlaylistDetailScreenState extends State<PlaylistDetailScreen> {
               PopupMenuItem(
                 value: 'range',
                 child: Text(t('lists.markRange')),
+              ),
+              PopupMenuItem(
+                value: 'showRange',
+                child: Text(t('lists.showRange')),
               ),
             ],
           ),
@@ -540,7 +578,49 @@ class _PlaylistDetailScreenState extends State<PlaylistDetailScreen> {
           ? const Center(child: CircularProgressIndicator())
           : total == 0
               ? _emptyState(scheme)
-              : visible.isEmpty
+              : Column(
+                  children: [
+                    if (_range != null) _rangeBanner(scheme),
+                    Expanded(child: _list(visible, scheme)),
+                  ],
+                ),
+    );
+  }
+
+  /// Aralık süzgeci açıkken görünen şerit.
+  ///
+  /// Olmasaydı kullanıcı kısalmış listeye bakıp sebebini anlamaz ve
+  /// süzgeci kapatmanın yolunu bulamazdı.
+  Widget _rangeBanner(ColorScheme scheme) {
+    final range = _range!;
+    return Container(
+      width: double.infinity,
+      color: scheme.secondaryContainer,
+      padding: const EdgeInsets.fromLTRB(16, 6, 8, 6),
+      child: Row(
+        children: [
+          Expanded(
+            child: Text(
+              t('lists.rangeActive', {'from': range.$1, 'to': range.$2}),
+              style: TextStyle(
+                fontSize: 12.5,
+                color: scheme.onSecondaryContainer,
+              ),
+            ),
+          ),
+          IconButton(
+            tooltip: t('common.clearSelection'),
+            icon: const Icon(Icons.close_rounded, size: 18),
+            color: scheme.onSecondaryContainer,
+            onPressed: () => setState(() => _range = null),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _list(List<SavedGame> visible, ColorScheme scheme) {
+    return visible.isEmpty
                   ? Center(
                       child: Text(
                         t('lists.noMatch'),
@@ -563,8 +643,7 @@ class _PlaylistDetailScreenState extends State<PlaylistDetailScreen> {
                         itemBuilder: (context, index) =>
                             _gameTile(visible[index], scheme),
                       ),
-                    ),
-    );
+                    );
   }
 
   /// Süzgeci değiştirir ve sıralamayı varsayılana döndürür.
