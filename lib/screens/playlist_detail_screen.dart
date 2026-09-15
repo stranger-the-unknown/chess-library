@@ -92,6 +92,8 @@ class _PlaylistDetailScreenState extends State<PlaylistDetailScreen> {
           startFen: game.startFen,
           title: game.name,
           initialResult: game.result,
+          whiteName: game.white,
+          blackName: game.black,
         ),
       ),
     );

@@ -48,6 +48,11 @@ class GameScreen extends StatefulWidget {
   /// Motora karşı oyunda seviye (yoksa ayarlardaki seviye).
   final int? engineLevelIndex;
 
+  /// Oyuncuların adları (PGN'den). Tahtanın üstünde ve altında
+  /// gösterilir; tahta döndüğünde yer değiştirirler.
+  final String? whiteName;
+  final String? blackName;
+
   const GameScreen({
     super.key,
     this.mode = GameMode.analysis,
@@ -58,6 +63,8 @@ class GameScreen extends StatefulWidget {
     this.initialResult,
     this.playerColor = engine.Color.white,
     this.engineLevelIndex,
+    this.whiteName,
+    this.blackName,
   });
 
   @override
@@ -909,7 +916,15 @@ class _GameScreenState extends State<GameScreen> {
           ? t('game.you')
           : t('game.engine', {'level': _level.name});
     } else {
-      name = side == engine.Color.white ? t('common.white') : t('common.black');
+      // PGN'de adlar varsa onlar yazılır; listede kartta sığmayan adlar
+      // burada tam görünüyor. Yoksa rengin adı.
+      final given =
+          side == engine.Color.white ? widget.whiteName : widget.blackName;
+      name = (given != null && given.trim().isNotEmpty)
+          ? given.trim()
+          : (side == engine.Color.white
+              ? t('common.white')
+              : t('common.black'));
     }
 
     return Padding(
@@ -928,12 +943,16 @@ class _GameScreenState extends State<GameScreen> {
             ),
           ),
           const SizedBox(width: 8),
-          Text(
-            name,
-            style: TextStyle(
-              fontWeight: toMove ? FontWeight.w800 : FontWeight.w500,
-              color: toMove ? scheme.onSurface : scheme.onSurfaceVariant,
-              fontSize: 13,
+          Flexible(
+            child: Text(
+              name,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: TextStyle(
+                fontWeight: toMove ? FontWeight.w800 : FontWeight.w500,
+                color: toMove ? scheme.onSurface : scheme.onSurfaceVariant,
+                fontSize: 13,
+              ),
             ),
           ),
           if (toMove && _thinking) ...[
