@@ -363,6 +363,9 @@ class Strings {
     'analysis.started': '{count} oyun analiz ediliyor...',
     'analysis.finished': 'Analiz bitti.',
     'analysis.deepList': 'Son derin analizler',
+    'analysis.emptyList':
+        'Henüz analiz yok. Bir oyun listesinden oyun seçip analiz '
+        'başlattığında sonuçlar burada birikir.',
     'analysis.quickList': 'Son hızlı analizler',
     'analysis.progress': '{done}/{total} oyun analiz edildi',
     'lists.showRange': 'Aralık göster',
@@ -874,6 +877,9 @@ class Strings {
     'analysis.started': 'Analysing {count} games...',
     'analysis.finished': 'Analysis finished.',
     'analysis.deepList': 'Recent deep analyses',
+    'analysis.emptyList':
+        'No analyses yet. Pick games from a list and start an '
+        'analysis; the results collect here.',
     'analysis.quickList': 'Recent quick analyses',
     'analysis.progress': '{done}/{total} games analysed',
     'lists.showRange': 'Show a range',

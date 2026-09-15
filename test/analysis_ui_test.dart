@@ -32,7 +32,11 @@ Future<void> _pump(WidgetTester tester, Widget screen) async {
     tester.view.resetPhysicalSize();
     tester.view.resetDevicePixelRatio();
   });
-  await tester.pumpWidget(MaterialApp(home: screen));
+  // Anahtar verilmezse Flutter aynı türdeki ekranın State'ini koruyor,
+  // initState yeniden çalışmıyor ve ekranda bir öncekinin verisi kalıyor.
+  await tester.pumpWidget(
+    MaterialApp(home: KeyedSubtree(key: UniqueKey(), child: screen)),
+  );
   await tester.pumpAndSettle();
 }
 
@@ -134,5 +138,43 @@ void main() {
       PlaylistDetailScreen(playlistId: StorageService.deepListId),
     );
     expect(find.text('Bir'), findsOneWidget);
+  });
+
+  testWidgets('analiz listesinin başlığı da çevrilmiş', (tester) async {
+    // Ham kimlik ("sys_quick") görünüyordu: ad çözümü listeler
+    // sekmesinde yapılıyor ama detay ekranında yapılmıyordu.
+    await _seed();
+    await _pump(
+      tester,
+      const PlaylistDetailScreen(playlistId: StorageService.quickListId),
+    );
+    expect(find.text('Son hızlı analizler'), findsOneWidget);
+    expect(find.text('sys_quick'), findsNothing);
+
+    await _pump(
+      tester,
+      const PlaylistDetailScreen(playlistId: StorageService.deepListId),
+    );
+    expect(find.text('Son derin analizler'), findsOneWidget);
+    expect(find.text('sys_deep'), findsNothing);
+  });
+
+  testWidgets('boş analiz listesi doğru yönlendiriyor', (tester) async {
+    // "Tahta ekranından oyun kaydet" demek burada yanlış: bu listeye
+    // oyun ancak analizle giriyor.
+    await _seed();
+    await _pump(
+      tester,
+      const PlaylistDetailScreen(playlistId: StorageService.deepListId),
+    );
+    expect(find.textContaining('Henüz analiz yok'), findsOneWidget);
+    expect(find.textContaining('Tahta ekranındaki'), findsNothing);
+  });
+
+  test('kullanıcı listesinin adı olduğu gibi kalıyor', () async {
+    final playlist = await _seed();
+    final loaded = (await StorageService.instance.loadPlaylists()).first;
+    expect(StorageService.displayName(loaded), 'Tal');
+    expect(loaded.id, playlist.id);
   });
 }

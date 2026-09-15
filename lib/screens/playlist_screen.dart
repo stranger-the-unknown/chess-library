@@ -249,21 +249,9 @@ class _PlaylistScreenState extends State<PlaylistScreen> {
                                         CrossAxisAlignment.start,
                                     children: [
                                       Text(
-                                        // Analiz listelerinin adı
-                                        // çeviriden gelir; kimlikleri
-                                        // sabit olduğu için dil
-                                        // değişince adı da değişir.
-                                        StorageService.isSystemList(
-                                          playlist.id,
-                                        )
-                                            ? t(
-                                                playlist.id ==
-                                                        StorageService
-                                                            .deepListId
-                                                    ? 'analysis.deepList'
-                                                    : 'analysis.quickList',
-                                              )
-                                            : playlist.name,
+                                        StorageService.displayName(
+                                          playlist,
+                                        ),
                                         style: const TextStyle(
                                           fontSize: 15.5,
                                           fontWeight: FontWeight.w600,

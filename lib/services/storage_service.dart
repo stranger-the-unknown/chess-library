@@ -171,6 +171,18 @@ class StorageService extends ChangeNotifier {
     if (notify) notifyListeners();
   }
 
+  /// Ekranda gösterilecek liste adı.
+  ///
+  /// Analiz listelerinin kayıtlı adı kimliğinin kendisidir (`sys_deep`);
+  /// görünen ad çeviriden gelir, böylece dil değişince ad da değişir.
+  /// Bu çözüm tek yerde: iki ekranda ayrı ayrı yapılınca biri unutuldu
+  /// ve detay ekranının başlığında "sys_quick" yazıyordu.
+  static String displayName(Playlist playlist) {
+    if (playlist.id == deepListId) return t('analysis.deepList');
+    if (playlist.id == quickListId) return t('analysis.quickList');
+    return playlist.name;
+  }
+
   /// Bu liste kullanıcının silemeyeceği bir analiz listesi mi?
   static bool isSystemList(String id) =>
       id == deepListId || id == quickListId;

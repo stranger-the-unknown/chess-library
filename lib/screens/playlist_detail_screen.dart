@@ -508,7 +508,11 @@ class _PlaylistDetailScreenState extends State<PlaylistDetailScreen> {
 
     return Scaffold(
       appBar: AppBar(
-        title: Text(playlist?.name ?? t('game.list')),
+        title: Text(
+          playlist == null
+              ? t('game.list')
+              : StorageService.displayName(playlist),
+        ),
         actions: [
           IconButton(
             tooltip: _descending
@@ -800,13 +804,19 @@ class _PlaylistDetailScreenState extends State<PlaylistDetailScreen> {
           mainAxisSize: MainAxisSize.min,
           children: [
             Icon(
-              Icons.sports_esports_outlined,
+              // Analiz listesi boşken kullanıcıya oyun kaydetmesini
+              // söylemenin anlamı yok; oraya oyun ancak analizle giriyor.
+              StorageService.isSystemList(widget.playlistId)
+                  ? Icons.query_stats_outlined
+                  : Icons.sports_esports_outlined,
               size: 46,
               color: scheme.onSurfaceVariant,
             ),
             const SizedBox(height: 14),
             Text(
-              t('lists.emptyGames'),
+              StorageService.isSystemList(widget.playlistId)
+                  ? t('analysis.emptyList')
+                  : t('lists.emptyGames'),
               textAlign: TextAlign.center,
               style: TextStyle(color: scheme.onSurfaceVariant, height: 1.4),
             ),
