@@ -295,7 +295,7 @@ giderse eski veri geri konur.
 
 ## Ayarlar
 
-- **Tema** — koyu, açık ya da sistemi izle.
+- **Tema** — koyu, açık ya da sistemi izle. Varsayılan: sistemi izler.
 - **Dil** — sistem, Türkçe, İngilizce.
 - **Tahta görünümü** — 32 seçenek:
   - **12 düz renk** (kahve, yeşil, turnuva, mavi, gri, arduvaz, kum,

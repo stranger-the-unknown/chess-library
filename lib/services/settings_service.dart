@@ -16,7 +16,11 @@ class SettingsService extends ChangeNotifier {
   SharedPreferences? _prefs;
 
   // Görünüm
-  ThemeMode _themeMode = ThemeMode.dark;
+  //
+  // Tema varsayılanı **cihazın kendi ayarı**: telefon gece modundaysa
+  // uygulama da gece modunda açılır. Kullanıcı ayarlardan açıkça birini
+  // seçerse seçim kaydedilir ve cihazı izlemeyi bırakır.
+  ThemeMode _themeMode = ThemeMode.system;
   AppLanguage _language = AppLanguage.system;
   static const String _defaultPieceSet = 'chessnut';
   static const String _defaultBoardTheme = 'brown';
@@ -61,7 +65,7 @@ class SettingsService extends ChangeNotifier {
     final prefs = await SharedPreferences.getInstance();
     _prefs = prefs;
     _themeMode = ThemeMode.values[
-        (prefs.getInt('themeMode') ?? ThemeMode.dark.index)
+        (prefs.getInt('themeMode') ?? ThemeMode.system.index)
             .clamp(0, ThemeMode.values.length - 1)];
     _language = AppLanguage.values[
         (prefs.getInt('language') ?? AppLanguage.system.index)
