@@ -184,6 +184,9 @@ class StorageService extends ChangeNotifier {
   }
 
   Future<void> renamePlaylist(String id, String name) async {
+    // Analiz listeleri sistemin; adları çeviriden geliyor. Arayüz zaten
+    // komutu sunmuyor ama başka bir yol çağırırsa burada durdurulur.
+    if (isSystemList(id)) return;
     final playlists = await loadPlaylists();
     final index = playlists.indexWhere((p) => p.id == id);
     if (index == -1) return;
@@ -192,6 +195,7 @@ class StorageService extends ChangeNotifier {
   }
 
   Future<void> deletePlaylist(String id) async {
+    if (isSystemList(id)) return;
     final playlists = await loadPlaylists();
     playlists.removeWhere((p) => p.id == id);
     await _save();

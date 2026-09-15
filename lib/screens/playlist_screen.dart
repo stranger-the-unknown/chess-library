@@ -40,7 +40,10 @@ class _PlaylistScreenState extends State<PlaylistScreen> {
   }
 
   Future<void> _load() async {
-    final playlists = await _storage.loadPlaylists();
+    // Analiz listeleri her zaman en üstte; silinemez ve yeniden
+    // adlandırılamazlar.
+    final analysis = await _storage.loadAnalysisLists();
+    final playlists = [...analysis, ...await _storage.loadPlaylists()];
     if (!mounted) return;
     setState(() {
       _playlists = playlists;
@@ -231,7 +234,21 @@ class _PlaylistScreenState extends State<PlaylistScreen> {
                                         CrossAxisAlignment.start,
                                     children: [
                                       Text(
-                                        playlist.name,
+                                        // Analiz listelerinin adı
+                                        // çeviriden gelir; kimlikleri
+                                        // sabit olduğu için dil
+                                        // değişince adı da değişir.
+                                        StorageService.isSystemList(
+                                          playlist.id,
+                                        )
+                                            ? t(
+                                                playlist.id ==
+                                                        StorageService
+                                                            .deepListId
+                                                    ? 'analysis.deepList'
+                                                    : 'analysis.quickList',
+                                              )
+                                            : playlist.name,
                                         style: const TextStyle(
                                           fontSize: 15.5,
                                           fontWeight: FontWeight.w600,
@@ -265,18 +282,28 @@ class _PlaylistScreenState extends State<PlaylistScreen> {
                                     if (value == 'delete') _delete(playlist);
                                   },
                                   itemBuilder: (context) => [
-                                    PopupMenuItem(
-                                      value: 'rename',
-                                      child: Text(t('common.rename')),
-                                    ),
+                                    // Analiz listeleri silinemez ve
+                                    // yeniden adlandırılamaz; komutları
+                                    // göstermek yerine hiç sunulmuyor.
+                                    if (!StorageService.isSystemList(
+                                      playlist.id,
+                                    )) ...[
+                                      PopupMenuItem(
+                                        value: 'rename',
+                                        child: Text(t('common.rename')),
+                                      ),
+                                    ],
                                     PopupMenuItem(
                                       value: 'export',
                                       child: Text(t('lists.exportPgn')),
                                     ),
-                                    PopupMenuItem(
-                                      value: 'delete',
-                                      child: Text(t('common.delete')),
-                                    ),
+                                    if (!StorageService.isSystemList(
+                                      playlist.id,
+                                    ))
+                                      PopupMenuItem(
+                                        value: 'delete',
+                                        child: Text(t('common.delete')),
+                                      ),
                                   ],
                                 ),
                               ],

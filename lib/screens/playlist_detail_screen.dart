@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../services/analysis_queue.dart';
 import '../widgets/filter_strip.dart';
 import '../widgets/responsive.dart';
 
@@ -44,6 +45,14 @@ class _PlaylistDetailScreenState extends State<PlaylistDetailScreen> {
   /// Yalnızca bu numara aralığındaki oyunlar listelenir; null ise hepsi.
   (int, int)? _range;
 
+  /// Toplu analiz için seçim kipi ve seçilen oyunlar.
+  ///
+  /// Seçim kipi ayrı bir kip: satıra dokunmak normalde oyunu açıyor,
+  /// seçim kipinde ise işaretliyor. İki davranışı aynı anda vermek
+  /// (uzun basma gibi) telefonda yanlış dokunuşa çok açık.
+  bool _selecting = false;
+  final Set<String> _selected = <String>{};
+
   /// Oyun kimliği -> listedeki sıra numarası (1'den başlar). Süzgeç
   /// uygulansa da numara değişmez, böylece "#42" ile aranabilir.
   final Map<String, int> _numbers = {};
@@ -64,11 +73,10 @@ class _PlaylistDetailScreenState extends State<PlaylistDetailScreen> {
   }
 
   Future<void> _load() async {
-    final playlists = await _storage.loadPlaylists();
+    // playlistById analiz listelerini de buluyor; yalnızca
+    // loadPlaylists()'e bakmak analiz listelerini boş gösteriyordu.
+    final playlist = await _storage.playlistById(widget.playlistId);
     if (!mounted) return;
-
-    final matches = playlists.where((p) => p.id == widget.playlistId).toList();
-    final playlist = matches.isEmpty ? null : matches.first;
 
     _numbers.clear();
     if (playlist != null) {
@@ -391,6 +399,40 @@ class _PlaylistDetailScreenState extends State<PlaylistDetailScreen> {
   ///
   /// Numaralar süzgeçten bağımsızdır; kullanıcı satırda gördüğü numarayı
   /// yazar.
+  void _toggleSelected(String gameId) {
+    setState(() {
+      if (!_selected.remove(gameId)) _selected.add(gameId);
+    });
+  }
+
+  void _endSelection() {
+    setState(() {
+      _selecting = false;
+      _selected.clear();
+    });
+  }
+
+  /// Seçilen oyunları toplu analize gönderir.
+  Future<void> _analyseSelected({required bool deep}) async {
+    final games = (_playlist?.games ?? const <SavedGame>[])
+        .where((g) => _selected.contains(g.id))
+        .toList();
+    if (games.isEmpty) return;
+
+    _endSelection();
+    AppDialogs.snack(
+      context,
+      t('analysis.started', {'count': games.length}),
+    );
+    await AnalysisQueue.instance.enqueue(
+      playlistId: widget.playlistId,
+      games: games,
+      deep: deep,
+    );
+    if (!mounted) return;
+    AppDialogs.snack(context, t('analysis.finished'));
+  }
+
   /// Listeyi bir numara aralığına daraltır.
   Future<void> _pickRange() async {
     final games = _playlist?.games ?? const <SavedGame>[];
@@ -494,6 +536,9 @@ class _PlaylistDetailScreenState extends State<PlaylistDetailScreen> {
               if (value == 'allUnread') _setAllRead(false);
               if (value == 'range') _markRange();
               if (value == 'showRange') _pickRange();
+              if (value == 'select') {
+                setState(() => _selecting = true);
+              }
             },
             itemBuilder: (context) => [
               PopupMenuItem(
@@ -511,6 +556,10 @@ class _PlaylistDetailScreenState extends State<PlaylistDetailScreen> {
               PopupMenuItem(
                 value: 'showRange',
                 child: Text(t('lists.showRange')),
+              ),
+              PopupMenuItem(
+                value: 'select',
+                child: Text(t('analysis.selectGames')),
               ),
             ],
           ),
@@ -584,8 +633,90 @@ class _PlaylistDetailScreenState extends State<PlaylistDetailScreen> {
                   children: [
                     if (_range != null) _rangeBanner(scheme),
                     Expanded(child: _list(visible, scheme)),
+                    if (_selecting) _selectionBar(visible, scheme),
                   ],
                 ),
+    );
+  }
+
+  /// Seçim kipindeki alt şerit: seçim sayısı ve iki analiz düğmesi.
+  ///
+  /// Gezinme çubuğu payı ekleniyor; düğmeler telefonun tuşlarının
+  /// altında kalmasın.
+  Widget _selectionBar(List<SavedGame> visible, ColorScheme scheme) {
+    final count = _selected.length;
+    final allSelected =
+        visible.isNotEmpty && visible.every((g) => _selected.contains(g.id));
+
+    return Material(
+      color: scheme.surfaceContainerHigh,
+      child: Padding(
+        padding: EdgeInsets.fromLTRB(
+          12,
+          8,
+          12,
+          8 + MediaQuery.viewPaddingOf(context).bottom,
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Row(
+              children: [
+                IconButton(
+                  tooltip: t('common.cancel'),
+                  icon: const Icon(Icons.close_rounded),
+                  onPressed: _endSelection,
+                ),
+                Expanded(
+                  child: Text(
+                    t('analysis.selectedCount', {'count': count}),
+                    style: const TextStyle(fontWeight: FontWeight.w600),
+                  ),
+                ),
+                TextButton(
+                  onPressed: () => setState(() {
+                    if (allSelected) {
+                      _selected.clear();
+                    } else {
+                      _selected.addAll(visible.map((g) => g.id));
+                    }
+                  }),
+                  child: Text(
+                    allSelected
+                        ? t('common.clearSelection')
+                        : t('analysis.selectAll'),
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 4),
+            Text(
+              t('analysis.screenHint'),
+              style: TextStyle(fontSize: 11.5, color: scheme.onSurfaceVariant),
+            ),
+            const SizedBox(height: 8),
+            Row(
+              children: [
+                Expanded(
+                  child: OutlinedButton(
+                    onPressed:
+                        count == 0 ? null : () => _analyseSelected(deep: false),
+                    child: Text(t('analysis.quick')),
+                  ),
+                ),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: FilledButton(
+                    onPressed:
+                        count == 0 ? null : () => _analyseSelected(deep: true),
+                    child: Text(t('analysis.deep')),
+                  ),
+                ),
+              ],
+            ),
+          ],
+        ),
+      ),
     );
   }
 
@@ -691,11 +822,17 @@ class _PlaylistDetailScreenState extends State<PlaylistDetailScreen> {
       child: InkWell(
         mouseCursor: kClickable,
         borderRadius: BorderRadius.circular(14),
-        onTap: () => _openGame(game),
+        onTap: () =>
+            _selecting ? _toggleSelected(game.id) : _openGame(game),
         child: Padding(
           padding: const EdgeInsets.fromLTRB(6, 10, 6, 10),
           child: Row(
             children: [
+              if (_selecting)
+                Checkbox(
+                  value: _selected.contains(game.id),
+                  onChanged: (_) => _toggleSelected(game.id),
+                ),
               IconButton(
                 tooltip:
                     game.read ? t('lists.markUnread') : t('lists.markRead'),
