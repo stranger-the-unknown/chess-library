@@ -410,34 +410,4 @@ class StorageService extends ChangeNotifier {
     playlists[to].games.add(game);
     await _save();
   }
-
-  /// Tüm verinin yedeği (JSON metni).
-  Future<String> exportAll() async {
-    final playlists = await loadPlaylists();
-    return jsonEncode({
-      'version': 2,
-      'exportedAt': DateTime.now().toIso8601String(),
-      'playlists': playlists.map((p) => p.toJson()).toList(),
-    });
-  }
-
-  /// Yedeği geri yükler; eklenen liste sayısını döner.
-  Future<int> importAll(String json) async {
-    final data = jsonDecode(json);
-    final list = data is Map ? data['playlists'] : data;
-    if (list is! List) {
-      throw FormatException(t('lists.invalidBackup'));
-    }
-    final playlists = await loadPlaylists();
-    int added = 0;
-    for (final entry in list) {
-      final playlist = Playlist.fromJson(
-        Map<String, dynamic>.from(entry as Map),
-      );
-      playlists.add(playlist);
-      added++;
-    }
-    await _save();
-    return added;
-  }
 }

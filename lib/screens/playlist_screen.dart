@@ -91,34 +91,6 @@ class _PlaylistScreenState extends State<PlaylistScreen> {
     await _load();
   }
 
-  Future<void> _exportBackup() async {
-    final json = await _storage.exportAll();
-    await Clipboard.setData(ClipboardData(text: json));
-    if (mounted) {
-      AppDialogs.snack(context, t('lists.backupCopied'));
-    }
-  }
-
-  Future<void> _importBackup() async {
-    final json = await AppDialogs.prompt(
-      context,
-      title: t('lists.restoreBackup'),
-      label: t('lists.pasteBackup'),
-      maxLines: 6,
-      confirmLabel: t('common.load'),
-    );
-    if (json == null || !mounted) return;
-    try {
-      final added = await _storage.importAll(json);
-      await _load();
-      if (mounted) {
-        AppDialogs.snack(context, t('lists.backupImported', {'count': added}));
-      }
-    } catch (_) {
-      if (mounted) AppDialogs.snack(context, t('lists.backupUnreadable'));
-    }
-  }
-
   /// Listeyi PGN dosyası olarak kaydeder; kaydedilemezse panoya kopyalar.
   Future<void> _exportPgn(Playlist playlist) async {
     if (playlist.games.isEmpty) {
@@ -165,22 +137,6 @@ class _PlaylistScreenState extends State<PlaylistScreen> {
             tooltip: t('lists.newList'),
             icon: const Icon(Icons.create_new_folder_outlined),
             onPressed: _create,
-          ),
-          PopupMenuButton<String>(
-            onSelected: (value) {
-              if (value == 'export') _exportBackup();
-              if (value == 'import') _importBackup();
-            },
-            itemBuilder: (context) => [
-              PopupMenuItem(
-                value: 'export',
-                child: Text(t('lists.copyBackup')),
-              ),
-              PopupMenuItem(
-                value: 'import',
-                child: Text(t('lists.restoreBackup')),
-              ),
-            ],
           ),
         ],
       ),
