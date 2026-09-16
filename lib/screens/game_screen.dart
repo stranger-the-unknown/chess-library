@@ -521,6 +521,19 @@ class _GameScreenState extends State<GameScreen> {
   }
 
   /// Kullanıcı pes eder; oyun rakibin kazancıyla biter.
+  /// "Pes et" gösterilsin mi?
+  ///
+  /// Yalnızca kullanıcının kendi oynadığı bir oyunda anlamlı: motora
+  /// karşı oyunda ya da serbest tahtada. Dışarıdan yüklenmiş bir oyunu
+  /// (PGN, kayıtlı liste, analiz kaydı) okurken pes etmek anlamsızdı —
+  /// menüde duruyor ama başkasının oyununa sonuç yazmaktan başka bir şey
+  /// yapmıyordu.
+  bool get _canResign {
+    if (_history.isEmpty || _resultText != null) return false;
+    if (widget.mode == GameMode.versusEngine) return true;
+    return widget.uciMoves == null && widget.pgnContent == null;
+  }
+
   Future<void> _resign() async {
     final confirmed = await AppDialogs.confirm(
       context,
@@ -787,7 +800,7 @@ class _GameScreenState extends State<GameScreen> {
                   title: Text(t('common.editPosition')),
                 ),
               ),
-              if (_history.isNotEmpty && _resultText == null)
+              if (_canResign)
                 PopupMenuItem(
                   value: 'resign',
                   child: ListTile(

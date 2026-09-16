@@ -10,7 +10,9 @@ import 'package:chess_pgn_reader/models/pgn_parser.dart';
 import 'package:chess_pgn_reader/models/playlist.dart';
 import 'package:chess_pgn_reader/screens/home_screen.dart';
 import 'package:chess_pgn_reader/screens/openings/opening_list_screen.dart';
+import 'package:chess_pgn_reader/models/chess_engine.dart' as engine;
 import 'package:chess_pgn_reader/screens/board_editor_screen.dart';
+import 'package:chess_pgn_reader/screens/game_screen.dart';
 import 'package:chess_pgn_reader/screens/pgn_import_screen.dart';
 import 'package:chess_pgn_reader/screens/playlist_detail_screen.dart';
 import 'package:chess_pgn_reader/screens/settings_screen.dart';
@@ -824,6 +826,59 @@ C00|French|İleri Varyant|e4 e6 d4 d5 e5
       expect(left('Beyaz 12'), left('Siyah 12'));
       expect(left('Beyaz 1'), left('Beyaz 12'),
           reason: 'numara haneleri satırları kaydırıyor');
+    });
+  });
+
+  group('"Pes et" yalnızca kendi oyununda', () {
+    Future<void> openBoard(WidgetTester tester, GameScreen screen) async {
+      Strings.language = AppLanguage.turkish;
+      tester.view.devicePixelRatio = 1;
+      tester.view.physicalSize = const Size(500, 1100);
+      await tester.pumpWidget(
+        KeyedSubtree(key: UniqueKey(), child: MaterialApp(home: screen)),
+      );
+      await tester.pumpAndSettle();
+      await tester.tap(
+        find.descendant(
+          of: find.byType(AppBar),
+          matching: find.byType(PopupMenuButton<String>),
+        ),
+      );
+      await tester.pumpAndSettle();
+    }
+
+    testWidgets('PGN okurken menüde yok', (tester) async {
+      // Başkasının oyununa sonuç yazmaktan başka bir şey yapmıyordu.
+      await openBoard(
+        tester,
+        const GameScreen(uciMoves: ['e2e4', 'e7e5'], title: 'Okunan oyun'),
+      );
+      expect(find.text('Pes et'), findsNothing);
+      expect(find.text('PGN kopyala'), findsOneWidget,
+          reason: 'menü gerçekten açılmış olmalı');
+    });
+
+    testWidgets('motora karşı oynarken var', (tester) async {
+      await openBoard(
+        tester,
+        const GameScreen(
+          mode: GameMode.versusEngine,
+          uciMoves: ['e2e4', 'e7e5'],
+        ),
+      );
+      expect(find.text('Pes et'), findsOneWidget);
+    });
+
+    testWidgets('hamle oynanmamışken yok', (tester) async {
+      await openBoard(
+        tester,
+        GameScreen(
+          startFen: engine.ChessGame().fen,
+          title: 'Serbest tahta',
+        ),
+      );
+      // Henüz hamle yok: pes edilecek bir oyun da yok.
+      expect(find.text('Pes et'), findsNothing);
     });
   });
 }
