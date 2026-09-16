@@ -156,6 +156,34 @@ void main() {
       );
     });
 
+    testWidgets('telefonda kısa etiketler satırı dolduruyor', (tester) async {
+      // İngilizce süzgeçler kısa; doğal genişlikle dizildiklerinde
+      // çipler metin kadar daralıp düğmeye benzemekten çıkıyordu.
+      // Etiketler kısa tutuldu: testteki yazı tipi harfleri gerçekte
+      // olduğundan geniş çiziyor, uzun etiketlerle şerit kaydırmaya
+      // düşüyor ve ölçülen şey kural olmaktan çıkıyor.
+      await _pump(
+        tester,
+        _strip(const ['All', 'Unread', 'Read', 'Fav']),
+        _phone,
+      );
+
+      final widths = _chipSizes(tester).map((s) => s.width).toList();
+      expect(widths, hasLength(4));
+
+      final used = widths.fold<double>(0, (sum, w) => sum + w);
+      expect(
+        used,
+        greaterThan(_phone.width * 0.85),
+        reason: 'çipler satırın çoğunu kaplamalı',
+      );
+      expect(
+        widths.reduce((a, b) => a < b ? a : b),
+        greaterThan(_phone.width / 8),
+        reason: 'kısa etiketli çip metin kadar dar kalmamalı',
+      );
+    });
+
     testWidgets('telefonda eski davranış duruyor', (tester) async {
       // Sığan süzgeçler: sabit satır, kaydırma yok. Etiketler kısa
       // seçildi; testteki yazı tipi gerçek genişlikleri temsil etmiyor,

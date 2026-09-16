@@ -258,10 +258,15 @@ finished ones stay; only the rest are left undone.
 
 ### Analysis lists
 
-At the top of the lists there are two of them: **recent deep analyses**
-and **recent quick analyses**. Each keeps at most a hundred records,
-newest first, and the oldest drops off beyond that. These two cannot be
-deleted or renamed; every other list feature works on them.
+At the top of the lists there are two of them: **Recent Deep Analyses**
+and **Recent Quick Analyses**. Each keeps at most a hundred records,
+newest first, and the oldest drops off beyond that.
+
+These two belong to the app rather than to you: they cannot be deleted or
+renamed, and neither can the records inside them be renamed, deleted,
+moved to another list or marked read in bulk; PGN cannot be imported into
+them either. Read and favorite marks, search, filters, sorting, showing a
+range, game details and copying PGN all work.
 
 Opening a saved analysis does not run the engine again. Analysing the
 same game a second time does not delete the old record, it adds a new one

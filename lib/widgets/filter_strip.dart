@@ -51,9 +51,9 @@ class FilterStrip extends StatelessWidget {
 
   /// Masaüstünde bir çipin inebileceği en küçük genişlik.
   ///
-  /// Çok sayıda süzgeç varken eşit paylaşım çipleri okunamayacak kadar
-  /// daraltabilir; o noktada şerit içeriğinden geniş olmayı bırakıp
-  /// gereken kadar yer kaplar.
+  /// Yalnızca geniş pencerede uygulanıyor: orada yer bol olduğu için
+  /// şerit gerekirse büyüyebilir. Telefonda taban yok — satır zaten
+  /// kıt ve çipler ellerindeki yeri paylaşıyorlar.
   static const double _minDesktopChip = 92;
 
   /// Ölçüye eklenen küçük pay.
@@ -153,25 +153,41 @@ class FilterStrip extends StatelessWidget {
     List<FilterOption> options,
     double available,
   ) {
+    final width = _evenWidth(context, options, available,
+        minChip: _minDesktopChip);
+    if (width == null) return null;
+    // Masaüstünde şerit en az içerik genişliği kadar; altındaki listeyle
+    // aynı hizada dursun diye.
+    return math.min(available, math.max(Layout.maxContentWidth, width));
+  }
+
+  /// Eşit genişlikte dizilebiliyorsa şeridin isteyeceği genişlik.
+  ///
+  /// En uzun etikete göre hesaplanıyor: çiplerin hepsi o genişlikte
+  /// olacak. Sığmıyorsa null döner ve şerit doğal genişliklere düşer.
+  ///
+  /// [minChip] yalnızca masaüstünde veriliyor; telefonda taban koymak
+  /// eşit genişliği hepten imkânsız kılar ve çipler yine metin kadar
+  /// dar kalırdı.
+  static double? _evenWidth(
+    BuildContext context,
+    List<FilterOption> options,
+    double available, {
+    double minChip = 0,
+  }) {
     if (options.isEmpty) return null;
     final widths = [
       for (final option in options) _chipWidth(context, option.label),
     ];
     final count = options.length;
-    final widest = math.max(widths.reduce(math.max), _minDesktopChip);
-    final gaps = _gap * (count - 1) + _gap * 2;
-
-    final needed = widest * count + gaps;
-    if (needed > available) return null;
-
-    return math.min(available, math.max(Layout.maxContentWidth, needed));
+    final widest = math.max(widths.reduce(math.max), minChip);
+    final needed = widest * count + _gap * (count - 1) + _gap * 2;
+    return needed > available ? null : needed;
   }
 
-  Widget? _segments(BuildContext context, BoxConstraints constraints) {
+  /// Eşit genişlikte çiplerden oluşan şerit.
+  Widget _segments(BuildContext context, double width) {
     final count = options.length;
-    final width = desktopWidth(context, options, constraints.maxWidth);
-    if (width == null) return null;
-
     return Center(
       child: SizedBox(
         width: width,
@@ -199,25 +215,47 @@ class FilterStrip extends StatelessWidget {
           final widths =
               options.map((o) => _chipWidth(context, o.label)).toList();
 
+          // 1) Hepsi eşit genişlikte sığıyorsa en iyisi bu: düğmeler
+          //    aynı boyda ve satırı dolduruyorlar. Masaüstünde şerit
+          //    içerik genişliğine ortalanıyor, telefonda satırı kaplıyor.
           if (Layout.isWide(context)) {
-            final segments = _segments(context, constraints);
-            if (segments != null) return segments;
+            final width = desktopWidth(context, options, constraints.maxWidth);
+            if (width != null) return _segments(context, width);
+          } else {
+            final width =
+                _evenWidth(context, options, constraints.maxWidth);
+            if (width != null) {
+              return _segments(context, constraints.maxWidth);
+            }
           }
 
-          final total = widths.fold<double>(0, (sum, w) => sum + w) +
-              _gap * (options.length + 1);
+          // 2) Eşit genişlikte sığmıyor ama doğal genişlikleriyle
+          //    sığıyorsa artan yer eşit paylaştırılıyor: her çip aynı
+          //    miktarda büyüyor, satır doluyor ve kısa etiketli çipler
+          //    ("All", "Read") metin kadar dar kalmıyor.
+          final count = options.length;
+          final sum = widths.fold<double>(0, (total, w) => total + w);
+          final gaps = _gap * (count - 1) + _gap * 2;
 
-          if (total <= constraints.maxWidth) {
+          if (sum + gaps <= constraints.maxWidth) {
+            final extra = (constraints.maxWidth - gaps - sum) / count;
             return Padding(
               padding: const EdgeInsets.symmetric(horizontal: _gap),
               child: Row(
-                mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                 children: [
-                  for (final option in options) _chip(context, option),
+                  for (int i = 0; i < count; i++) ...[
+                    if (i > 0) const SizedBox(width: _gap),
+                    SizedBox(
+                      width: widths[i] + extra,
+                      child: _chip(context, options[i], fill: true),
+                    ),
+                  ],
                 ],
               ),
             );
           }
+
+          // 3) Hiç sığmıyorsa kaydırmalı şerit.
 
           return ListView.separated(
             scrollDirection: Axis.horizontal,

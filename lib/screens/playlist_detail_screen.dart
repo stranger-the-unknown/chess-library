@@ -1,3 +1,5 @@
+import 'dart:math' as math;
+
 import 'package:flutter/material.dart';
 
 import '../services/analysis_queue.dart';
@@ -108,6 +110,27 @@ class _PlaylistDetailScreenState extends State<PlaylistDetailScreen> {
     );
     await _load();
   }
+
+  /// Numara sütununun genişliği.
+  ///
+  /// Listedeki en büyük numaranın hane sayısına göre; böylece üç haneli
+  /// bir listede de, beş oyunluk bir listede de adlar aynı hizadan
+  /// başlıyor ve boşuna yer kaplamıyor.
+  double get _numberWidth {
+    var digits = 1;
+    for (final number in _numbers.values) {
+      digits = math.max(digits, number.toString().length);
+    }
+    return 8.0 * digits + 12;
+  }
+
+  /// Bu ekran bir analiz listesini mi gösteriyor?
+  ///
+  /// Analiz listeleri ayrı bir anahtarda duruyor; kullanıcı listelerini
+  /// değiştiren işlemler (yeniden adlandırma, silme, taşıma, toplu
+  /// okundu, PGN ekleme) orada hiçbir şey yapmıyor. Sessizce çalışmayan
+  /// düğme göstermek yerine hiç gösterilmiyorlar.
+  bool get _isAnalysisList => StorageService.isSystemList(widget.playlistId);
 
   Future<void> _rename(SavedGame game) async {
     final name = await AppDialogs.prompt(
@@ -513,10 +536,16 @@ class _PlaylistDetailScreenState extends State<PlaylistDetailScreen> {
 
     return Scaffold(
       appBar: AppBar(
-        title: Text(
-          playlist == null
-              ? t('game.list')
-              : StorageService.displayName(playlist),
+        // Analiz listelerinin adı uzun ("Son Hızlı Analizler"); telefonda
+        // başlık çubuğuna sığmıyordu. Sığmadığında küçülüyor, kırpılmıyor.
+        title: FittedBox(
+          fit: BoxFit.scaleDown,
+          alignment: AlignmentDirectional.centerStart,
+          child: Text(
+            playlist == null
+                ? t('game.list')
+                : StorageService.displayName(playlist),
+          ),
         ),
         actions: [
           IconButton(
@@ -530,11 +559,12 @@ class _PlaylistDetailScreenState extends State<PlaylistDetailScreen> {
             ),
             onPressed: () => setState(() => _descending = !_descending),
           ),
-          IconButton(
-            tooltip: t('pgn.importIntoList'),
-            icon: const Icon(Icons.file_open_outlined),
-            onPressed: _importPgnFile,
-          ),
+          if (!_isAnalysisList)
+            IconButton(
+              tooltip: t('pgn.importIntoList'),
+              icon: const Icon(Icons.file_open_outlined),
+              onPressed: _importPgnFile,
+            ),
           IconButton(
             tooltip: t('lists.exportPgn'),
             icon: const Icon(Icons.ios_share_rounded),
@@ -551,26 +581,29 @@ class _PlaylistDetailScreenState extends State<PlaylistDetailScreen> {
               }
             },
             itemBuilder: (context) => [
-              PopupMenuItem(
-                value: 'allRead',
-                child: Text(t('lists.markAllRead')),
-              ),
-              PopupMenuItem(
-                value: 'allUnread',
-                child: Text(t('lists.markAllUnread')),
-              ),
-              PopupMenuItem(
-                value: 'range',
-                child: Text(t('lists.markRange')),
-              ),
+              if (!_isAnalysisList) ...[
+                PopupMenuItem(
+                  value: 'allRead',
+                  child: Text(t('lists.markAllRead')),
+                ),
+                PopupMenuItem(
+                  value: 'allUnread',
+                  child: Text(t('lists.markAllUnread')),
+                ),
+                PopupMenuItem(
+                  value: 'range',
+                  child: Text(t('lists.markRange')),
+                ),
+              ],
               PopupMenuItem(
                 value: 'showRange',
                 child: Text(t('lists.showRange')),
               ),
-              PopupMenuItem(
-                value: 'select',
-                child: Text(t('analysis.selectGames')),
-              ),
+              if (!_isAnalysisList)
+                PopupMenuItem(
+                  value: 'select',
+                  child: Text(t('analysis.selectGames')),
+                ),
             ],
           ),
         ],
@@ -882,51 +915,62 @@ class _PlaylistDetailScreenState extends State<PlaylistDetailScreen> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    // Oyuncular alt alta: tek satıra sığdırmaya
-                    // çalışınca siyahın adı kırpılıyordu.
+                    // Numara sabit genişlikte bir sütunda; iki oyuncu adı
+                    // onun sağında alt alta. Eskiden numara ile beyazın
+                    // adı aynı satırdaydı, siyahın adı ise sabit bir
+                    // girintiyle altındaydı: numara bir hane büyüyünce
+                    // iki ad birbirinden kayıyordu.
                     Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Text(
-                          '${_numbers[game.id] ?? 0}.',
-                          style: TextStyle(
-                            fontSize: 13,
-                            fontWeight: FontWeight.w700,
-                            color: scheme.onSurfaceVariant,
+                        SizedBox(
+                          width: _numberWidth,
+                          child: Text(
+                            '${_numbers[game.id] ?? 0}.',
+                            style: TextStyle(
+                              fontSize: 13,
+                              fontWeight: FontWeight.w700,
+                              color: scheme.onSurfaceVariant,
+                            ),
                           ),
                         ),
-                        const SizedBox(width: 6),
                         Expanded(
-                          child: Text(
-                            game.white ?? game.name,
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                            style: TextStyle(
-                              fontSize: 15,
-                              fontWeight: FontWeight.w600,
-                              color: game.read
-                                  ? scheme.onSurfaceVariant
-                                  : scheme.onSurface,
-                            ),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                game.white ?? game.name,
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                                style: TextStyle(
+                                  fontSize: 15,
+                                  fontWeight: FontWeight.w600,
+                                  color: game.read
+                                      ? scheme.onSurfaceVariant
+                                      : scheme.onSurface,
+                                ),
+                              ),
+                              if (game.white != null && game.black != null)
+                                Padding(
+                                  padding: const EdgeInsets.only(top: 1),
+                                  child: Text(
+                                    game.black!,
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
+                                    style: TextStyle(
+                                      fontSize: 15,
+                                      fontWeight: FontWeight.w600,
+                                      color: game.read
+                                          ? scheme.onSurfaceVariant
+                                          : scheme.onSurface,
+                                    ),
+                                  ),
+                                ),
+                            ],
                           ),
                         ),
                       ],
                     ),
-                    if (game.white != null && game.black != null)
-                      Padding(
-                        padding: const EdgeInsets.only(left: 18, top: 1),
-                        child: Text(
-                          game.black!,
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                          style: TextStyle(
-                            fontSize: 15,
-                            fontWeight: FontWeight.w600,
-                            color: game.read
-                                ? scheme.onSurfaceVariant
-                                : scheme.onSurface,
-                          ),
-                        ),
-                      ),
                     const SizedBox(height: 4),
                     // Wrap, Row değil: tarih eklendikten sonra dar
                     // ekranlarda satır taşıyordu. Sığmayan parça alta
@@ -1011,28 +1055,32 @@ class _PlaylistDetailScreenState extends State<PlaylistDetailScreen> {
                           : t('common.favoriteAdd'),
                     ),
                   ),
-                  PopupMenuItem(
-                    value: 'rename',
-                    child: Text(t('common.rename')),
-                  ),
-                  if (game.note != null && game.note!.isNotEmpty)
+                  if (!_isAnalysisList) ...[
                     PopupMenuItem(
-                      value: 'deleteNote',
-                      child: Text(t('common.deleteNote')),
+                      value: 'rename',
+                      child: Text(t('common.rename')),
                     ),
+                    if (game.note != null && game.note!.isNotEmpty)
+                      PopupMenuItem(
+                        value: 'deleteNote',
+                        child: Text(t('common.deleteNote')),
+                      ),
+                  ],
                   PopupMenuItem(
                     value: 'info',
                     child: Text(t('lists.gameInfo')),
                   ),
                   PopupMenuItem(value: 'pgn', child: Text(t('game.copyPgn'))),
-                  PopupMenuItem(
-                    value: 'move',
-                    child: Text(t('lists.moveToList')),
-                  ),
-                  PopupMenuItem(
-                    value: 'delete',
-                    child: Text(t('common.delete')),
-                  ),
+                  if (!_isAnalysisList) ...[
+                    PopupMenuItem(
+                      value: 'move',
+                      child: Text(t('lists.moveToList')),
+                    ),
+                    PopupMenuItem(
+                      value: 'delete',
+                      child: Text(t('common.delete')),
+                    ),
+                  ],
                 ],
               ),
             ],

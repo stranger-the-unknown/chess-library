@@ -249,10 +249,15 @@ bitenler durur; yalnızca kalanlar yapılmamış olur.
 
 ### Analiz listeleri
 
-Listelerin en üstünde iki liste vardır: **son derin analizler** ve **son
-hızlı analizler**. Her biri en fazla yüz kayıt tutar, en yeni kayıt başta
-olur ve yüzü aşınca en eski düşer. Bu iki liste silinemez, yeniden
-adlandırılamaz; diğer liste özelliklerinin hepsi çalışır.
+Listelerin en üstünde iki liste vardır: **Son Derin Analizler** ve **Son
+Hızlı Analizler**. Her biri en fazla yüz kayıt tutar, en yeni kayıt başta
+olur ve yüzü aşınca en eski düşer.
+
+Bu iki liste kullanıcının değil sistemindir: silinemez, yeniden
+adlandırılamaz. Kayıtları da yerinde durur — yeniden adlandırma, silme,
+başka listeye taşıma, toplu okundu işaretleme ve PGN ekleme burada
+yoktur. Okundu ve favori işaretleri, arama, süzgeçler, sıralama, aralık
+gösterme, oyun bilgileri ve PGN kopyalama çalışır.
 
 Kaydedilmiş bir analizi açtığında motor yeniden çalışmaz. Aynı oyunu
 tekrar analiz edersen eski kayıt silinmez, yeni bir kayıt eklenir — liste

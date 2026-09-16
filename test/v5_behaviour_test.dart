@@ -787,4 +787,43 @@ C00|French|İleri Varyant|e4 e6 d4 d5 e5
       );
     });
   });
+
+  group('Oyun kartında hizalama', () {
+    testWidgets('numara kaç haneli olursa olsun adlar aynı hizada',
+        (tester) async {
+      // Numara ile beyazın adı aynı satırdaydı, siyahın adı ise sabit
+      // girintiyle altındaydı: numara bir hane büyüyünce iki ad
+      // birbirinden kayıyordu.
+      final playlist = await StorageService.instance.createPlaylist('Hiza');
+      final pgn = List.generate(12, (i) => """
+[White "Beyaz ${i + 1}"]
+[Black "Siyah ${i + 1}"]
+
+1. e4 e5 *
+""").join();
+      await PgnImportService.addToList(playlist.id, PgnParser.parseAll(pgn));
+
+      Strings.language = AppLanguage.turkish;
+      tester.view.devicePixelRatio = 1;
+      tester.view.physicalSize = const Size(500, 1800);
+      await tester.pumpWidget(
+        KeyedSubtree(
+          key: UniqueKey(),
+          child: MaterialApp(
+            home: PlaylistDetailScreen(playlistId: playlist.id),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      double left(String name) => tester.getTopLeft(find.text(name)).dx;
+
+      // Tek haneli ve iki haneli numaralı satırlar.
+      expect(left('Beyaz 1'), left('Siyah 1'),
+          reason: 'aynı satırdaki iki ad hizasız');
+      expect(left('Beyaz 12'), left('Siyah 12'));
+      expect(left('Beyaz 1'), left('Beyaz 12'),
+          reason: 'numara haneleri satırları kaydırıyor');
+    });
+  });
 }

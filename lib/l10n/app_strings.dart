@@ -364,11 +364,11 @@ class Strings {
     'analysis.limitWarning':
         'Analiz listesi en fazla {limit} kayıt tutuyor; fazlası düşer.',
     'analysis.finished': 'Analiz bitti.',
-    'analysis.deepList': 'Son derin analizler',
+    'analysis.deepList': 'Son Derin Analizler',
     'analysis.emptyList':
         'Henüz analiz yok. Bir oyun listesinden oyun seçip analiz '
         'başlattığında sonuçlar burada birikir.',
-    'analysis.quickList': 'Son hızlı analizler',
+    'analysis.quickList': 'Son Hızlı Analizler',
     'analysis.progress': '{done}/{total} oyun analiz edildi',
     'lists.showRange': 'Aralık göster',
     'lists.rangeActive': '{from}-{to} arası gösteriliyor',
@@ -885,11 +885,11 @@ class Strings {
     'analysis.limitWarning':
         'The analysis list keeps at most {limit} records; the rest drop off.',
     'analysis.finished': 'Analysis finished.',
-    'analysis.deepList': 'Recent deep analyses',
+    'analysis.deepList': 'Recent Deep Analyses',
     'analysis.emptyList':
         'No analyses yet. Pick games from a list and start an '
         'analysis; the results collect here.',
-    'analysis.quickList': 'Recent quick analyses',
+    'analysis.quickList': 'Recent Quick Analyses',
     'analysis.progress': '{done}/{total} games analysed',
     'lists.showRange': 'Show a range',
     'lists.rangeActive': 'Showing {from}-{to}',
