@@ -117,7 +117,13 @@ class SoundService {
     future.catchError((_) {});
   }
 
+  /// Dokunsal geri bildirim.
+  ///
+  /// Ses ayarına bağlı: kullanıcı sesleri kapattığında telefonun her
+  /// hamlede titremesi "kapattım ama hâlâ tepki veriyor" demek oluyordu.
+  /// Ayrı bir titreşim ayarı yok; anahtarın açıklaması bunu söylüyor.
   void _vibrate({bool strong = false}) {
+    if (!SettingsService.instance.soundEnabled) return;
     if (strong) {
       HapticFeedback.mediumImpact();
     } else {

@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -10,11 +11,15 @@ import 'package:chess_pgn_reader/models/playlist.dart';
 import 'package:chess_pgn_reader/screens/home_screen.dart';
 import 'package:chess_pgn_reader/screens/openings/opening_list_screen.dart';
 import 'package:chess_pgn_reader/screens/pgn_import_screen.dart';
+import 'package:chess_pgn_reader/screens/playlist_detail_screen.dart';
+import 'package:chess_pgn_reader/screens/settings_screen.dart';
 import 'package:chess_pgn_reader/services/analysis_queue.dart';
 import 'package:chess_pgn_reader/services/engine/engine_service.dart';
 import 'package:chess_pgn_reader/services/opening_service.dart';
 import 'package:chess_pgn_reader/services/puzzle_service.dart';
+import 'package:chess_pgn_reader/services/pgn_import_service.dart';
 import 'package:chess_pgn_reader/services/settings_service.dart';
+import 'package:chess_pgn_reader/services/sound_service.dart';
 import 'package:chess_pgn_reader/services/storage_service.dart';
 import 'package:chess_pgn_reader/widgets/app_dialogs.dart';
 import 'package:chess_pgn_reader/widgets/picker_panel.dart';
@@ -390,6 +395,157 @@ C00|French|İleri Varyant|e4 e6 d4 d5 e5
         tester.widget<AnimatedOpacity>(fade).opacity,
         0,
         reason: 'sona gelince solma kalkmalı',
+      );
+    });
+  });
+
+  group('Denetim sonrası düzeltmeler', () {
+    testWidgets('gizlenen oyunlar yüzünden seçim boşalınca düğmeler kapanıyor',
+        (tester) async {
+      // Düğmeler `_selected`e bakarken, süzgeç açıkken kaydedilecek bir
+      // şey kalmasa da etkin görünüp hiçbir şey yapmıyorlardı.
+      await _pump(
+        tester,
+        PgnImportScreen(
+          games: [_pgnGame('Eksik', skipped: 4)],
+          suggestedName: 'Deneme',
+        ),
+      );
+
+      expect(
+        tester.widget<ElevatedButton>(find.byType(ElevatedButton)).onPressed,
+        isNotNull,
+      );
+
+      await tester.tap(find.byType(FilterChip));
+      await tester.pumpAndSettle();
+
+      expect(
+        tester.widget<ElevatedButton>(find.byType(ElevatedButton)).onPressed,
+        isNull,
+        reason: 'kaydedilecek oyun kalmadı, düğme etkin kalmamalı',
+      );
+      expect(
+        tester.widget<OutlinedButton>(find.byType(OutlinedButton)).onPressed,
+        isNull,
+      );
+    });
+
+    testWidgets('arama açılış başlıklarını kendiliğinden açmıyor',
+        (tester) async {
+      await OpeningService.instance.importText(
+        'C00|French|Ana Hat|e4 e6\n'
+        'B90|Sicilian|Najdorf|e4 c5 Nf3 d6 d4 cxd4 Nxd4 Nf6 Nc3 a6\n',
+      );
+      await _pump(tester, const OpeningListScreen());
+
+      // Aranan kelime başlığın kendisi: varyant adı yazılırsa arama
+      // kutusundaki metin de eşleşir ve ölçüm anlamsızlaşır.
+      await tester.enterText(find.byType(TextField).first, 'Sicilian');
+      await tester.pumpAndSettle();
+
+      expect(find.text('French'), findsNothing, reason: 'süzgeç çalışmalı');
+      expect(
+        find.text('Najdorf'),
+        findsNothing,
+        reason: 'arama başlığı kendiliğinden açmamalı',
+      );
+    });
+
+    testWidgets('ses kapalıyken titreşim de verilmiyor', (tester) async {
+      final calls = <String>[];
+      tester.binding.defaultBinaryMessenger.setMockMethodCallHandler(
+        SystemChannels.platform,
+        (call) async {
+          calls.add(call.method);
+          return null;
+        },
+      );
+      addTearDown(() {
+        tester.binding.defaultBinaryMessenger
+            .setMockMethodCallHandler(SystemChannels.platform, null);
+      });
+
+      SettingsService.instance.soundEnabled = true;
+      SoundService.instance.playMoveSound();
+      await tester.pump();
+      expect(
+        calls.where((m) => m.startsWith('HapticFeedback')),
+        isNotEmpty,
+        reason: 'ses açıkken titreşim olmalı',
+      );
+
+      calls.clear();
+      SettingsService.instance.soundEnabled = false;
+      SoundService.instance.playMoveSound();
+      await tester.pump();
+      expect(
+        calls.where((m) => m.startsWith('HapticFeedback')),
+        isEmpty,
+        reason: 'ses kapalıyken telefon titrememeli',
+      );
+
+      SettingsService.instance.soundEnabled = true;
+    });
+
+    testWidgets("tahta seçicideki kutuların kendi Material'ı var",
+        (tester) async {
+      await _pump(tester, const SettingsScreen());
+      await tester.tap(find.text('Tahta görünümü'));
+      await tester.pumpAndSettle();
+
+      final tile = find
+          .descendant(
+            of: find.byType(GridView),
+            matching: find.byType(InkWell),
+          )
+          .first;
+      expect(
+        find.ancestor(
+          of: tile,
+          matching: find.byWidgetPredicate(
+            (widget) =>
+                widget is Material &&
+                widget.type == MaterialType.transparency &&
+                widget.clipBehavior != Clip.none,
+          ),
+        ),
+        findsOneWidget,
+        reason: 'kırpan Material yoksa vurgu listenin dışına taşar',
+      );
+    });
+
+    testWidgets('yüz kayıttan fazlası seçilince uyarı çıkıyor',
+        (tester) async {
+      final playlist = await StorageService.instance.createPlaylist('Büyük');
+      final pgn = List.generate(
+        StorageService.analysisLimit + 2,
+        (i) => '[White "B$i"]\n[Black "S$i"]\n\n1. e4 e5 *\n',
+      ).join();
+      await PgnImportService.addToList(playlist.id, PgnParser.parseAll(pgn));
+
+      await _pump(tester, PlaylistDetailScreen(playlistId: playlist.id));
+
+      // Her oyun satırında da bir üç nokta var; başlık çubuğundaki.
+      await tester.tap(
+        find.descendant(
+          of: find.byType(AppBar),
+          matching: find.byIcon(Icons.more_vert),
+        ),
+      );
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Analiz için oyun seç'));
+      await tester.pumpAndSettle();
+
+      expect(find.textContaining('kayıt tutuyor'), findsNothing);
+
+      await tester.tap(find.text('Tümünü seç'));
+      await tester.pumpAndSettle();
+
+      expect(
+        find.textContaining('kayıt tutuyor'),
+        findsOneWidget,
+        reason: 'sınır aşıldığında sessiz kalmamalı',
       );
     });
   });

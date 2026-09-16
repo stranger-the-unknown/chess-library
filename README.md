@@ -138,8 +138,9 @@ Arama kutusu sıra numarası (`#128`), etiketler, ad, not ve FEN üzerinde
 bulmacayı tek seferde çözüldü ya da çözülmedi yaparsın. Numaralar
 süzgeçten bağımsızdır: ekranda gördüğün numarayı yazarsın.
 
-**Bugün çözülen** — Her listede gece yarısından beri kaç bulmaca
-çözdüğün başlıkta ve liste kartında görünür. Ayarlardan kapatılabilir.
+**Bugün çözülen** — Gece yarısından beri kaç bulmaca çözdüğün, bulmaca
+listeleri ekranındaki liste kartlarında görünür. Ayarlardan
+kapatılabilir.
 
 Menüden **tahtayı PNG olarak kaydedebilirsin**; dosya
 `board-<liste adı>-<numara>.png` olarak kaydedilir. Her bulmaca yeniden
@@ -305,9 +306,9 @@ giderse eski veri geri konur.
   - **17 doku**: dört ahşap, iki akçaağaç, mermer, mavi mermer, taş,
     metal, deri, kanvas, zeytin, yeşil plastik, pembe piramit, mor
     çizgi ve horsey.
-- **Taş takımı** — 16 seçenek: Chessnut, RhosGFX, Fantasy, Spatial,
-  Celtic, Kiwen Suwi, Firi, Totoy, Papercut, Cburnett, Merida, Mono,
-  Letter, Pirouetti, Pixel, MPChess.
+- **Taş takımı** — 16 seçenek: Cburnett (varsayılan), Chessnut, RhosGFX,
+  Fantasy, Spatial, Celtic, Kiwen Suwi, Firi, Totoy, Papercut, Merida,
+  Mono, Letter, Pirouetti, Pixel, MPChess.
 - **Kare adlarını göster** — koordinatların rengi seçtiğin tahtadan
   gelir: yazı, üzerinde durduğu karenin karşıt rengini alır. Taş ve
   mermer gibi iki kare rengi birbirine yakın olan tahtalarda yazı
@@ -315,8 +316,9 @@ giderse eski veri geri konur.
   düşülür.
 - Yasal hamle göstergeleri, son hamle vurgusu, hamle animasyonu,
   değerlendirme çubuğu.
-- **Bugün çözülen sayısı** — bulmaca listelerinde günlük sayacı gösterir.
-- Hamle sesleri.
+- **Bugün çözülen sayısı** — bulmaca listesi kartlarında günlük sayacı
+  gösterir.
+- **Hamle sesleri** — kapalıyken titreşim de verilmez.
 - **Veri** — yedek alma ve geri yükleme (yukarıya bakın).
 
 Seçtiğin tahta ve taş takımı yalnızca oyun tahtasında değil, bulmaca ve
@@ -329,7 +331,7 @@ oyun listelerindeki küçük önizlemelerde de kullanılır.
 **Android** — APK dosyasını telefona kopyalayıp açın. Bilinmeyen
 kaynaklardan kuruluma izin vermeniz gerekebilir.
 
-**Windows** — `ChessLibrary-Kurulum-<sürüm>.exe` dosyasını çalıştırın.
+**Windows** — `Chess Library <sürüm> Kurulum.exe` dosyasını çalıştırın.
 Yönetici hakkı istemez, kendi kullanıcı klasörünüze kurar; Başlat
 menüsüne kısayol koyar ve Denetim Masası'ndan kaldırılabilir.
 

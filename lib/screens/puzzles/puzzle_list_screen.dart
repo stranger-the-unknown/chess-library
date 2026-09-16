@@ -400,8 +400,8 @@ class _PuzzleListScreenState extends State<PuzzleListScreen> {
       note: null,
       tags: puzzle.tags,
     );
+    // Not listeden zaten kalkıyor; ayrıca bildirim göstermiyoruz.
     await _load();
-    if (mounted) AppDialogs.snack(context, t('common.noteDeleted'));
   }
 
   Future<void> _exportPuzzles() async {
@@ -513,24 +513,28 @@ class _PuzzleListScreenState extends State<PuzzleListScreen> {
           preferredSize: const Size.fromHeight(104),
           child: Column(
             children: [
-              Padding(
-                padding: const EdgeInsets.fromLTRB(16, 0, 16, 8),
-                child: TextField(
-                  controller: _searchController,
-                  onChanged: (value) => setState(() => _query = value),
-                  decoration: InputDecoration(
-                    hintText: t('puzzles.search'),
-                    prefixIcon: const Icon(Icons.search_rounded, size: 20),
-                    isDense: true,
-                    suffixIcon: _query.isEmpty
-                        ? null
-                        : IconButton(
-                            icon: const Icon(Icons.clear_rounded, size: 18),
-                            onPressed: () {
-                              _searchController.clear();
-                              setState(() => _query = '');
-                            },
-                          ),
+              // Arama kutusu da içerik genişliğinde: geniş pencerede
+              // tek başına pencereye yapışık duruyordu.
+              ContentWidth(
+                child: Padding(
+                  padding: const EdgeInsets.fromLTRB(16, 0, 16, 8),
+                  child: TextField(
+                    controller: _searchController,
+                    onChanged: (value) => setState(() => _query = value),
+                    decoration: InputDecoration(
+                      hintText: t('puzzles.search'),
+                      prefixIcon: const Icon(Icons.search_rounded, size: 20),
+                      isDense: true,
+                      suffixIcon: _query.isEmpty
+                          ? null
+                          : IconButton(
+                              icon: const Icon(Icons.clear_rounded, size: 18),
+                              onPressed: () {
+                                _searchController.clear();
+                                setState(() => _query = '');
+                              },
+                            ),
+                    ),
                   ),
                 ),
               ),

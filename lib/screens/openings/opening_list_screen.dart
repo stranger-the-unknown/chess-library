@@ -31,10 +31,12 @@ class _OpeningListScreenState extends State<OpeningListScreen> {
   bool _onlyFavorites = false;
   bool _loading = true;
 
-  /// "Hepsini aç" / "hepsini kapat" seçildiyse başlıkların açılış hâli.
+  /// Başlıklar açık mı kapalı mı kurulsun.
   ///
-  /// null iken eski kural geçerli: arama yapılıyorsa açık, yoksa kapalı.
-  bool? _expandAll;
+  /// Menüdeki "hepsini aç" / "hepsini kapat" bunu değiştiriyor. Arama
+  /// buna karışmıyor: eskiden arama yapılınca eşleşen başlıklar kendi
+  /// kendine açılıyordu, artık açılmıyor.
+  bool _expandAll = false;
 
   /// Başlıkları yeniden kurmak için sayaç.
   ///
@@ -420,24 +422,28 @@ class _OpeningListScreenState extends State<OpeningListScreen> {
         ],
         bottom: PreferredSize(
           preferredSize: const Size.fromHeight(60),
-          child: Padding(
-            padding: const EdgeInsets.fromLTRB(16, 0, 16, 10),
-            child: TextField(
-              controller: _searchController,
-              onChanged: (value) => setState(() => _query = value),
-              decoration: InputDecoration(
-                hintText: t('openings.search'),
-                prefixIcon: const Icon(Icons.search_rounded, size: 20),
-                isDense: true,
-                suffixIcon: _query.isEmpty
-                    ? null
-                    : IconButton(
-                        icon: const Icon(Icons.clear_rounded, size: 18),
-                        onPressed: () {
-                          _searchController.clear();
-                          setState(() => _query = '');
-                        },
-                      ),
+          // Arama kutusu da içerik genişliğinde: geniş pencerede tek
+          // başına pencereye yapışık duruyordu.
+          child: ContentWidth(
+            child: Padding(
+              padding: const EdgeInsets.fromLTRB(16, 0, 16, 10),
+              child: TextField(
+                controller: _searchController,
+                onChanged: (value) => setState(() => _query = value),
+                decoration: InputDecoration(
+                  hintText: t('openings.search'),
+                  prefixIcon: const Icon(Icons.search_rounded, size: 20),
+                  isDense: true,
+                  suffixIcon: _query.isEmpty
+                      ? null
+                      : IconButton(
+                          icon: const Icon(Icons.clear_rounded, size: 18),
+                          onPressed: () {
+                            _searchController.clear();
+                            setState(() => _query = '');
+                          },
+                        ),
+                ),
               ),
             ),
           ),
@@ -584,7 +590,7 @@ class _OpeningListScreenState extends State<OpeningListScreen> {
           data: Theme.of(context).copyWith(dividerColor: Colors.transparent),
           child: ExpansionTile(
             key: ValueKey('$family|$_expansionEpoch'),
-            initiallyExpanded: _expandAll ?? _query.isNotEmpty,
+            initiallyExpanded: _expandAll,
             title: Row(
               children: [
                 Expanded(

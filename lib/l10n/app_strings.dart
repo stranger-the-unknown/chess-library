@@ -94,7 +94,9 @@ class Strings {
     'puzzles.outcomeNone': 'İşaretleme',
     'puzzles.todaySolved': 'Bugün {count}',
     'settings.dailyCount': 'Bugün çözülen sayısı',
-    'settings.dailyCountSub': 'Bulmaca listelerinde gece yarısından beri çözdüklerin gösterilir.',
+    'settings.dailyCountSub':
+        'Bulmaca listesi kartlarında gece yarısından beri çözdüklerin '
+        'gösterilir.',
     'lists.markRange': 'Aralığı işaretle',
     'lists.rangeHint': 'Listedeki sıraya göre; {min} ile {max} arası.',
     'lists.rangeMarked': '{count} oyun işaretlendi.',
@@ -135,7 +137,6 @@ class Strings {
     'backup.nothingChanged': 'Veriler olduğu gibi kaldı.',
     'openings.noValidMove': 'Geçerli hamle bulunamadı.',
     'openings.editVariation': 'Varyantı düzenle',
-    'openings.edited': 'Varyant güncellendi.',
     'openings.importFile': 'Metin dosyasından al',
     'openings.exportFile': 'Metin dosyası olarak ver',
     'openings.importing': 'Varyantlar ekleniyor...',
@@ -143,7 +144,6 @@ class Strings {
     'openings.exported': '{count} varyant dosyaya yazıldı.',
     'openings.exportEmpty': 'Verilecek varyant yok.',
     'common.deleteNote': 'Notu sil',
-    'common.noteDeleted': 'Not silindi.',
     // Genel
     // Ürün adı çevrilmez: uygulama simgesinin etiketi ve pencere
     // başlığı da 'Chess Library'. Yalnızca alt başlık dile uyar.
@@ -361,7 +361,8 @@ class Strings {
     'analysis.deep': 'Derin analiz',
     'analysis.screenHint':
         'Analiz sürerken ekran açık kalır; şarjda yapman iyi olur.',
-    'analysis.started': '{count} oyun analiz ediliyor...',
+    'analysis.limitWarning':
+        'Analiz listesi en fazla {limit} kayıt tutuyor; fazlası düşer.',
     'analysis.finished': 'Analiz bitti.',
     'analysis.deepList': 'Son derin analizler',
     'analysis.emptyList':
@@ -580,6 +581,7 @@ class Strings {
     'settings.evalBarSub': 'Analiz açıkken tahtanın yanında',
     'settings.soundSection': 'Ses',
     'settings.sound': 'Hamle sesleri',
+    'settings.soundSub': 'Kapalıyken titreşim de verilmez.',
     'settings.about': 'Hakkında',
     'settings.aboutText':
         'Sürüm {version} · Motor tamamen cihazda çalışır, internet '
@@ -623,7 +625,9 @@ class Strings {
     'puzzles.outcomeNone': 'No marking',
     'puzzles.todaySolved': 'Today {count}',
     'settings.dailyCount': 'Daily solved count',
-    'settings.dailyCountSub': 'Shows how many you have solved since midnight on puzzle lists.',
+    'settings.dailyCountSub':
+        'Shows how many you have solved since midnight on puzzle list '
+        'cards.',
     'lists.markRange': 'Mark a range',
     'lists.rangeHint': 'By position in the list; between {min} and {max}.',
     'lists.rangeMarked': '{count} games marked.',
@@ -664,7 +668,6 @@ class Strings {
     'backup.nothingChanged': 'Your data was left unchanged.',
     'openings.noValidMove': 'No legal move was found.',
     'openings.editVariation': 'Edit line',
-    'openings.edited': 'Line updated.',
     'openings.importFile': 'Import from text file',
     'openings.exportFile': 'Export as text file',
     'openings.importing': 'Adding lines...',
@@ -672,7 +675,6 @@ class Strings {
     'openings.exported': 'Wrote {count} lines to the file.',
     'openings.exportEmpty': 'There are no lines to export.',
     'common.deleteNote': 'Delete note',
-    'common.noteDeleted': 'Note deleted.',
     'editor.applyFen': 'Apply',
     'app.title': 'Chess Library',
     'app.subtitle': 'Read your games, solve puzzles, play the engine',
@@ -878,7 +880,8 @@ class Strings {
     'analysis.deep': 'Deep analysis',
     'analysis.screenHint':
         'The screen stays on while analysing; best done on charge.',
-    'analysis.started': 'Analysing {count} games...',
+    'analysis.limitWarning':
+        'The analysis list keeps at most {limit} records; the rest drop off.',
     'analysis.finished': 'Analysis finished.',
     'analysis.deepList': 'Recent deep analyses',
     'analysis.emptyList':
@@ -1091,6 +1094,7 @@ class Strings {
     'settings.evalBarSub': 'Next to the board while analysis is on',
     'settings.soundSection': 'Sound',
     'settings.sound': 'Move sounds',
+    'settings.soundSub': 'Vibration is off as well when this is off.',
     'settings.about': 'About',
     'settings.aboutText':
         'Version {version} · The engine runs entirely on your device, no '

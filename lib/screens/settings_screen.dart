@@ -172,6 +172,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 SwitchListTile(
                   secondary: const Icon(Icons.volume_up_rounded),
                   title: Text(t('settings.sound')),
+                  subtitle: Text(t('settings.soundSub')),
                   value: _settings.soundEnabled,
                   onChanged: (value) => _settings.soundEnabled = value,
                 ),
@@ -529,38 +530,47 @@ class _SettingsScreenState extends State<SettingsScreen> {
           itemBuilder: (context, index) {
             final name = BoardAssets.boards[index];
             final selected = name == _settings.boardTheme;
-            return InkWell(
-              mouseCursor: kClickable,
+            // Kendi Material'ı olmadan InkWell, mürekkebi kaydırma
+            // alanının dışındaki üst Material'a çiziyor; panelin
+            // kenarında yarısı görünen bir tahtaya dokununca vurgu
+            // listenin dışına taşıyordu.
+            return Material(
+              type: MaterialType.transparency,
               borderRadius: BorderRadius.circular(12),
-              onTap: () {
-                _settings.boardTheme = name;
-                setSheetState(() {});
-              },
-              child: Column(
-                children: [
-                  Expanded(
-                    child: Container(
-                      decoration: BoxDecoration(
-                        borderRadius: BorderRadius.circular(10),
-                        border: Border.all(
-                          color: selected
-                              ? Theme.of(context).colorScheme.primary
-                              : Colors.transparent,
-                          width: 3,
+              clipBehavior: Clip.antiAlias,
+              child: InkWell(
+                mouseCursor: kClickable,
+                borderRadius: BorderRadius.circular(12),
+                onTap: () {
+                  _settings.boardTheme = name;
+                  setSheetState(() {});
+                },
+                child: Column(
+                  children: [
+                    Expanded(
+                      child: Container(
+                        decoration: BoxDecoration(
+                          borderRadius: BorderRadius.circular(10),
+                          border: Border.all(
+                            color: selected
+                                ? Theme.of(context).colorScheme.primary
+                                : Colors.transparent,
+                            width: 3,
+                          ),
                         ),
+                        clipBehavior: Clip.antiAlias,
+                        child: BoardBackground(board: name, fit: BoxFit.cover),
                       ),
-                      clipBehavior: Clip.antiAlias,
-                      child: BoardBackground(board: name, fit: BoxFit.cover),
                     ),
-                  ),
-                  const SizedBox(height: 4),
-                  Text(
-                    BoardAssets.label(name),
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: const TextStyle(fontSize: 11.5),
-                  ),
-                ],
+                    const SizedBox(height: 4),
+                    Text(
+                      BoardAssets.label(name),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: const TextStyle(fontSize: 11.5),
+                    ),
+                  ],
+                ),
               ),
             );
           },

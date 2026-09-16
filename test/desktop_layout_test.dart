@@ -5,6 +5,8 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 import 'package:chess_pgn_reader/l10n/app_strings.dart';
 import 'package:chess_pgn_reader/models/pgn_parser.dart';
+import 'package:chess_pgn_reader/screens/board_editor_screen.dart';
+import 'package:chess_pgn_reader/screens/pgn_import_screen.dart';
 import 'package:chess_pgn_reader/screens/playlist_detail_screen.dart';
 import 'package:chess_pgn_reader/screens/settings_screen.dart';
 import 'package:chess_pgn_reader/services/opening_service.dart';
@@ -224,6 +226,68 @@ void main() {
 
       expect(area, _wide.width);
       expect(content, lessThanOrEqualTo(Layout.maxContentWidth));
+    });
+
+    testWidgets('PGN alma listesi pencere kadar geniş', (tester) async {
+      // Denetimde atlanmış olduğu görüldü: uzun oyun listesi tam da
+      // kaydırma gereken ekran.
+      await _pump(
+        tester,
+        PgnImportScreen(
+          games: [
+            for (int i = 0; i < 12; i++)
+              PgnGame(
+                headers: {'White': 'Beyaz $i', 'Black': 'Siyah $i'},
+                uciMoves: const ['e2e4', 'e7e5'],
+              ),
+          ],
+          suggestedName: 'Deneme',
+        ),
+        _wide,
+      );
+
+      final list = find.byKey(const Key('pgnGameList'));
+      final (area, content) = measure(tester, list);
+      expect(area, _wide.width);
+      expect(content, lessThanOrEqualTo(Layout.maxContentWidth));
+    });
+
+    testWidgets('tahta düzenleyici pencere kadar geniş', (tester) async {
+      await _pump(
+        tester,
+        const BoardEditorScreen(
+          initialFen: 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1',
+        ),
+        _wide,
+      );
+
+      final list = find.byType(ListView).first;
+      final (area, content) = measure(tester, list);
+      expect(area, _wide.width);
+      expect(content, lessThanOrEqualTo(Layout.maxContentWidth));
+    });
+
+    testWidgets('arama kutusu içerik genişliğini aşmıyor', (tester) async {
+      final playlist = await StorageService.instance.createPlaylist('Deneme');
+      await PgnImportService.addToList(
+        playlist.id,
+        PgnParser.parseAll('''
+[White "Beyaz"]
+[Black "Siyah"]
+
+1. e4 e5 *
+'''),
+      );
+
+      await _pump(tester, PlaylistDetailScreen(playlistId: playlist.id), _wide);
+
+      final field = find.byType(TextField);
+      expect(field, findsOneWidget);
+      expect(
+        tester.getSize(field).width,
+        lessThanOrEqualTo(Layout.maxContentWidth),
+        reason: 'arama kutusu tek başına pencereye yapışık kalmamalı',
+      );
     });
 
     testWidgets('telefonda dolgu büyümüyor', (tester) async {

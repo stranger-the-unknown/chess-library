@@ -437,8 +437,8 @@ class _PuzzleSolveScreenState extends State<PuzzleSolveScreen> {
       tags: _puzzle.tags,
     );
     if (!mounted) return;
+    // Not ekrandan zaten kalkıyor; ayrıca bildirim göstermiyoruz.
     setState(() => _puzzle.note = null);
-    AppDialogs.snack(context, t('common.noteDeleted'));
   }
 
   // -------------------------------------------------------------------------

@@ -580,30 +580,34 @@ class _PlaylistDetailScreenState extends State<PlaylistDetailScreen> {
                 preferredSize: const Size.fromHeight(104),
                 child: Column(
                   children: [
-                    Padding(
-                      padding: const EdgeInsets.fromLTRB(16, 0, 16, 8),
-                      child: TextField(
-                        controller: _searchController,
-                        onChanged: (value) => setState(() => _query = value),
-                        decoration: InputDecoration(
-                          hintText: t('lists.search'),
-                          prefixIcon: const Icon(
-                            Icons.search_rounded,
-                            size: 20,
-                          ),
-                          isDense: true,
-                          suffixIcon: _query.isEmpty
-                              ? null
-                              : IconButton(
-                                  icon: const Icon(
-                                    Icons.clear_rounded,
-                                    size: 18,
+                    // Arama kutusu da içerik genişliğinde: geniş pencerede
+                    // tek başına pencereye yapışık duruyordu.
+                    ContentWidth(
+                      child: Padding(
+                        padding: const EdgeInsets.fromLTRB(16, 0, 16, 8),
+                        child: TextField(
+                          controller: _searchController,
+                          onChanged: (value) => setState(() => _query = value),
+                          decoration: InputDecoration(
+                            hintText: t('lists.search'),
+                            prefixIcon: const Icon(
+                              Icons.search_rounded,
+                              size: 20,
+                            ),
+                            isDense: true,
+                            suffixIcon: _query.isEmpty
+                                ? null
+                                : IconButton(
+                                    icon: const Icon(
+                                      Icons.clear_rounded,
+                                      size: 18,
+                                    ),
+                                    onPressed: () {
+                                      _searchController.clear();
+                                      setState(() => _query = '');
+                                    },
                                   ),
-                                  onPressed: () {
-                                    _searchController.clear();
-                                    setState(() => _query = '');
-                                  },
-                                ),
+                          ),
                         ),
                       ),
                     ),
@@ -704,6 +708,18 @@ class _PlaylistDetailScreenState extends State<PlaylistDetailScreen> {
               t('analysis.screenHint'),
               style: TextStyle(fontSize: 11.5, color: scheme.onSurfaceVariant),
             ),
+            // Analiz listeleri yüz kayıtla sınırlı; daha fazlası
+            // seçilirse iş bitince en son analiz edilenler listede
+            // görünmüyor. Saatler süren bir işin sessizce kırpılmaması
+            // için önceden söyleniyor.
+            if (count > StorageService.analysisLimit) ...[
+              const SizedBox(height: 4),
+              Text(
+                t('analysis.limitWarning',
+                    {'limit': StorageService.analysisLimit}),
+                style: TextStyle(fontSize: 11.5, color: scheme.error),
+              ),
+            ],
             const SizedBox(height: 8),
             Row(
               children: [

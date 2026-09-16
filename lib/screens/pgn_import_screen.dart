@@ -164,10 +164,15 @@ class _PgnImportScreenState extends State<PgnImportScreen> {
           ),
         ],
       ),
-      body: ContentWidth(
-        child: Column(
-          children: [
-            Container(
+      // Liste tüm genişliği kaplıyor, ortalama kendi dolgusuyla
+      // yapılıyor: aksi hâlde kaydırma alanı da daralıyor ve imleç
+      // pencerenin kenarına yakınken fare tekerleği hiçbir şey yapmıyor.
+      // Üstteki özet, süzgeç ve alttaki düğmeler kaydırılmadığı için
+      // eskisi gibi ortalanmış duruyor.
+      body: Column(
+        children: [
+          ContentWidth(
+            child: Container(
               width: double.infinity,
               margin: const EdgeInsets.fromLTRB(16, 8, 16, 4),
               padding: const EdgeInsets.all(12),
@@ -186,8 +191,10 @@ class _PgnImportScreenState extends State<PgnImportScreen> {
                 ),
               ),
             ),
-            if (_partialCount > 0)
-              Align(
+          ),
+          if (_partialCount > 0)
+            ContentWidth(
+              child: Align(
                 alignment: Alignment.centerLeft,
                 child: Padding(
                   padding: const EdgeInsets.fromLTRB(16, 6, 16, 0),
@@ -209,9 +216,13 @@ class _PgnImportScreenState extends State<PgnImportScreen> {
                   ),
                 ),
               ),
-            Expanded(
-              child: ListView.builder(
-                padding: const EdgeInsets.fromLTRB(12, 4, 12, 12),
+            ),
+          Expanded(
+            child: ContentInset(
+              padding: const EdgeInsets.fromLTRB(12, 4, 12, 12),
+              builder: (context, padding) => ListView.builder(
+                key: const Key('pgnGameList'),
+                padding: padding,
                 itemCount: shown.length,
                 itemBuilder: (context, index) => _gameTile(
                   shown[index],
@@ -220,7 +231,9 @@ class _PgnImportScreenState extends State<PgnImportScreen> {
                 ),
               ),
             ),
-            SafeArea(
+          ),
+          ContentWidth(
+            child: SafeArea(
               top: false,
               child: Padding(
                 padding: const EdgeInsets.fromLTRB(16, 4, 16, 12),
@@ -228,7 +241,12 @@ class _PgnImportScreenState extends State<PgnImportScreen> {
                   children: [
                     Expanded(
                       child: OutlinedButton.icon(
-                        onPressed: _saving || _selected.isEmpty
+                        // Kaydedilecek küme `_selectedGames`; süzgeç
+                        // açıkken seçili ama gizli oyunlar buna girmiyor.
+                        // Düğmeler `_selected`e bakarsa, gizlenen oyunlar
+                        // yüzünden kaydedilecek bir şey kalmadığında bile
+                        // etkin görünüp hiçbir şey yapmıyorlar.
+                        onPressed: _saving || _selectedGames.isEmpty
                             ? null
                             : _addToExisting,
                         icon: const Icon(Icons.playlist_add_rounded, size: 20),
@@ -238,7 +256,7 @@ class _PgnImportScreenState extends State<PgnImportScreen> {
                     const SizedBox(width: 10),
                     Expanded(
                       child: ElevatedButton.icon(
-                        onPressed: _saving || _selected.isEmpty
+                        onPressed: _saving || _selectedGames.isEmpty
                             ? null
                             : _saveAsNewList,
                         icon: const Icon(
@@ -252,8 +270,8 @@ class _PgnImportScreenState extends State<PgnImportScreen> {
                 ),
               ),
             ),
-          ],
-        ),
+          ),
+        ],
       ),
     );
   }

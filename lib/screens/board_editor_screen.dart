@@ -229,9 +229,12 @@ class _BoardEditorScreenState extends State<BoardEditorScreen> {
           ),
         ],
       ),
-      body: ContentWidth(
-        child: ListView(
-          padding: const EdgeInsets.fromLTRB(12, 8, 12, 24),
+      // Liste tüm genişliği kaplıyor, ortalama kendi dolgusuyla
+      // yapılıyor; yoksa imleç kenardayken fare tekerleği çalışmıyor.
+      body: ContentInset(
+        padding: const EdgeInsets.fromLTRB(12, 8, 12, 24),
+        builder: (context, padding) => ListView(
+          padding: padding,
           children: [
             _buildBoard(scheme),
             const SizedBox(height: 12),
