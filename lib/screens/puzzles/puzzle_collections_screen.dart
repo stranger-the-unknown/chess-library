@@ -166,16 +166,17 @@ class _PuzzleCollectionsScreenState extends State<PuzzleCollectionsScreen> {
           ? const Center(child: CircularProgressIndicator())
           : RefreshIndicator(
               onRefresh: _load,
-              child: ContentWidth(
-                child: _collections.isEmpty
+              child: ContentInset(
+                padding: const EdgeInsets.fromLTRB(16, 8, 16, 28),
+                builder: (context, padding) => _collections.isEmpty
                     ? ListView(
                         // Kaydırılabilir kalmalı: RefreshIndicator ancak
                         // kaydırılabilir bir çocukla çalışır.
-                        padding: const EdgeInsets.fromLTRB(16, 8, 16, 28),
+                        padding: padding,
                         children: [_emptyState(scheme)],
                       )
                     : ListView.separated(
-                        padding: const EdgeInsets.fromLTRB(16, 8, 16, 28),
+                        padding: padding,
                         itemCount: _collections.length + (_hasPuzzles ? 1 : 0),
                         separatorBuilder: (_, __) => const SizedBox(height: 12),
                         itemBuilder: (context, index) {

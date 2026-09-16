@@ -178,6 +178,23 @@ class AnalysisQueue extends ChangeNotifier {
   }
 }
 
+/// Seçilen oyunları analiz sırasına dizer: **numarası büyük olan önce**.
+///
+/// Analiz listesine her yeni kayıt başa ekleniyor. Oyunlar düz sırayla
+/// işlenseydi liste tersine dönerdi: 1., 2., 3. oyunu seçen kullanıcı
+/// analiz listesinde 3., 2., 1. görürdü. Sondan başlayınca listedeki
+/// sıra kaynak listedekiyle aynı oluyor.
+///
+/// [numbers] oyunun kimliğinden listedeki sıra numarasına eşleme;
+/// numarası olmayan oyun sıfır sayılır ve sona düşer.
+List<SavedGame> analysisOrder(
+  List<SavedGame> games,
+  Map<String, int> numbers,
+) {
+  return [...games]
+    ..sort((a, b) => (numbers[b.id] ?? 0).compareTo(numbers[a.id] ?? 0));
+}
+
 /// İncelemeyi saklanabilir biçime çevirir.
 ///
 /// Hamlelerin kendisi oyunda duruyor; burada yalnızca motorun söyledikleri

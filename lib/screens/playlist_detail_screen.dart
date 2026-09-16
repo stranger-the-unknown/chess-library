@@ -390,10 +390,11 @@ class _PlaylistDetailScreenState extends State<PlaylistDetailScreen> {
   }
 
   /// Oyunun notunu siler.
+  ///
+  /// Not ekrandan kalkıyor; ayrıca bir bildirim göstermeye gerek yok.
   Future<void> _deleteNote(SavedGame game) async {
     game.note = null;
     await _storage.updateGame(widget.playlistId, game);
-    if (mounted) AppDialogs.snack(context, t('common.noteDeleted'));
   }
 
   /// Sıra numarası aralığındaki oyunları okundu/okunmadı yapar.
@@ -414,17 +415,21 @@ class _PlaylistDetailScreenState extends State<PlaylistDetailScreen> {
   }
 
   /// Seçilen oyunları toplu analize gönderir.
+  /// Seçilen oyunları kuyruğa verir; sıra [analysisOrder] ile kuruluyor.
   Future<void> _analyseSelected({required bool deep}) async {
-    final games = (_playlist?.games ?? const <SavedGame>[])
-        .where((g) => _selected.contains(g.id))
-        .toList();
+    final games = analysisOrder(
+      (_playlist?.games ?? const <SavedGame>[])
+          .where((g) => _selected.contains(g.id))
+          .toList(),
+      _numbers,
+    );
     if (games.isEmpty) return;
 
+    // Başladığını söyleyen bir bildirim yok: listeler sekmesinin
+    // üstündeki ilerleme şeridi zaten beliriyor ve kaç oyunun kaldığını
+    // da gösteriyor. Bitişte bildirim kalıyor, çünkü kullanıcı o sırada
+    // telefonun başında olmayabilir.
     _endSelection();
-    AppDialogs.snack(
-      context,
-      t('analysis.started', {'count': games.length}),
-    );
     await AnalysisQueue.instance.enqueue(
       playlistId: widget.playlistId,
       games: games,
@@ -765,17 +770,18 @@ class _PlaylistDetailScreenState extends State<PlaylistDetailScreen> {
                         style: TextStyle(color: scheme.onSurfaceVariant),
                       ),
                     )
-                  : ContentWidth(
-                      child: ListView.separated(
+                  : ContentInset(
+                      // Telefonun gezinme çubuğu ekranın altından yer
+                      // kapıyor; son satır oraya denk gelirse tıklanamıyor.
+                      padding: EdgeInsets.fromLTRB(
+                        16,
+                        8,
+                        16,
+                        28 + MediaQuery.viewPaddingOf(context).bottom,
+                      ),
+                      builder: (context, padding) => ListView.separated(
                         key: const Key('gameList'),
-                        // Telefonun gezinme çubuğu ekranın altından yer
-                        // kapıyor; son satır oraya denk gelirse tıklanamıyor.
-                        padding: EdgeInsets.fromLTRB(
-                          16,
-                          8,
-                          16,
-                          28 + MediaQuery.viewPaddingOf(context).bottom,
-                        ),
+                        padding: padding,
                         itemCount: visible.length,
                         separatorBuilder: (_, __) => const SizedBox(height: 8),
                         itemBuilder: (context, index) =>

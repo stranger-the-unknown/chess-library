@@ -244,6 +244,7 @@ class Strings {
     'pgn.noListYet': 'Henüz liste yok; önce yeni liste oluştur.',
     'pgn.chooseList': 'Hangi listeye eklensin?',
     'pgn.partial': '{count} hamle okunamadı',
+    'pgn.hidePartial': 'Eksik hamleli {count} oyunu gizle',
     'pgn.preview': 'Oyunu aç',
     'pgn.noGames': 'Dosyada okunabilir oyun bulunamadı.',
     'pgn.readError': 'Dosya okunamadı.',
@@ -520,6 +521,8 @@ class Strings {
         '{count} varyantın hepsi, ilerlemen ve notlarınla birlikte '
         'silinsin mi? Bu işlem geri alınamaz.',
     'openings.deleteAllEmpty': 'Silinecek açılış yok.',
+    'openings.expandAll': 'Tüm başlıkları aç',
+    'openings.collapseAll': 'Tüm başlıkları kapat',
     'openings.hidden': 'Gizli açılışlar',
     'openings.allHidden':
         'Bütün başlıklar gizli. Çalışmak istediklerini geri getir.',
@@ -765,6 +768,7 @@ class Strings {
     'pgn.noListYet': 'You have no lists yet; create one first.',
     'pgn.chooseList': 'Add to which list?',
     'pgn.partial': '{count} moves could not be read',
+    'pgn.hidePartial': 'Hide {count} games with unreadable moves',
     'pgn.preview': 'Open game',
     'pgn.noGames': 'No readable game was found in the file.',
     'pgn.readError': 'The file could not be read.',
@@ -1030,6 +1034,8 @@ class Strings {
         'Delete all {count} lines, along with your progress and notes? '
         'This cannot be undone.',
     'openings.deleteAllEmpty': 'Nothing to delete.',
+    'openings.expandAll': 'Expand all titles',
+    'openings.collapseAll': 'Collapse all titles',
     'openings.hidden': 'Hidden openings',
     'openings.allHidden':
         'Every title is hidden. Bring back the ones you want to study.',

@@ -10,7 +10,6 @@ import '../../models/chess_engine.dart' as engine;
 import '../../models/puzzle.dart';
 import '../../models/puzzle_search.dart';
 import '../../services/puzzle_service.dart';
-import '../../services/settings_service.dart';
 import '../../theme/app_theme.dart';
 import '../../widgets/app_dialogs.dart';
 import '../../widgets/mini_board.dart';
@@ -67,7 +66,6 @@ class _PuzzleListScreenState extends State<PuzzleListScreen> {
   (int, int)? _range;
 
   /// Bugün (yerel gece yarısından beri) çözülen bulmaca sayısı.
-  int _solvedToday = 0;
 
   @override
   void initState() {
@@ -93,16 +91,9 @@ class _PuzzleListScreenState extends State<PuzzleListScreen> {
       _numbers[puzzles[i].id] = puzzles[i].number ?? i + 1;
     }
 
-    final today = DateTime.now();
-    int todayCount = 0;
-    for (final puzzle in puzzles) {
-      if (progress[puzzle.id]?.solvedOn(today) == true) todayCount++;
-    }
-
     setState(() {
       _all = puzzles;
       _progress = progress;
-      _solvedToday = todayCount;
       _loading = false;
     });
   }
@@ -443,26 +434,11 @@ class _PuzzleListScreenState extends State<PuzzleListScreen> {
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
     final visible = _ordered;
-    final showToday =
-        SettingsService.instance.showDailyCount && _solvedToday > 0;
 
     return Scaffold(
       appBar: AppBar(
         title: Text(widget.collection.name),
         actions: [
-          if (showToday)
-            Padding(
-              padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 4),
-              child: Chip(
-                visualDensity: VisualDensity.compact,
-                padding: EdgeInsets.zero,
-                labelPadding: const EdgeInsets.symmetric(horizontal: 6),
-                label: Text(
-                  t('puzzles.todaySolved', {'count': _solvedToday}),
-                  style: const TextStyle(fontSize: 11.5),
-                ),
-              ),
-            ),
           IconButton(
             tooltip:
                 _descending ? t('puzzles.sortOldest') : t('puzzles.sortNewest'),
@@ -621,20 +597,21 @@ class _PuzzleListScreenState extends State<PuzzleListScreen> {
                 Expanded(
                   child: visible.isEmpty
                       ? _empty(scheme)
-                      : ContentWidth(
-                  child: ListView.builder(
-                    key: const Key('puzzleList'),
-                    padding: EdgeInsets.fromLTRB(
-                      12,
-                      8,
-                      12,
-                      90 + MediaQuery.viewPaddingOf(context).bottom,
-                    ),
-                    itemCount: visible.length,
-                          itemBuilder: (context, index) =>
-                              _puzzleTile(visible[index], scheme),
+                      : ContentInset(
+                          padding: EdgeInsets.fromLTRB(
+                            12,
+                            8,
+                            12,
+                            90 + MediaQuery.viewPaddingOf(context).bottom,
+                          ),
+                          builder: (context, padding) => ListView.builder(
+                            key: const Key('puzzleList'),
+                            padding: padding,
+                            itemCount: visible.length,
+                            itemBuilder: (context, index) =>
+                                _puzzleTile(visible[index], scheme),
+                          ),
                         ),
-                      ),
                 ),
               ],
             ),

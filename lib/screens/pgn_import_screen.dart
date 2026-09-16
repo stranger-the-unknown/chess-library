@@ -34,19 +34,35 @@ class _PgnImportScreenState extends State<PgnImportScreen> {
   );
   bool _saving = false;
 
-  List<PgnGame> get _selectedGames => [
+  /// Okunamayan hamlesi olan oyunlar listeden gizlensin mi?
+  ///
+  /// Gizlenenler seçimden de düşüyor, yani kaydedilmiyorlar. Süzgeç
+  /// kapatılınca eski seçimleri geri geliyor: seçim kümesi hiç
+  /// değiştirilmiyor, yalnızca görünenlerle kesiştiriliyor.
+  bool _hidePartial = false;
+
+  /// Hamlesi eksik okunan oyun sayısı.
+  int get _partialCount =>
+      widget.games.where((g) => g.skippedCount > 0).length;
+
+  /// Listede gösterilen oyunların sıra numaraları.
+  List<int> get _shown => [
         for (int i = 0; i < widget.games.length; i++)
+          if (!_hidePartial || widget.games[i].skippedCount == 0) i,
+      ];
+
+  List<PgnGame> get _selectedGames => [
+        for (final i in _shown)
           if (_selected.contains(i)) widget.games[i],
       ];
 
   void _toggleAll() {
+    final shown = _shown;
     setState(() {
-      if (_selected.length == widget.games.length) {
-        _selected.clear();
+      if (shown.every(_selected.contains)) {
+        _selected.removeAll(shown);
       } else {
-        _selected
-          ..clear()
-          ..addAll(List<int>.generate(widget.games.length, (i) => i));
+        _selected.addAll(shown);
       }
     });
   }
@@ -125,15 +141,24 @@ class _PgnImportScreenState extends State<PgnImportScreen> {
   @override
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
-    final allSelected = _selected.length == widget.games.length;
+    final shown = _shown;
+    final allSelected = shown.isNotEmpty && shown.every(_selected.contains);
 
     return Scaffold(
       appBar: AppBar(
         title: Text(t('pgn.importTitle')),
         actions: [
-          TextButton(
+          // Süzgeç çipiyle karışmasın diye simgeli: bu bir eylem,
+          // aşağıdaki ise listeyi daraltan bir anahtar.
+          TextButton.icon(
             onPressed: _toggleAll,
-            child: Text(
+            icon: Icon(
+              allSelected
+                  ? Icons.remove_done_rounded
+                  : Icons.checklist_rtl_rounded,
+              size: 20,
+            ),
+            label: Text(
               allSelected ? t('pgn.clearSelection') : t('pgn.selectAll'),
             ),
           ),
@@ -153,7 +178,7 @@ class _PgnImportScreenState extends State<PgnImportScreen> {
               child: Text(
                 t('pgn.foundGames', {
                   'count': widget.games.length,
-                  'selected': _selected.length,
+                  'selected': _selectedGames.length,
                 }),
                 style: TextStyle(
                   fontSize: 12.5,
@@ -161,12 +186,38 @@ class _PgnImportScreenState extends State<PgnImportScreen> {
                 ),
               ),
             ),
+            if (_partialCount > 0)
+              Align(
+                alignment: Alignment.centerLeft,
+                child: Padding(
+                  padding: const EdgeInsets.fromLTRB(16, 6, 16, 0),
+                  child: FilterChip(
+                    selected: _hidePartial,
+                    showCheckmark: false,
+                    avatar: Icon(
+                      _hidePartial
+                          ? Icons.filter_alt_rounded
+                          : Icons.filter_alt_off_rounded,
+                      size: 18,
+                    ),
+                    label: Text(
+                      t('pgn.hidePartial', {'count': _partialCount}),
+                      style: const TextStyle(fontSize: 12.5),
+                    ),
+                    onSelected: (value) =>
+                        setState(() => _hidePartial = value),
+                  ),
+                ),
+              ),
             Expanded(
               child: ListView.builder(
                 padding: const EdgeInsets.fromLTRB(12, 4, 12, 12),
-                itemCount: widget.games.length,
-                itemBuilder: (context, index) =>
-                    _gameTile(index, widget.games[index], scheme),
+                itemCount: shown.length,
+                itemBuilder: (context, index) => _gameTile(
+                  shown[index],
+                  widget.games[shown[index]],
+                  scheme,
+                ),
               ),
             ),
             SafeArea(

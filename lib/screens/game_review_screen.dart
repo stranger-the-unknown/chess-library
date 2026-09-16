@@ -168,11 +168,9 @@ class _GameReviewScreenState extends State<GameReviewScreen> {
             ),
         ],
       ),
-      body: ContentWidth(
-        child: review == null
-            ? _progressView(scheme)
-            : _resultView(review, scheme),
-      ),
+      body: review == null
+          ? ContentWidth(child: _progressView(scheme))
+          : _resultView(review, scheme),
     );
   }
 
@@ -224,21 +222,24 @@ class _GameReviewScreenState extends State<GameReviewScreen> {
 
     final current = review.moves[_cursor.clamp(0, review.moves.length - 1)];
 
-    return ListView(
+    return ContentInset(
       padding: const EdgeInsets.fromLTRB(16, 12, 16, 28),
-      children: [
-        _accuracyCard(review, scheme),
-        const SizedBox(height: 14),
-        _chartCard(review, scheme),
-        const SizedBox(height: 14),
-        _moveCard(current, scheme),
-        const SizedBox(height: 14),
-        _breakdownCard(review, scheme),
-        if (review.turningPoints.isNotEmpty) ...[
+      builder: (context, padding) => ListView(
+        padding: padding,
+        children: [
+          _accuracyCard(review, scheme),
           const SizedBox(height: 14),
-          _turningPointsCard(review, scheme),
+          _chartCard(review, scheme),
+          const SizedBox(height: 14),
+          _moveCard(current, scheme),
+          const SizedBox(height: 14),
+          _breakdownCard(review, scheme),
+          if (review.turningPoints.isNotEmpty) ...[
+            const SizedBox(height: 14),
+            _turningPointsCard(review, scheme),
+          ],
         ],
-      ],
+      ),
     );
   }
 

@@ -124,11 +124,11 @@ void main() {
       await tester.tap(find.text('Taş takımı'));
       await tester.pumpAndSettle();
 
-      final list = find.descendant(
+      final grid = find.descendant(
         of: find.byType(BottomSheet),
-        matching: find.byType(ListView),
+        matching: find.byType(GridView),
       );
-      final padding = (tester.widget(list) as ListView).padding as EdgeInsets;
+      final padding = (tester.widget(grid) as GridView).padding as EdgeInsets;
       expect(padding.bottom, greaterThanOrEqualTo(_inset));
     });
   });

@@ -29,7 +29,16 @@ Future<void> _pumpSettings(WidgetTester tester, double bottomInset) async {
   tester.view.viewPadding = FakeViewPadding(bottom: bottomInset);
   tester.view.padding = FakeViewPadding(bottom: bottomInset);
 
-  await tester.pumpWidget(const MaterialApp(home: SettingsScreen()));
+  // Yeni anahtar: aynı widget'ı ikinci kez kurmak ağacı tazelemiyor,
+  // eski Navigator'la birlikte açık kalan alt sayfa da duruyor. Panelin
+  // başlığı ayarlardaki satırla aynı metni taşıdığı için o sayfa açık
+  // kalınca dokunulacak hedef ikiye çıkıyordu.
+  await tester.pumpWidget(
+    KeyedSubtree(
+      key: UniqueKey(),
+      child: const MaterialApp(home: SettingsScreen()),
+    ),
+  );
   await tester.pumpAndSettle();
 }
 
@@ -87,12 +96,12 @@ void main() {
     await _pumpSettings(tester, 0);
     await tester.tap(find.text('Taş takımı'));
     await tester.pumpAndSettle();
-    final withoutInset = _bottomPadding(tester, ListView);
+    final withoutInset = _bottomPadding(tester, GridView);
 
     await _pumpSettings(tester, inset);
     await tester.tap(find.text('Taş takımı'));
     await tester.pumpAndSettle();
-    final withInset = _bottomPadding(tester, ListView);
+    final withInset = _bottomPadding(tester, GridView);
 
     expect(
       withInset - withoutInset,

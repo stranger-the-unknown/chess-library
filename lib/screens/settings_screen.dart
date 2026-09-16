@@ -9,6 +9,7 @@ import '../services/backup_service.dart';
 import '../services/settings_service.dart';
 import '../services/text_file_service.dart';
 import '../widgets/app_dialogs.dart';
+import '../widgets/picker_panel.dart';
 import '../widgets/piece_widget.dart';
 import '../widgets/cursors.dart';
 import '../widgets/board_background.dart';
@@ -32,9 +33,10 @@ class _SettingsScreenState extends State<SettingsScreen> {
       appBar: AppBar(title: Text(t('nav.settings'))),
       body: AnimatedBuilder(
         animation: _settings,
-        builder: (context, _) => ContentWidth(
-          child: ListView(
-            padding: const EdgeInsets.fromLTRB(16, 8, 16, 32),
+        builder: (context, _) => ContentInset(
+          padding: const EdgeInsets.fromLTRB(16, 8, 16, 32),
+          builder: (context, padding) => ListView(
+            padding: padding,
             children: [
               _section(t('settings.appearance')),
               _card([
@@ -505,70 +507,63 @@ class _SettingsScreenState extends State<SettingsScreen> {
   }
 
   Future<void> _pickBoard() async {
-    await showModalBottomSheet<void>(
-      context: context,
-      isScrollControlled: true,
-      builder: (sheetContext) => DraggableScrollableSheet(
-        expand: false,
-        initialChildSize: 0.7,
-        builder: (context, controller) => StatefulBuilder(
-          builder: (context, setSheetState) => GridView.builder(
-            controller: controller,
-            // Telefonun gezinme çubuğu listenin son satırının üstüne
-            // biniyordu; alta sistem payı ekleniyor ki son tahta da
-            // tıklanabilsin.
-            padding: EdgeInsets.fromLTRB(
-              16,
-              16,
-              16,
-              16 + MediaQuery.viewPaddingOf(context).bottom,
-            ),
-            gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-              crossAxisCount: 3,
-              mainAxisSpacing: 12,
-              crossAxisSpacing: 12,
-              childAspectRatio: 0.82,
-            ),
-            itemCount: BoardAssets.boards.length,
-            itemBuilder: (context, index) {
-              final name = BoardAssets.boards[index];
-              final selected = name == _settings.boardTheme;
-              return InkWell(
-                mouseCursor: kClickable,
-                borderRadius: BorderRadius.circular(12),
-                onTap: () {
-                  _settings.boardTheme = name;
-                  setSheetState(() {});
-                },
-                child: Column(
-                  children: [
-                    Expanded(
-                      child: Container(
-                        decoration: BoxDecoration(
-                          borderRadius: BorderRadius.circular(10),
-                          border: Border.all(
-                            color: selected
-                                ? Theme.of(context).colorScheme.primary
-                                : Colors.transparent,
-                            width: 3,
-                          ),
-                        ),
-                        clipBehavior: Clip.antiAlias,
-                        child: BoardBackground(board: name, fit: BoxFit.cover),
-                      ),
-                    ),
-                    const SizedBox(height: 4),
-                    Text(
-                      BoardAssets.label(name),
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: const TextStyle(fontSize: 11.5),
-                    ),
-                  ],
-                ),
-              );
-            },
+    await showPickerPanel(
+      context,
+      title: t('settings.boardTheme'),
+      builder: (context, controller, padding) => StatefulBuilder(
+        builder: (context, setSheetState) => GridView.builder(
+          controller: controller,
+          // Telefonun gezinme çubuğu listenin son satırının üstüne
+          // biniyordu; alt pay panelden geliyor ki son tahta da
+          // tıklanabilsin.
+          padding: padding,
+          // Sütun sayısı genişlikten çıkıyor: telefonda üç, geniş
+          // panelde beş altı tahta yan yana geliyor.
+          gridDelegate: const SliverGridDelegateWithMaxCrossAxisExtent(
+            maxCrossAxisExtent: 170,
+            mainAxisSpacing: 12,
+            crossAxisSpacing: 12,
+            childAspectRatio: 0.82,
           ),
+          itemCount: BoardAssets.boards.length,
+          itemBuilder: (context, index) {
+            final name = BoardAssets.boards[index];
+            final selected = name == _settings.boardTheme;
+            return InkWell(
+              mouseCursor: kClickable,
+              borderRadius: BorderRadius.circular(12),
+              onTap: () {
+                _settings.boardTheme = name;
+                setSheetState(() {});
+              },
+              child: Column(
+                children: [
+                  Expanded(
+                    child: Container(
+                      decoration: BoxDecoration(
+                        borderRadius: BorderRadius.circular(10),
+                        border: Border.all(
+                          color: selected
+                              ? Theme.of(context).colorScheme.primary
+                              : Colors.transparent,
+                          width: 3,
+                        ),
+                      ),
+                      clipBehavior: Clip.antiAlias,
+                      child: BoardBackground(board: name, fit: BoxFit.cover),
+                    ),
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    BoardAssets.label(name),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: const TextStyle(fontSize: 11.5),
+                  ),
+                ],
+              ),
+            );
+          },
         ),
       ),
     );
@@ -576,107 +571,105 @@ class _SettingsScreenState extends State<SettingsScreen> {
   }
 
   Future<void> _pickPieceSet() async {
-    await showModalBottomSheet<void>(
-      context: context,
-      isScrollControlled: true,
-      builder: (sheetContext) => DraggableScrollableSheet(
-        expand: false,
-        initialChildSize: 0.7,
-        builder: (context, controller) => StatefulBuilder(
-          builder: (context, setSheetState) => ListView.separated(
-            controller: controller,
-            // Tahta seçicideki ile aynı sebep: son takım gezinme
-            // çubuğunun altında kalıyordu.
-            padding: EdgeInsets.fromLTRB(
-              16,
-              16,
-              16,
-              16 + MediaQuery.viewPaddingOf(context).bottom,
-            ),
-            itemCount: BoardAssets.pieceSets.length,
-            separatorBuilder: (_, __) => const SizedBox(height: 8),
-            itemBuilder: (context, index) {
-              final name = BoardAssets.pieceSets[index];
-              final selected = name == _settings.pieceSet;
-              final scheme = Theme.of(context).colorScheme;
-              return Material(
-                color: selected
-                    ? scheme.primary.withValues(alpha: 0.16)
-                    : scheme.surfaceContainer,
+    await showPickerPanel(
+      context,
+      title: t('settings.pieceSet'),
+      builder: (context, controller, padding) => StatefulBuilder(
+        builder: (context, setSheetState) => GridView.builder(
+          controller: controller,
+          padding: padding,
+          // Telefonda tek sütun, geniş panelde iki: satırlar okunaklı
+          // kalıyor, panel de boş durmuyor.
+          gridDelegate: const SliverGridDelegateWithMaxCrossAxisExtent(
+            maxCrossAxisExtent: 430,
+            mainAxisSpacing: 8,
+            crossAxisSpacing: 8,
+            mainAxisExtent: 58,
+          ),
+          itemCount: BoardAssets.pieceSets.length,
+          itemBuilder: (context, index) {
+            final name = BoardAssets.pieceSets[index];
+            final selected = name == _settings.pieceSet;
+            final scheme = Theme.of(context).colorScheme;
+            return Material(
+              color: selected
+                  ? scheme.primary.withValues(alpha: 0.16)
+                  : scheme.surfaceContainer,
+              borderRadius: BorderRadius.circular(12),
+              child: InkWell(
+                mouseCursor: kClickable,
                 borderRadius: BorderRadius.circular(12),
-                child: InkWell(
-                  mouseCursor: kClickable,
-                  borderRadius: BorderRadius.circular(12),
-                  onTap: () {
-                    _settings.pieceSet = name;
-                    setSheetState(() {});
-                  },
-                  child: Padding(
-                    padding: const EdgeInsets.all(10),
-                    child: Row(
-                      children: [
-                        Expanded(
-                          child: Text(
-                            BoardAssets.label(name),
-                            style: TextStyle(
-                              fontWeight:
-                                  selected ? FontWeight.w700 : FontWeight.w500,
-                            ),
+                onTap: () {
+                  _settings.pieceSet = name;
+                  setSheetState(() {});
+                },
+                child: Padding(
+                  padding: const EdgeInsets.all(10),
+                  child: Row(
+                    children: [
+                      Expanded(
+                        child: Text(
+                          BoardAssets.label(name),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: TextStyle(
+                            fontWeight:
+                                selected ? FontWeight.w700 : FontWeight.w500,
                           ),
                         ),
-                        // Örnek taşlar küçük bir kare şeridi üzerinde
-                        // gösterilir: hem beyaz hem siyah taş, uygulama
-                        // teması ne olursa olsun okunur kalır.
-                        ClipRRect(
-                          borderRadius: BorderRadius.circular(6),
-                          child: Row(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              for (final (i, code) in const [
-                                'wk',
-                                'wq',
-                                'bn',
-                                'bp',
-                              ].indexed)
-                                Container(
+                      ),
+                      // Örnek taşlar küçük bir kare şeridi üzerinde
+                      // gösterilir: hem beyaz hem siyah taş, uygulama
+                      // teması ne olursa olsun okunur kalır.
+                      ClipRRect(
+                        borderRadius: BorderRadius.circular(6),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            for (final (i, code) in const [
+                              'wk',
+                              'wq',
+                              'bn',
+                              'bp',
+                            ].indexed)
+                              Container(
+                                width: 30,
+                                height: 30,
+                                color: Color(
+                                  i.isEven
+                                      ? BoardAssets.squareColors(
+                                          _settings.boardTheme,
+                                        ).$1
+                                      : BoardAssets.squareColors(
+                                          _settings.boardTheme,
+                                        ).$2,
+                                ),
+                                child: SvgPicture.asset(
+                                  BoardAssets.piecePath(name, code),
                                   width: 30,
                                   height: 30,
-                                  color: Color(
-                                    i.isEven
-                                        ? BoardAssets.squareColors(
-                                            _settings.boardTheme,
-                                          ).$1
-                                        : BoardAssets.squareColors(
-                                            _settings.boardTheme,
-                                          ).$2,
-                                  ),
-                                  child: SvgPicture.asset(
-                                    BoardAssets.piecePath(name, code),
-                                    width: 30,
-                                    height: 30,
-                                    placeholderBuilder: (context) =>
-                                        const SizedBox(width: 30, height: 30),
-                                  ),
+                                  placeholderBuilder: (context) =>
+                                      const SizedBox(width: 30, height: 30),
                                 ),
-                            ],
+                              ),
+                          ],
+                        ),
+                      ),
+                      if (selected)
+                        Padding(
+                          padding: const EdgeInsets.only(left: 8),
+                          child: Icon(
+                            Icons.check_circle_rounded,
+                            color: scheme.primary,
+                            size: 20,
                           ),
                         ),
-                        if (selected)
-                          Padding(
-                            padding: const EdgeInsets.only(left: 8),
-                            child: Icon(
-                              Icons.check_circle_rounded,
-                              color: scheme.primary,
-                              size: 20,
-                            ),
-                          ),
-                      ],
-                    ),
+                    ],
                   ),
                 ),
-              );
-            },
-          ),
+              ),
+            );
+          },
         ),
       ),
     );

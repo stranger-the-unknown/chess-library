@@ -1,3 +1,5 @@
+import 'dart:math' as math;
+
 import 'package:flutter/material.dart';
 
 import '../l10n/app_strings.dart';
@@ -114,6 +116,15 @@ class AppDialogs {
     return result ?? false;
   }
 
+  /// İlerleme diyalogunun geniş ekranda alacağı genişlik.
+  static const double _progressWidth = 420;
+
+  /// İlerleme çubuğunun kalınlığı.
+  ///
+  /// Varsayılan dört piksellik çubuk masaüstünde bir çizgi gibi duruyor;
+  /// yükleme sürerken bakılan tek şey o olduğu için görünür olmalı.
+  static const double _progressHeight = 12;
+
   /// Uzun süren bir işi ilerleme çubuğuyla çalıştırır.
   ///
   /// [task]'a verilen geri çağırım 0-1 arası ilerlemeyi bildirir; iş bitince
@@ -132,23 +143,51 @@ class AppDialogs {
       builder: (dialogContext) => PopScope(
         canPop: false,
         child: AlertDialog(
-          content: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(message),
-              const SizedBox(height: 16),
-              ValueListenableBuilder<double>(
-                valueListenable: progress,
-                builder: (context, value, _) => ClipRRect(
-                  borderRadius: BorderRadius.circular(6),
-                  child: LinearProgressIndicator(
-                    value: value == 0 ? null : value,
-                    minHeight: 6,
-                  ),
+          // Diyalog içeriğine göre daralıyordu: masaüstünde iki satır
+          // metnin altında avuç içi kadar bir çubuk kalıyordu. Genişlik
+          // burada veriliyor, dar ekranda pencereye göre kısılıyor.
+          content: SizedBox(
+            width: math.min(
+              _progressWidth,
+              MediaQuery.sizeOf(dialogContext).width - 96,
+            ),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(message),
+                const SizedBox(height: 18),
+                ValueListenableBuilder<double>(
+                  valueListenable: progress,
+                  builder: (context, value, _) {
+                    final scheme = Theme.of(context).colorScheme;
+                    return Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        ClipRRect(
+                          borderRadius: BorderRadius.circular(_progressHeight),
+                          child: LinearProgressIndicator(
+                            value: value == 0 ? null : value,
+                            minHeight: _progressHeight,
+                            backgroundColor: scheme.surfaceContainerHighest,
+                          ),
+                        ),
+                        if (value > 0) ...[
+                          const SizedBox(height: 8),
+                          Text(
+                            '%${(value * 100).round()}',
+                            style: TextStyle(
+                              fontSize: 12,
+                              color: scheme.onSurfaceVariant,
+                            ),
+                          ),
+                        ],
+                      ],
+                    );
+                  },
                 ),
-              ),
-            ],
+              ],
+            ),
           ),
         ),
       ),

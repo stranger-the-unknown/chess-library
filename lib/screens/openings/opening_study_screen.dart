@@ -12,6 +12,7 @@ import '../../services/sound_service.dart';
 import '../../theme/app_theme.dart';
 import '../../widgets/app_dialogs.dart';
 import '../../widgets/chess_board_widget.dart';
+import '../../widgets/move_scroll.dart';
 import '../game_screen.dart';
 
 enum StudyMode {
@@ -34,6 +35,10 @@ class OpeningStudyScreen extends StatefulWidget {
 
 class _OpeningStudyScreenState extends State<OpeningStudyScreen> {
   final OpeningService _service = OpeningService.instance;
+
+  /// Hamle şeridini seçili hamlede tutar; kural tahtanın altındaki
+  /// şeritle aynı yerde duruyor.
+  final MoveScroller _scroller = MoveScroller();
 
   late engine.ChessGame _game;
   int _cursor = -1;
@@ -58,6 +63,7 @@ class _OpeningStudyScreenState extends State<OpeningStudyScreen> {
   @override
   void dispose() {
     _autoTimer?.cancel();
+    _scroller.dispose();
     super.dispose();
   }
 
@@ -224,8 +230,9 @@ class _OpeningStudyScreenState extends State<OpeningStudyScreen> {
   Future<void> _deleteNote(Opening opening) async {
     await _service.setNote(opening.id, '');
     if (!mounted) return;
+    // Not ekrandan zaten kalkıyor; ayrıca "not silindi" demek
+    // kullanıcının gördüğü şeyi tekrar etmek olurdu.
     setState(() => opening.note = null);
-    AppDialogs.snack(context, t('common.noteDeleted'));
   }
 
   @override
@@ -489,6 +496,13 @@ class _OpeningStudyScreenState extends State<OpeningStudyScreen> {
     // Alıştırmada henüz gelmemiş hamleler gizlenir.
     final revealed = _mode == StudyMode.practice ? _cursor + 1 : moves.length;
 
+    // Seçili hamle değiştiyse şerit oraya kayar; aynı hamlede tekrar
+    // çağrılması bir şey yapmaz, kullanıcının elle kaydırması bozulmaz.
+    _scroller.follow(
+      index: _cursor,
+      rowCount: (moves.length / 2).ceil(),
+    );
+
     return Container(
       height: 46,
       margin: const EdgeInsets.fromLTRB(12, 8, 12, 0),
@@ -497,6 +511,7 @@ class _OpeningStudyScreenState extends State<OpeningStudyScreen> {
         borderRadius: BorderRadius.circular(12),
       ),
       child: ListView.builder(
+        controller: _scroller.controller,
         scrollDirection: Axis.horizontal,
         padding: const EdgeInsets.symmetric(horizontal: 8),
         itemCount: (moves.length / 2).ceil(),
@@ -512,6 +527,7 @@ class _OpeningStudyScreenState extends State<OpeningStudyScreen> {
               child: GestureDetector(
                 onTap: _mode == StudyMode.watch ? () => _goTo(i) : null,
                 child: Container(
+                  key: _scroller.keyFor(i),
                   margin: const EdgeInsets.symmetric(horizontal: 1),
                   padding: const EdgeInsets.symmetric(
                     horizontal: 8,

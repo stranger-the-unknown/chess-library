@@ -22,7 +22,7 @@ class SettingsService extends ChangeNotifier {
   // seçerse seçim kaydedilir ve cihazı izlemeyi bırakır.
   ThemeMode _themeMode = ThemeMode.system;
   AppLanguage _language = AppLanguage.system;
-  static const String _defaultPieceSet = 'chessnut';
+  static const String _defaultPieceSet = 'cburnett';
   static const String _defaultBoardTheme = 'brown';
 
   String _pieceSet = _defaultPieceSet;
@@ -191,7 +191,7 @@ class SettingsService extends ChangeNotifier {
 ///
 /// Tek kaynak burasıdır; `pubspec.yaml` ile aynı olduğu testle denetlenir.
 /// Hakkında bölümünde ve yedek dosyasının başlığında görünür.
-const String appVersionName = '4.0.0';
+const String appVersionName = '5.0.0';
 
 class BoardAssets {
   BoardAssets._();
@@ -261,6 +261,7 @@ class BoardAssets {
   /// Takımlar dışarıdan alınmıştır ve izin veren lisanslarla gelir;
   /// kaynak ve lisansları `ASSETS.md` içinde listelenir.
   static const List<String> pieceSets = [
+    'cburnett',
     'chessnut',
     'rhosgfx',
     'fantasy',
@@ -270,7 +271,6 @@ class BoardAssets {
     'firi',
     'totoy',
     'papercut',
-    'cburnett',
     'merida',
     'mono',
     'letter',

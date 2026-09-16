@@ -202,9 +202,10 @@ class _PlaylistScreenState extends State<PlaylistScreen> {
           ? const Center(child: CircularProgressIndicator())
           : _playlists.isEmpty
               ? _empty(scheme)
-              : ContentWidth(
-                  child: ListView.separated(
-                    padding: const EdgeInsets.fromLTRB(16, 8, 16, 28),
+              : ContentInset(
+                  padding: const EdgeInsets.fromLTRB(16, 8, 16, 28),
+                  builder: (context, padding) => ListView.separated(
+                    padding: padding,
                     itemCount: _playlists.length,
                     separatorBuilder: (_, __) => const SizedBox(height: 10),
                     itemBuilder: (context, index) {

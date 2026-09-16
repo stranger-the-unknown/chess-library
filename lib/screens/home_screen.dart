@@ -28,9 +28,10 @@ class HomeScreen extends StatelessWidget {
 
     return Scaffold(
       body: SafeArea(
-        child: ContentWidth(
-          child: ListView(
-            padding: const EdgeInsets.fromLTRB(20, 24, 20, 32),
+        child: ContentInset(
+          padding: const EdgeInsets.fromLTRB(20, 24, 20, 32),
+          builder: (context, padding) => ListView(
+            padding: padding,
             children: [
               Row(
                 children: [
@@ -350,7 +351,16 @@ class HomeScreen extends StatelessWidget {
                     ListTile(
                       dense: true,
                       contentPadding: EdgeInsets.zero,
-                      onTap: () => setLocalState(() => levelIndex = i),
+                      // Zorluk seçilir seçilmez kaydediliyor. Eskiden
+                      // yalnızca oyun başlatılırsa kaydediliyordu; geri
+                      // çıkan kullanıcı ayarı eski hâlinde buluyordu.
+                      // Açılış çalışırken "bu konumdan motora karşı oyna"
+                      // zorluk sormadan başladığı için, zorluğu önceden
+                      // buradan ayarlayabilmek gerekiyor.
+                      onTap: () => setLocalState(() {
+                        levelIndex = i;
+                        settings.engineLevel = i;
+                      }),
                       leading: Icon(
                         levelIndex == i
                             ? Icons.radio_button_checked_rounded

@@ -31,6 +31,27 @@ class _OpeningListScreenState extends State<OpeningListScreen> {
   bool _onlyFavorites = false;
   bool _loading = true;
 
+  /// "Hepsini aç" / "hepsini kapat" seçildiyse başlıkların açılış hâli.
+  ///
+  /// null iken eski kural geçerli: arama yapılıyorsa açık, yoksa kapalı.
+  bool? _expandAll;
+
+  /// Başlıkları yeniden kurmak için sayaç.
+  ///
+  /// [ExpansionTile] `initiallyExpanded` değerini yalnızca kurulurken
+  /// okur; sonradan değiştirmek bir şey yapmaz. Sayaç anahtarın parçası
+  /// olduğu için, artınca bütün başlıklar yeni açılış hâliyle sıfırdan
+  /// kuruluyor. Kullanıcının tek tek yaptığı açıp kapamalar arada
+  /// korunuyor, çünkü anahtar aynı kaldıkça durum da kalıyor.
+  int _expansionEpoch = 0;
+
+  void _setAllExpanded(bool expanded) {
+    setState(() {
+      _expandAll = expanded;
+      _expansionEpoch++;
+    });
+  }
+
   @override
   void initState() {
     super.initState();
@@ -171,8 +192,8 @@ class _OpeningListScreenState extends State<OpeningListScreen> {
         AppDialogs.snack(context, t('openings.noValidMove'));
         return;
       }
+      // Değişiklik listede görünüyor; ayrıca bildirim göstermiyoruz.
       await _load();
-      if (mounted) AppDialogs.snack(context, t('openings.edited'));
       return;
     }
 
@@ -339,12 +360,29 @@ class _OpeningListScreenState extends State<OpeningListScreen> {
           ),
           PopupMenuButton<String>(
             onSelected: (value) {
+              if (value == 'expandAll') _setAllExpanded(true);
+              if (value == 'collapseAll') _setAllExpanded(false);
               if (value == 'import') _importFromFile();
               if (value == 'export') _exportToFile();
               if (value == 'visibility') _manageVisibility();
               if (value == 'deleteAll') _deleteAll();
             },
             itemBuilder: (context) => [
+              PopupMenuItem(
+                value: 'expandAll',
+                child: ListTile(
+                  leading: const Icon(Icons.unfold_more_rounded),
+                  title: Text(t('openings.expandAll')),
+                ),
+              ),
+              PopupMenuItem(
+                value: 'collapseAll',
+                child: ListTile(
+                  leading: const Icon(Icons.unfold_less_rounded),
+                  title: Text(t('openings.collapseAll')),
+                ),
+              ),
+              const PopupMenuDivider(),
               PopupMenuItem(
                 value: 'import',
                 child: ListTile(
@@ -407,9 +445,10 @@ class _OpeningListScreenState extends State<OpeningListScreen> {
       ),
       body: _loading
           ? const Center(child: CircularProgressIndicator())
-          : ContentWidth(
-              child: ListView(
-                padding: const EdgeInsets.fromLTRB(16, 8, 16, 28),
+          : ContentInset(
+              padding: const EdgeInsets.fromLTRB(16, 8, 16, 28),
+              builder: (context, padding) => ListView(
+                padding: padding,
                 children: [
                   if (_all.isNotEmpty)
                     Container(
@@ -544,7 +583,8 @@ class _OpeningListScreenState extends State<OpeningListScreen> {
         child: Theme(
           data: Theme.of(context).copyWith(dividerColor: Colors.transparent),
           child: ExpansionTile(
-            initiallyExpanded: _query.isNotEmpty,
+            key: ValueKey('$family|$_expansionEpoch'),
+            initiallyExpanded: _expandAll ?? _query.isNotEmpty,
             title: Row(
               children: [
                 Expanded(

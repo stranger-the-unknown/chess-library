@@ -61,6 +61,53 @@ class ContentWidth extends StatelessWidget {
   }
 }
 
+/// Kaydırma alanını daraltmadan içeriği ortalayan liste dolgusu.
+///
+/// [ContentWidth] kaydırılabilir gövdelerde yanlış araçtır: listeyi
+/// daraltınca kaydırma alanı da daralıyor, listenin yanında kalan boşluk
+/// da kaydırmaya cevap vermiyor. Masaüstünde imleç pencerenin kenarına
+/// yakınken fare tekerleği hiçbir şey yapmıyordu — sayfa kıpırdamıyordu.
+///
+/// Burada liste tüm genişliği kaplıyor; ortalama, listenin **kendi**
+/// dolgusuyla yapılıyor. Görüntü aynı, kaydırma alanı ise pencere kadar
+/// geniş.
+///
+/// Genişlik [MediaQuery] yerine [LayoutBuilder] ile ölçülüyor: geniş
+/// pencerede solda bir gezinme çubuğu var ve pencere genişliği listeye
+/// kalan genişlikten fazla.
+class ContentInset extends StatelessWidget {
+  /// Listenin dar pencerede kullanacağı dolgu.
+  final EdgeInsets padding;
+
+  final double maxWidth;
+
+  /// Hesaplanmış dolguyla listeyi kurar.
+  final Widget Function(BuildContext context, EdgeInsets padding) builder;
+
+  const ContentInset({
+    super.key,
+    required this.padding,
+    required this.builder,
+    this.maxWidth = Layout.maxContentWidth,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final extra = math.max(0.0, (constraints.maxWidth - maxWidth) / 2);
+        return builder(
+          context,
+          padding.copyWith(
+            left: padding.left + extra,
+            right: padding.right + extra,
+          ),
+        );
+      },
+    );
+  }
+}
+
 /// Tahtayı ortalayıp en fazla [Layout.maxBoardSide] kadar büyütür.
 ///
 /// [builder] kenar uzunluğunu alır; tahta widget'ını o ölçüde kurar.
