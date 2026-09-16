@@ -155,4 +155,39 @@ void main() {
   test('bilinmeyen anahtar ham hâliyle döner', () {
     expect(Strings.get('boyle.bir.anahtar.yok'), 'boyle.bir.anahtar.yok');
   });
+
+  test('karşılıksız metin anahtarı yok', () {
+    // Arayüzden kaldırılan bir düğmenin metni geride kalırsa çeviri
+    // dosyasında ölü ağırlık olarak birikiyor ve ileride "bu neden
+    // çalışmıyor" sorusuna yol açıyor. Denetimde beş tane bulunmuştu.
+    //
+    // Bazı anahtarlar çalışma anında kuruluyor (`t('level.$i.name')`);
+    // onlar önek olarak tanınıyor.
+    const dynamicPrefixes = [
+      'level.',
+      'quality.',
+      'board.saveResult.',
+    ];
+
+    final code = StringBuffer();
+    for (final entity in Directory('lib').listSync(recursive: true)) {
+      if (entity is! File || !entity.path.endsWith('.dart')) continue;
+      if (entity.path.endsWith('app_strings.dart')) continue;
+      code.writeln(entity.readAsStringSync());
+    }
+    final text = code.toString();
+
+    final unused = <String>[];
+    for (final key in Strings.debugKeys('tr')) {
+      if (dynamicPrefixes.any(key.startsWith)) continue;
+      if (text.contains("'$key'")) continue;
+      unused.add(key);
+    }
+
+    expect(
+      unused,
+      isEmpty,
+      reason: 'bu anahtarları kullanan bir şey yok: ${unused.join(', ')}',
+    );
+  });
 }

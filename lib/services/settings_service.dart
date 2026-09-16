@@ -37,7 +37,6 @@ class SettingsService extends ChangeNotifier {
   // Davranış
   bool _soundEnabled = true;
   bool _vibrationEnabled = true;
-  bool _confirmMoves = false;
   int _engineLevel = 2;
   bool _showEvaluationBar = true;
 
@@ -72,7 +71,6 @@ class SettingsService extends ChangeNotifier {
   /// de kapanıyor ve açılamıyor. Ses yeniden açıldığında titreşim kendi
   /// kendine geri gelmiyor; kullanıcı isterse açar.
   bool get vibrationEnabled => _vibrationEnabled;
-  bool get confirmMoves => _confirmMoves;
   int get engineLevel => _engineLevel;
   bool get showEvaluationBar => _showEvaluationBar;
   bool get showDailyCount => _showDailyCount;
@@ -132,7 +130,6 @@ class SettingsService extends ChangeNotifier {
     _animateMoves = prefs.getBool('animateMoves') ?? true;
     _soundEnabled = prefs.getBool('soundEnabled') ?? true;
     _vibrationEnabled = prefs.getBool('vibrationEnabled') ?? true;
-    _confirmMoves = prefs.getBool('confirmMoves') ?? false;
     _engineLevel = prefs.getInt('engineLevel') ?? 2;
     _showEvaluationBar = prefs.getBool('showEvaluationBar') ?? true;
     _showDailyCount = prefs.getBool('showDailyCount') ?? true;
@@ -213,12 +210,6 @@ class SettingsService extends ChangeNotifier {
     if (value && !_soundEnabled) return;
     _vibrationEnabled = value;
     _set('vibrationEnabled', value);
-    notifyListeners();
-  }
-
-  set confirmMoves(bool value) {
-    _confirmMoves = value;
-    _set('confirmMoves', value);
     notifyListeners();
   }
 
