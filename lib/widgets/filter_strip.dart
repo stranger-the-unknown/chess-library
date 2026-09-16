@@ -56,17 +56,38 @@ class FilterStrip extends StatelessWidget {
   /// gereken kadar yer kaplar.
   static const double _minDesktopChip = 92;
 
+  /// Ölçüye eklenen küçük pay.
+  ///
+  /// Genişlik en uzun etikete göre paylaştırıldığı için hesapta hiç
+  /// boşluk kalmıyor; yarım pikselik bir fark bile en uzun etiketi üç
+  /// noktaya düşürüyor. Bu pay o sınırı kaldırıyor.
+  static const double _slack = 6;
+
   const FilterStrip({super.key, required this.options});
 
+  /// Etiketin **gerçekte çizileceği** biçem.
+  ///
+  /// [Text], verilen biçemi üstteki [DefaultTextStyle] ile birleştiriyor.
+  /// Ölçüm yalnız `chipTheme.labelStyle`'a bakarsa aradaki fark kadar dar
+  /// çıkıyor: o biçem harf aralığı belirtmiyor, üstteki gövde biçemi ise
+  /// 0.3 piksel veriyor. On üç harflik "Beyaz kazanır" böylece dört
+  /// piksel taşıp üç noktaya düşüyordu — İngilizcede etiketler kısa
+  /// olduğu için fark görünmüyordu.
+  TextStyle _labelStyle(BuildContext context) {
+    final theme = Theme.of(context);
+    final label = theme.chipTheme.labelStyle ?? theme.textTheme.labelLarge;
+    final ambient = DefaultTextStyle.of(context).style;
+    if (label == null) return ambient;
+    return label.inherit ? ambient.merge(label) : label;
+  }
+
   double _chipWidth(BuildContext context, String label) {
-    final style = Theme.of(context).chipTheme.labelStyle ??
-        Theme.of(context).textTheme.labelLarge;
     final painter = TextPainter(
-      text: TextSpan(text: label, style: style),
+      text: TextSpan(text: label, style: _labelStyle(context)),
       textDirection: Directionality.of(context),
       textScaler: MediaQuery.textScalerOf(context),
     )..layout();
-    return painter.width + _chipPadding;
+    return painter.width + _chipPadding + _slack;
   }
 
   Widget _chip(BuildContext context, FilterOption option, {bool fill = false}) {

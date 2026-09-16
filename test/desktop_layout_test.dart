@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/rendering.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -11,6 +12,7 @@ import 'package:chess_pgn_reader/services/pgn_import_service.dart';
 import 'package:chess_pgn_reader/services/puzzle_service.dart';
 import 'package:chess_pgn_reader/services/settings_service.dart';
 import 'package:chess_pgn_reader/services/storage_service.dart';
+import 'package:chess_pgn_reader/theme/app_theme.dart';
 import 'package:chess_pgn_reader/widgets/filter_strip.dart';
 import 'package:chess_pgn_reader/widgets/responsive.dart';
 
@@ -231,6 +233,91 @@ void main() {
       final padding = (tester.widget(list) as ListView).padding as EdgeInsets;
       expect(padding.left, 16);
       expect(padding.right, 16);
+    });
+  });
+
+  group('Etiketler sığıyor mu', () {
+    /// Oyun sonu listesindeki yedi süzgeç, uygulamanın kendi temasıyla ve
+    /// **başlık çubuğunun içinde**.
+    ///
+    /// Bağlam önemli: `Text`, biçemi üstteki `DefaultTextStyle` ile
+    /// birleştiriyor ve oradan gelen harf aralığı (0.3 piksel) ölçüme
+    /// girmiyordu. Çıplak bir `Scaffold` gövdesinde bu fark görünmez;
+    /// hata da tam burada ortaya çıkmıştı.
+    const endgame = [
+      'Tümü',
+      'Çözülmemiş',
+      'Çözülmüş',
+      'Favoriler',
+      'Beyaz kazanır',
+      'Berabere',
+      'Siyah kazanır',
+    ];
+
+    Future<void> pumpInAppBar(WidgetTester tester, Size size) async {
+      tester.view.devicePixelRatio = 1;
+      tester.view.physicalSize = size;
+      await tester.pumpWidget(
+        KeyedSubtree(
+          key: UniqueKey(),
+          child: MaterialApp(
+            theme: AppTheme.dark,
+            home: Scaffold(
+              appBar: AppBar(
+                title: const Text('Oyun sonu'),
+                bottom: PreferredSize(
+                  preferredSize: const Size.fromHeight(44),
+                  child: FilterStrip(
+                    options: [
+                      for (final (i, label) in endgame.indexed)
+                        FilterOption(
+                          label: label,
+                          selected: i == 0,
+                          onTap: () {},
+                        ),
+                    ],
+                  ),
+                ),
+              ),
+              body: const SizedBox(),
+            ),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+    }
+
+    /// Kurulmuş olan çiplerin metnini denetler; kaç tanesine baktığını
+    /// döndürür. Kaydırmalı şeritte görünmeyen çipler kurulmuyor.
+    int expectNoEllipsis(WidgetTester tester) {
+      var checked = 0;
+      for (final label in endgame) {
+        final finder = find.text(label);
+        if (finder.evaluate().isEmpty) continue;
+        final paragraph = tester.renderObject<RenderParagraph>(finder);
+        expect(
+          paragraph.didExceedMaxLines,
+          isFalse,
+          reason: '"$label" çipe sığmıyor, üç noktaya düşüyor',
+        );
+        checked++;
+      }
+      return checked;
+    }
+
+    testWidgets('masaüstünde uzun etiketler üç noktaya düşmüyor',
+        (tester) async {
+      await pumpInAppBar(tester, _wide);
+      expect(
+        expectNoEllipsis(tester),
+        endgame.length,
+        reason: 'masaüstünde yedisi de görünür olmalı',
+      );
+    });
+
+    testWidgets('telefonda da düşmüyor', (tester) async {
+      await pumpInAppBar(tester, _phone);
+      expect(expectNoEllipsis(tester), greaterThan(2));
     });
   });
 }
