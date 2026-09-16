@@ -1,363 +1,378 @@
 # Chess Library
 
-Satranç oyunlarını okumak, bulmaca çözmek, açılış çalışmak ve **tamamen
-cihazda çalışan** bir motora karşı oynamak için bir uygulama. İnternet
-bağlantısı gerekmez; hiçbir veri dışarı gönderilmez.
+***English** · [Türkçe](README.tr.md)*
 
-**Android** ve **Windows** üzerinde çalışır. Arayüz pencere genişliğine uyum
-sağlar: telefonda alt gezinme çubuğu, masaüstünde soldaki gezinme şeridi
-kullanılır.
+An app for reading chess games, solving puzzles, studying openings and
+playing against an engine that runs **entirely on your device**. No
+internet connection is needed; no data ever leaves the device.
 
-Diller: Türkçe ve İngilizce. Ayarlardan değiştirilir; varsayılan sistem
-dilidir.
+Runs on **Android** and **Windows**. The interface adapts to the window
+width: a bottom navigation bar on a phone, a rail down the left side on
+the desktop.
 
----
-
-## Oyna
-
-**Motora karşı oyna** — Zorluğu altı kademeden seçersin: acemiden ustaya,
-her kademenin ne kadar hata yaptığı kısaca yazıyor. Rengini beyaz, siyah ya da **rastgele** belirleyebilirsin. İstersen
-normal diziliş yerine **kendi kurduğun pozisyondan** başlarsın.
-
-**PGN yükle** — Bir dosyadan ya da panodan yapıştırarak. Bir dosyada
-istediğin kadar oyun olabilir: oyunlar listelenir, seçtiklerini **yeni bir
-liste olarak kaydedersin** ya da **var olan bir listeye eklersin**.
-Başlıklar, yorumlar, varyantlar, NAG işaretleri ve `[FEN]` ile başlayan
-oyunlar okunur. Uzun dosyalarda ilerleme çubuğu görünür, uygulama donmaz.
-
-**Serbest tahta** — İki tarafı da senin oynadığın analiz tahtası.
-
-**Pozisyon kur** — Taş paleti, hamle sırası, rok hakları ve geçerken alma
-karesiyle tam bir pozisyon düzenleyici. FEN alanına doğrudan yazabilir ya da
-panodan yapıştırabilirsin. Kurduğun pozisyonu analiz eder ya da motora karşı
-oynarsın; menüden tahtayı PNG olarak kaydedebilirsin.
+Languages: Turkish and English. Change it in Settings; the default is
+your system language.
 
 ---
 
-## Tahta ekranı
+## Play
 
-Taşları sürükleyerek ya da önce taşa, sonra hedef kareye dokunarak
-oynarsın. Terfi ederken hangi taşı istediğin sorulur.
+**Play the engine** — Pick one of six levels, from beginner to master;
+each level says briefly how often it errs. Your colour can be white,
+black or **random**. You can also start from a **position you set up
+yourself** instead of the standard arrangement.
 
-**Motor analizi** — Sağ üstteki grafik simgesiyle açılır. Değerlendirme
-çubuğu, en iyi hamle oku, ana varyant ve arama derinliği görünür. Analiz
-ayrı bir iş parçacığında çalışır, tahta akıcı kalır.
+**Load PGN** — From a file, or by pasting from the clipboard. A file may
+hold any number of games: they are listed, and you save the ones you pick
+as a **new list** or **add them to an existing list**. Headers, comments,
+variations, NAG marks and games that begin with a `[FEN]` tag are all
+read. Long files show a progress bar and the app stays responsive.
 
-**Gezinme** — Hamle listesindeki herhangi bir hamleye dokunarak o konuma
-gidersin; alttaki düğmelerle bir ileri, bir geri, başa ya da sona gidersin.
+**Free board** — An analysis board where you play both sides.
 
-**İşaretleme (fare ile)** — Bir kareye **sağ tıklamak** o kareyi işaretler;
-**sağ tuşu basılı tutup sürüklemek** iki kare arasına ok çizer. Aynı yere
-yeniden sağ tıklamak işareti kaldırır, sol tık hepsini siler. İşaret rengi
-seçili tahtadan türetilir, bu yüzden her tahtada seçilir.
-
-**Deneme hamleleri** — Kayıtlı bir oyuna bakarken tahtaya istediğin hamleyi
-oynayıp motorun değerlendirmesinin nasıl değiştiğini görebilirsin. Bu
-hamleler oyunun kendisine yazılmaz: hamle listesinde görünmez, PGN'e girmez,
-kaydedilmez ve ekrandan çıkınca kaybolur. Şeritteki düğmelerle son denemeyi
-geri alır ya da oyuna dönersin.
-
-**Oyun incelemesi** — Oyun bitince motor bütün hamleleri değerlendirir.
-Taraf başına doğruluk yüzdesi, her hamlenin niteliği (en iyi / çok iyi /
-iyi / yanlışlık / hata / ciddi hata), değerlendirme grafiği ve oyunun dönüm
-noktaları listelenir. Grafiğe dokunarak hamleler arasında atlarsın.
-
-Menüden ayrıca: PGN kopyalama, FEN kopyalama/yapıştırma, listeye kaydetme,
-tahtayı çevirme ve **pes etme**.
-
-**Sesler** — Hamle türüne göre farklı ses çalar (kendi hamlen, rakibin
-hamlesi, alma, rok, terfi, şah). Kural dışı hamle uyarısı yalnızca **şah
-altındayken** duyulur; oradaki anlamı "bu hamle şahı kurtarmıyor"dur.
-Şah yokken geçersiz bir kareye tıklamak sessizdir.
+**Set up a position** — A full position editor with a piece palette, side
+to move, castling rights and the en passant square. You can type into the
+FEN field directly or paste one from the clipboard. Analyse the position
+you built or play the engine from it; the menu can save the board as a
+PNG.
 
 ---
 
-## Bulmacalar
+## The board screen
 
-Uygulama hazır bulmaca ile gelmez; listeleri kendin oluşturursun.
+Move a piece by dragging it, or by tapping the piece and then the target
+square. When a pawn promotes you are asked which piece you want.
 
-**Liste oluşturma** — Sağ üstteki **+** ile yeni bir liste açarsın. Adı
-verirken listeyi **oyun sonu listesi** olarak da işaretleyebilirsin; bu
-işaret sonuç süzgeçlerini açar (aşağıda). Sonradan da liste menüsünden
-değiştirilebilir. Listeyi üç yolla doldurabilirsin:
+**Engine analysis** — Opens from the chart icon in the top right. You get
+an evaluation bar, an arrow for the best move, the main line and the
+search depth. The analysis runs on a separate thread, so the board stays
+smooth.
 
-1. **Tek tek ekleme** — Menüden "Bulmaca ekle", pozisyonu tahtada kurarsın.
-2. **FEN listesi yapıştırma** — Menüden "FEN listesi yapıştır", her satıra
-   bir FEN.
-3. **Metin dosyasından alma** — Menüden "Metin dosyasından al" ve bir `.txt`
-   seçersin.
+**Navigation** — Tap any move in the move strip to go to that position;
+the buttons below step back and forward, or jump to the start or the end.
 
-**Dosya biçimi** — Her satırda bir FEN. Şu üç yazım da tanınır:
+**Marks and arrows (mouse)** — **Right-click** a square to mark it;
+**hold the right button and drag** to draw an arrow between two squares.
+Right-clicking the same place again removes the mark, a left click clears
+them all. The colour is derived from the board you chose, so the marks
+stay visible on every style.
+
+**Trial moves** — While looking at a saved game you can play any move on
+the board to see how the engine's evaluation changes. These moves are not
+written into the game: they do not appear in the move list, they are not
+exported to PGN, they are not saved, and they disappear when you leave
+the screen. The buttons on the strip undo the last trial move or take you
+back to the game.
+
+**Game review** — When a game ends the engine scores every move. You get
+an accuracy percentage per side, a quality for each move (best / very
+good / good / inaccuracy / mistake / blunder), an evaluation chart and a
+list of the turning points. Tap the chart to jump between moves.
+
+The menu also offers: copy PGN, copy and paste FEN, save to a list, flip
+the board and **resign**.
+
+**Sounds** — Different sounds for different kinds of move (your move, the
+opponent's move, a capture, castling, promotion, check). The illegal-move
+warning is heard only when you are **in check**, where it means "this
+move does not get you out of check". Tapping an invalid square at any
+other time is silent.
+
+---
+
+## Puzzles
+
+The app ships with no puzzles; you build the lists yourself.
+
+**Creating a list** — The **+** in the top right opens a new list. While
+naming it you can also mark it as an **endgame list**, which turns on the
+outcome filters described below; this can be changed later from the list
+menu. There are three ways to fill a list:
+
+1. **One at a time** — "Add puzzle" in the menu, then set the position up
+   on the board.
+2. **Paste a FEN list** — "Add a FEN list" in the menu, one FEN per line.
+3. **Import from a text file** — "Import from text file" in the menu,
+   then pick a `.txt`.
+
+**File format** — One FEN per line. All three spellings are recognised:
 
 ```
 7k/8/5K2/8/8/8/8/6Q1 w - - 0 1
 12	7k/8/5K2/8/8/8/8/6Q1 w - - 0 1
-7k/8/5K2/8/8/8/8/6Q1 w - - 0 1|mat-1,az-tas|g1g7|12
+7k/8/5K2/8/8/8/8/6Q1 w - - 0 1|mate-1,few-pieces|g1g7|12
 ```
 
-Yani yalnızca FEN, ya da `numara<sekme>FEN`, ya da
-`FEN|etiketler|çözüm|numara`. `#` ile başlayan satırlar ve boş satırlar
-atlanır. Kurallara uymayan pozisyonlar sessizce elenir. Binlerce satırlık
-dosyalarda ilerleme çubuğu görünür.
+That is: the FEN on its own, or `number<TAB>FEN`, or
+`FEN|tags|solution|number`. Lines starting with `#` and blank lines are
+skipped. Positions that break the rules of chess are dropped quietly.
+Files with thousands of lines show a progress bar.
 
-**Dosyaya verme** — Menüden "Metin dosyası olarak ver". Liste
-`FEN|etiketler|çözüm|sıra` biçiminde yazılır ve aynı uygulamaya olduğu gibi
-geri alınabilir. Yedeklemek ya da başka bir cihaza taşımak için kullan.
+**Exporting** — "Export as text file" in the menu. The list is written as
+`FEN|tags|solution|order` and reads back into the same app exactly as it
+was. Use it as a backup or to move a list to another device.
 
-**Çözerken** — Kazandıran hamleyi tahtada oynarsın. Çözüm anahtarı olan
-bulmacalarda kayıtlı varyant kullanılır; olmayanlarda doğruluğu motor
-ölçer: hamlen en iyi hamleye göre değerlendirmeyi belirgin biçimde
-düşürmüyorsa doğru sayılır, böylece eşdeğer iyi hamleler de kabul edilir.
-Doğru hamleden sonra rakibin cevabını motor oynar.
+**Solving** — Play the winning move on the board. Where a puzzle has a
+recorded solution that line is used; where it does not, the engine judges
+your move: if it does not drop the evaluation noticeably compared with
+the best move it counts as correct, so an equally good alternative is
+accepted. After a correct move the engine plays the reply.
 
-İpucu alabilir, çözümü izleyebilir, baştan başlayabilir, favorilere
-ekleyebilir, çözüldü olarak işaretleyebilir ve not düşebilirsin.
+You can ask for a hint, watch the solution, start over, add the puzzle to
+favorites, mark it solved and write a note.
 
-**Numaralar** — Her bulmacanın numarası **listedeki asıl sırasıdır**
-(kaynak dosyada numara verilmişse o kullanılır). Süzgeç açıkken de,
-sıralama ters çevrilmişken de aynı numara görünür; satırda, bulmaca
-başlığında ve üstteki bilgi satırında hep aynı sayıyı okursun.
+**Numbers** — A puzzle's number is its **real place in the list** (or the
+number given in the source file). The same number is shown whatever
+filter is active and whichever way the list is sorted; in the row, in the
+puzzle title and in the information line above it.
 
-**Sıralama** — Liste baştan sona gelir; kitaptaki sıra neyse o. Başlık
-çubuğundaki okla ters çevirip en son eklediklerini üste alabilirsin.
-Süzgeci değiştirdiğinde sıralama baştan sonaya döner: ters sıralama
-çoğunlukla tek bir bakış için açılıyor, süzgeç değişince o iş bitmiş
-oluyor.
+**Sorting** — The list is in list order, the same as in the book it came
+from. The arrow in the title bar reverses it and brings the newest to the
+top. Changing a filter puts the order back: a reversed order is usually
+wanted for one quick look, and that look is over once the filter changes.
 
-**Arama ve süzgeçler** — Tümü / çözülmemiş / çözülen / favoriler.
-Liste oyun sonu listesi olarak işaretliyse ayrıca **beyaz
-kazanır / beraberlik / siyah kazanır** süzgeçleri görünür; bir bulmacanın
-sonucu satır menüsünden işaretlenir ya da alınan dosyada etiket olarak
-verilir (`beyaz-kazanir`, `beraberlik`, `siyah-kazanir`; İngilizce yazımı
-da tanınır).
+**Search and filters** — All / unsolved / solved / favorites. If the list
+is marked as an endgame list you also get **white wins / draw / black
+wins** filters; an outcome is set from the row menu or comes from a tag
+in an imported file (`white-wins`, `draw`, `black-wins`; the Turkish
+spellings are recognised too).
 
-Arama kutusu sıra numarası (`#128`), etiketler, ad, not ve FEN üzerinde
-çalışır; Türkçe harflere duyarsızdır.
+The search box works on the number (`#128`), the tags, the name, the note
+and the FEN, and ignores Turkish accents.
 
-**Aralık işaretleme** — Menüdeki "Aralığı işaretle" ile iki numara arası
-bulmacayı tek seferde çözüldü ya da çözülmedi yaparsın. Numaralar
-süzgeçten bağımsızdır: ekranda gördüğün numarayı yazarsın.
+**Marking a range** — "Mark a range" in the menu sets every puzzle
+between two numbers to solved or unsolved at once. The numbers are
+independent of the filter: you type the number you see on screen.
 
-**Bugün çözülen** — Gece yarısından beri kaç bulmaca çözdüğün, bulmaca
-listeleri ekranındaki liste kartlarında görünür. Ayarlardan
-kapatılabilir.
+**Daily count** — How many puzzles you have solved since midnight is
+shown on the list cards on the puzzle lists screen. It can be turned off
+in Settings.
 
-Menüden **tahtayı PNG olarak kaydedebilirsin**; dosya
-`board-<liste adı>-<numara>.png` olarak kaydedilir. Her bulmaca yeniden
-adlandırılabilir, pozisyonu düzenlenebilir, notu silinebilir ya da
-tamamen kaldırılabilir.
+The menu can also **save the board as a PNG**; the file is named
+`board-<list name>-<number>.png`. Every puzzle can be renamed, its
+position edited, its note deleted, or the puzzle removed entirely.
 
 ---
 
-## Açılışlar
+## Openings
 
-Liste boş başlar; çalışmak istediğin varyantları kendin eklersin.
+The list starts empty; you add the lines you want to study.
 
-**Varyant ekleme** — Aile adı (ör. "İspanyol Açılışı"), varyant adı (ör.
-"Breyer Varyantı") ve hamleler (SAN ya da PGN olarak yapıştırılabilir).
-Her hamle kurallara göre doğrulanır; hatalı bir hamle varsa uyarı alırsın.
-Eklediklerin aileye göre gruplanır: aynı aile adını yazarak bir ailenin
-altına istediğin kadar varyant koyabilirsin. Varyant adını boş
-bırakırsan o ailede sıradaki numarayı alır.
+**Adding a line** — A family name (for example "Ruy Lopez"), a variation
+name (for example "Breyer Variation") and the moves, which can be pasted
+as SAN or PGN. Every move is checked against the rules and you are warned
+about one that does not fit. Lines are grouped by family: type the same
+family name again and the new line joins that title. Leave the variation
+name empty and it takes the next number in that family.
 
-**Düzenleme** — Eklediğin bir varyantın adını, ailesini ve hamlelerini
-satır menüsünden değiştirebilir, notunu silebilir ya da varyantı
-kaldırabilirsin.
+**Editing** — The name, family and moves of a line you added can be
+changed from the row menu, its note deleted, or the line removed.
 
-**Başlığı silme** — Bir açılış başlığının yanındaki menüden o başlığın
-altındaki bütün varyantlar tek seferde silinir; kaç varyant gideceği
-sorulur. Bir dosyadan yüzlerce varyant aldıysan tek tek silmek iş
-görmüyor. Silinen varyantların ilerlemesi ve notu da temizlenir.
+**Deleting a title** — The menu next to an opening title deletes every
+line under it at once and tells you how many will go. When you have
+imported hundreds of lines from a file, deleting them one by one is no
+use. The progress and notes of the deleted lines are cleared too.
 
-**Gizleme** — Başlık menüsündeki **gizli açılışlar** ekranından, şu an
-çalışmadığın başlıklar listeden kaldırılır; ana ekranda yalnızca
-çalıştıkların kalır, gizlenenler silinmez. Satırın sonundaki göz o
-başlığı tek başına gizler. Kutucuklar seçim içindir: birkaç başlık
-seçip **seçilenler hariç hepsini gizle** dersen geriye yalnızca onlar
-kalır, **seçilenler hariç hepsini göster** ise tersini yapar. Hiçbir şey
-seçili değilken aynı iki komut *hepsini gizle* ve *hepsini göster* olur.
-Gizlilik aile adına bağlıdır, açılış kimliğine değil; dosyayı yeniden
-alsan da yerinde kalır.
+**Hiding** — The **hidden openings** screen in the title menu takes
+titles you are not working on out of the list; only what you study stays
+on the main screen, and nothing is deleted. The eye at the end of a row
+hides that one title. The checkboxes are for selecting: pick a few titles
+and **hide all but the selected** leaves only those, while **show all but
+the selected** does the opposite. With nothing selected the same two
+commands become *hide all* and *show all*. Hiding is tied to the family
+name, not to an internal id, so it survives re-importing the same file.
 
-**Hepsini silme** — Başlık menüsündeki **tüm açılışları sil**, varyantlarla
-birlikte ilerlemeni ve notlarını da siler. Geri alınamaz, kaç varyantın
-gideceği sorulur.
+**Expand and collapse** — **Expand all titles** and **collapse all
+titles** in the title menu open or close every family at once. Searching
+does not open titles by itself.
 
-**Tüm verileri sıfırla** — Ayarlar → Yedekleme altında, kırmızı yazılı.
-Listeler, bulmacalar, açılışlar, ilerleme ve ayarların hepsini siler ve
-onay ister; geri alınamaz. Android uygulamayı kaldırıp yeniden kurunca
-eski veriyi Drive'dan geri getirdiği için sıfırdan başlamanın yolu bu.
+**Deleting everything** — **Delete all openings** in the title menu
+removes the lines along with your progress and your notes. It cannot be
+undone and asks how many lines will go.
 
-**Metin dosyası** — Açılış listesi başlık menüsünden dosyaya verilir ve
-dosyadan alınır. Aynı dosya ikinci kez alındığında listede zaten bulunan
-hamle dizileri atlanır, hiçbir şey ikiye katlanmaz; kaç tanesinin
-atlandığı da söylenir. Farklı hamle sırasıyla aynı pozisyona varan iki
-hat ayrı varyant sayılır. Biçim satır başına bir varyanttır:
+**Reset all data** — Under Settings → Data, written in red. It deletes
+every list, puzzle, opening, all progress and all settings, and asks for
+confirmation; it cannot be undone. Android brings old data back from
+Drive when you uninstall and reinstall the app, so this is the way to
+start from scratch.
+
+**Text file** — The opening list is exported and imported from the title
+menu. Importing the same file a second time skips move sequences that are
+already in the list, so nothing is duplicated; you are told how many were
+skipped. Two lines that reach the same position by a different move order
+count as different lines. One line per row:
 
 ```
-C95|İspanyol Açılışı|Breyer Varyantı|1. e4 e5 2. Nf3 Nc6 3. Bb5 a6
-İspanyol Açılışı|Breyer Varyantı|1. e4 e5 2. Nf3 Nc6 3. Bb5 a6
+C95|Ruy Lopez|Breyer Variation|1. e4 e5 2. Nf3 Nc6 3. Bb5 a6
+Ruy Lopez|Breyer Variation|1. e4 e5 2. Nf3 Nc6 3. Bb5 a6
 ```
 
-Yani `ECO|aile|varyant|hamleler` ya da ECO'suz üç alan.
+That is `ECO|family|variation|moves`, or the same three fields without
+the ECO code.
 
-**İzle** — Varyantı adım adım ya da otomatik oynatarak izlersin.
+**Watch** — Step through the line by hand or let it play itself.
 
-**Alıştırma** — Hamleleri sen oynarsın, yanlışta uyarı alırsın. Hatasız iki
-tamamlamada varyant "öğrenildi" sayılır.
+**Practice** — You play the moves and are warned when one is wrong. Two
+clean runs mark the line as learned.
 
-Her varyantta ipucu, not, favori, "bu konumdan motora karşı oyna" ve
-"analiz tahtasında aç" seçenekleri vardır.
-
----
-
-## Listelerim
-
-Oyunlarını klasörler hâlinde saklarsın: yeniden adlandırma, listeler arası
-taşıma, silme.
-
-- **PGN dosyası içe aktar** ile bir listeye toplu oyun eklersin.
-- **Listeyi PGN dosyası olarak ver** ile listenin tamamını dışarı alırsın.
-- Listedeki oyunlar numaralandırılır; arama numara (`#42`), oyun adı,
-  oyuncu, sonuç ve not üzerinde çalışır.
-- **Okundu işareti**: tek tek, tümü birden ya da **numara aralığı vererek**
-  işaretleme; "okunmamış / okunan" süzgeci. Okunan sayısı listeye girmeden
-  kartta görünür.
-- **Favoriler**: satırdaki yıldızla işaretlenir, kendi süzgeci vardır.
-- **Sıralama** başlıktaki okla tersine çevrilir; süzgeç değişince
-  varsayılana döner.
-- **Aralık göster**: listeyi belirli bir numara aralığına daraltır, üstteki
-  şeritten kapatılır.
-- Kartta iki oyuncunun adı da tam görünür; PGN'de tarih varsa yazılır (tam
-  tarih yoksa yalnızca yıl, yıl da yoksa hiçbir şey).
-- Satır menüsündeki **oyun bilgileri** PGN başlıklarını gösterir: turnuva,
-  yer, tur, ECO, derece.
-- Oyunlara not düşebilir, notu sonradan silebilirsin.
-
-### Toplu analiz
-
-Başlık menüsünden **analiz için oyun seç** dersen satırlar işaretlenebilir
-hâle gelir. İstediklerini seçip **hızlı** ya da **derin** analizi
-başlatırsın; oyunlar teker teker incelenir, sen başında beklemezsin.
-Analiz sürerken ekran açık kalır — şarjda yapmak iyi olur. İlerleme
-listeler sekmesinin üstünde görünür ve oradan iptal edilebilir.
-
-Her oyun bittiğinde kaydedilir. Uygulama yarıda kapanırsa o ana kadar
-bitenler durur; yalnızca kalanlar yapılmamış olur.
-
-### Analiz listeleri
-
-Listelerin en üstünde iki liste vardır: **son derin analizler** ve **son
-hızlı analizler**. Her biri en fazla yüz kayıt tutar, en yeni kayıt başta
-olur ve yüzü aşınca en eski düşer. Bu iki liste silinemez, yeniden
-adlandırılamaz; diğer liste özelliklerinin hepsi çalışır.
-
-Kaydedilmiş bir analizi açtığında motor yeniden çalışmaz. Aynı oyunu
-tekrar analiz edersen eski kayıt silinmez, yeni bir kayıt eklenir — liste
-bir analiz geçmişidir.
-
-Bir analiz kaydını okundu ya da favori yaparsan asıl oyun da işaretlenir.
-Tersi olmaz: bir oyunun birden çok analizi olabildiği için hangisinin
-güncelleneceği belirsiz olurdu.
-
-Analiz kayıtları **yedeğe girmez**; cihaza özeldir ve gerekirse yeniden
-üretilebilir. "Tüm verileri sıfırla" onları da siler.
+Every line also offers a hint, a note, a favorite mark, "play the engine
+from here" and "open in the analysis board".
 
 ---
 
-## Yedekleme ve cihaz değiştirme
+## My lists
 
-**Ayarlar → Veri → Tüm veriyi yedekle** uygulamanın sakladığı her şeyi tek
-bir `.json` dosyasına yazar: oyun listeleri ve içindeki oyunlar (okundu,
-favori, not), bulmaca listeleri ve ilerlemen (çözüldü, favori, deneme
-sayısı, çözüm tarihi), eklediğin açılışlar ve açılış ilerlemen, bütün
-ayarlar.
+Your games are kept in folders: rename them, move games between them,
+delete them.
 
-Dosya düz metindir ve platforma özgü hiçbir şey içermez; telefonda
-alınan yedek bilgisayarda, bilgisayarda alınan yedek telefonda olduğu
-gibi açılır.
+- **Import a PGN file** adds many games to a list at once.
+- **Export as a PGN file** writes the whole list out.
+- Games in a list are numbered; search works on the number (`#42`), the
+  game name, the players, the result and your note.
+- **Read marks**: one at a time, all at once, or by giving a **range of
+  numbers**; there is an unread / read filter. The number you have read
+  is shown on the card without opening the list.
+- **Favorites**: set with the star on a row, with a filter of their own.
+- **Sorting** is reversed with the arrow in the title bar and goes back
+  to the default when the filter changes.
+- **Show a range** narrows the list to a stretch of numbers and is closed
+  again from the banner at the top.
+- The card shows both player names in full, and the date from the PGN if
+  there is one (the year alone if the date is incomplete, nothing if
+  there is no year).
+- **Game details** in the row menu shows the PGN tags: event, site,
+  round, ECO code, ratings.
+- Games can carry a note, which can be deleted later.
 
-**Ayarlar → Veri → Yedekten geri yükle** ile dosyayı seçersin. Önce
-dosyanın içindekiler özetlenir (kaç liste, kaç oyun, kaç bulmaca, kaç
-açılış) — yanlış dosyayı seçtiysen veri silinmeden fark edersin. Sonra
-iki seçenek sunulur:
+### Batch analysis
 
-- **Birleştir** — Yedektekiler var olanın üstüne eklenir. Aynı kayıt iki
-  tarafta da varsa yedekteki geçerli olur, cihazın ayarlarına
-  dokunulmaz.
-- **Değiştir** — Cihazdaki veri silinir, yerine yedektekiler konur. İki
-  cihazı birebir aynı yapmak içindir; ayrıca onay sorar.
+Choose **select games to analyse** from the title menu and the rows
+become selectable. Pick the ones you want and start either **quick** or
+**deep** analysis; the games are worked through one after another while
+you do something else. The screen stays awake while it runs, so a charger
+is a good idea. Progress appears above the lists tab and can be cancelled
+from there.
 
-Dosyanın içine bir sağlama damgası yazılır: yarım inen ya da bozulan bir
-yedek yüklenmeden önce fark edilir. Yazma sırasında bir şey ters
-giderse eski veri geri konur.
+Each game is saved as it finishes. If the app closes half-way, the
+finished ones stay; only the rest are left undone.
+
+### Analysis lists
+
+At the top of the lists there are two of them: **recent deep analyses**
+and **recent quick analyses**. Each keeps at most a hundred records,
+newest first, and the oldest drops off beyond that. These two cannot be
+deleted or renamed; every other list feature works on them.
+
+Opening a saved analysis does not run the engine again. Analysing the
+same game a second time does not delete the old record, it adds a new one
+— the list is a history.
+
+Marking an analysis record as read or favorite also marks the original
+game. It does not work the other way round: a game can have several
+analyses, so there would be no telling which one to update.
+
+Analysis records are **not included in backups**; they belong to the
+device and can be produced again. "Reset all data" does delete them.
 
 ---
 
-## Ayarlar
+## Backups and moving to a new device
 
-- **Tema** — koyu, açık ya da sistemi izle. Varsayılan: sistemi izler.
-- **Dil** — sistem, Türkçe, İngilizce.
-- **Tahta görünümü** — 32 seçenek:
-  - **12 düz renk** (kahve, yeşil, turnuva, mavi, gri, arduvaz, kum,
-    mor, fildişi, gül, deniz yeşili, gece mavisi) — görsel dosyası
-    yoktur, doğrudan çizilir, her ölçüde keskin çıkar.
-  - **3 ahşap** (koyu ahşap, ceviz, meşe) — bu proje için üretildi.
-  - **17 doku**: dört ahşap, iki akçaağaç, mermer, mavi mermer, taş,
-    metal, deri, kanvas, zeytin, yeşil plastik, pembe piramit, mor
-    çizgi ve horsey.
-- **Taş takımı** — 16 seçenek: Cburnett (varsayılan), Chessnut, RhosGFX,
+**Settings → Data → Back up all data** writes everything the app keeps
+into a single `.json` file: your game lists and the games in them (read
+marks, favorites, notes), your puzzle lists and progress (solved,
+favorite, attempts, the date solved), the openings you added and your
+progress through them, and all of your settings.
+
+The file is plain text and contains nothing platform-specific; a backup
+taken on a phone opens on a PC and the other way round.
+
+**Settings → Data → Restore from backup** asks for the file. What is
+inside it is summarised first — how many lists, games, puzzles and
+openings — so you notice a wrong file before any data is deleted. Then
+you are offered two modes:
+
+- **Merge** — The backup is added on top of what is here. Where the same
+  record exists on both sides the one from the backup wins, and the
+  settings on this device are left alone.
+- **Replace** — The data on this device is deleted and the backup takes
+  its place. It is for making two devices identical, and asks for an
+  extra confirmation.
+
+A checksum is written into the file, so a backup that downloaded
+half-way or was damaged is caught before it is loaded. If something goes
+wrong while writing, the old data is put back.
+
+---
+
+## Settings
+
+- **Theme** — dark, light or follow the system. Default: follows the
+  system.
+- **Language** — system, Turkish, English.
+- **Board style** — 32 choices:
+  - **12 flat colours** (brown, green, tournament, blue, grey, slate,
+    sand, purple, ivory, rose, teal, midnight) — no image file, drawn
+    directly, sharp at any size.
+  - **3 wood boards** (dark wood, walnut, oak) — made for this project.
+  - **17 textures**: four woods, two maples, marble, blue marble, stone,
+    metal, leather, canvas, olive, green plastic, pink pyramid, purple
+    stripe and horsey.
+- **Piece set** — 16 choices: Cburnett (default), Chessnut, RhosGFX,
   Fantasy, Spatial, Celtic, Kiwen Suwi, Firi, Totoy, Papercut, Merida,
   Mono, Letter, Pirouetti, Pixel, MPChess.
-- **Kare adlarını göster** — koordinatların rengi seçtiğin tahtadan
-  gelir: yazı, üzerinde durduğu karenin karşıt rengini alır. Taş ve
-  mermer gibi iki kare rengi birbirine yakın olan tahtalarda yazı
-  kaybolmasın diye karşıtlık ölçülür ve gerekirse siyah ya da beyaza
-  düşülür.
-- Yasal hamle göstergeleri, son hamle vurgusu, hamle animasyonu,
-  değerlendirme çubuğu.
-- **Bugün çözülen sayısı** — bulmaca listesi kartlarında günlük sayacı
-  gösterir.
-- **Hamle sesleri** ve **titreşim** — titreşim yalnızca telefonda
-  bulunur; sesler kapatılınca titreşim de kapanır ve ses yeniden
-  açılana kadar açılamaz.
-- **Veri** — yedek alma ve geri yükleme (yukarıya bakın).
+- **Show square names** — the coordinate colour comes from the board you
+  chose: the text takes the opposite colour of the square it sits on. On
+  boards whose two square colours are close to each other, such as stone
+  and marble, the contrast is measured and the text falls back to black
+  or white so it does not disappear.
+- Legal move hints, last move highlight, move animation, evaluation bar.
+- **Daily solved count** — shows the daily counter on puzzle list cards.
+- **Move sounds** and **vibration** — vibration exists only on the phone;
+  turning sounds off turns vibration off too, and it cannot be turned on
+  again until sounds are back on.
+- **Data** — backup and restore (see above).
 
-Seçtiğin tahta ve taş takımı yalnızca oyun tahtasında değil, bulmaca ve
-oyun listelerindeki küçük önizlemelerde de kullanılır.
+The board and piece set you choose are used not only on the game board
+but also in the small previews in puzzle and game lists.
 
 ---
 
-## Kurulum
+## Installing
 
-**Android** — APK dosyasını telefona kopyalayıp açın. Bilinmeyen
-kaynaklardan kuruluma izin vermeniz gerekebilir.
+**Android** — Copy the APK to the phone and open it. You may need to
+allow installation from unknown sources.
 
-**Windows** — `Chess Library <sürüm> Kurulum.exe` dosyasını çalıştırın.
-Yönetici hakkı istemez, kendi kullanıcı klasörünüze kurar; Başlat
-menüsüne kısayol koyar ve Denetim Masası'ndan kaldırılabilir.
+**Windows** — Run `Chess Library <version> Kurulum.exe`. It does not ask
+for administrator rights and installs into your own user folder; it adds
+a Start menu shortcut and can be removed from the Control Panel.
 
-Kurulum istemiyorsanız taşınabilir sürümü de kullanabilirsiniz: verilen
-klasörün **tamamını** kopyalayıp içindeki `ChessLibrary.exe` dosyasını
-çalıştırın. Yanındaki DLL'ler ve `data` klasörü olmadan uygulama açılmaz.
+If you would rather not install anything, use the portable version: copy
+**the whole** folder you were given and run `ChessLibrary.exe` inside it.
+The app will not start without the DLLs and the `data` folder next to it.
 
-> Windows ilk açılışta "Bilgisayarınızı korudu" uyarısı gösterebilir:
-> uygulama kod imzalama sertifikasıyla imzalı değil. **Ek bilgi →
-> Yine de çalıştır** ile geçebilirsiniz.
-
----
-
-## Lisans
-
-Proje [AGPLv3](LICENSE) lisanslıdır: özgür yazılımdır, isteyen satabilir,
-isteyen değiştirebilir; ancak uygulamayı alan herkes kaynak koduna da
-erişebilmeli ve değiştirilmiş sürümler aynı lisansla dağıtılmalıdır.
-Nedeni ve ayrıntısı [COPYRIGHT.md](COPYRIGHT.md) dosyasındadır.
-
-Taş takımları dışarıdan alınmıştır; çizenleri ve lisansları için
-[ASSETS.md](ASSETS.md) dosyasına bakın.
+> Windows may show a "Windows protected your PC" warning the first time:
+> the app is not signed with a code signing certificate. Get past it with
+> **More info → Run anyway**.
 
 ---
 
-Kaynaktan derlemek için [BUILD.md](BUILD.md), ses ve görsellerin nasıl
-üretildiği için [ASSETS.md](ASSETS.md) dosyalarına bakın.
+## Licence
+
+The project is licensed under [AGPLv3](LICENSE): it is free software,
+anyone may sell it and anyone may modify it — but everyone who receives
+the app must also be able to get the source code, and modified versions
+must be distributed under the same licence. The reasoning and the details
+are in [COPYRIGHT.md](COPYRIGHT.md).
+
+The piece sets come from elsewhere; see [ASSETS.md](ASSETS.md) for the
+artists and their licences.
+
+---
+
+To build from source see [BUILD.md](BUILD.md); for how the sounds and
+images were produced see [ASSETS.md](ASSETS.md). Those two documents, and
+`COPYRIGHT.md`, are written in Turkish.
+
+A user manual is published with each release as a PDF, in English and in
+Turkish.
