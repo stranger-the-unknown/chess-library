@@ -172,7 +172,19 @@ class PgnParser {
     return RegExp(r'^[a-h][1-8]$').hasMatch(square) ? square : null;
   }
 
-  /// Karşılaştırmayı bozan süsleri atar: "Nxe5+!?" -> "NE5".
+  /// Karşılaştırmayı bozan süsleri atar: "Nxe5+!?" -> "Ne5".
+  ///
+  /// **Büyük/küçük harf korunur.** SAN'da harfin kasası anlam taşır: `b`
+  /// b sütunundaki piyon, `B` fildir. Eskiden metin büyük harfe
+  /// çevrilerek karşılaştırılıyordu; `bxc3` ile `Bxc3` aynı görünüyor ve
+  /// ikisi de oynanabilir olduğunda listede önce gelen seçiliyordu.
+  /// Pozisyon oradan sapınca oyunun geri kalanı da okunamıyordu —
+  /// bildirilen bir oyunda yetmiş iki hamle böyle kaybolmuştu.
+  ///
+  /// Bunun bedeli, hamlelerini tümü büyük harfle yazan eski bir dosyanın
+  /// artık okunamaması. Orası zaten çözülemez: `BXC3` gerçekten de iki
+  /// hamleyi birden gösteriyor. Okunamayan hamle sayısı kullanıcıya
+  /// bildiriliyor; sessizce yanlış taşı oynamaktan iyidir.
   static String _normalizeSan(String san) {
     final buffer = StringBuffer();
     for (final rune in san.runes) {
@@ -186,9 +198,22 @@ class PgnParser {
           char == 'X') {
         continue;
       }
-      buffer.write(char == '0' ? 'O' : char.toUpperCase());
+      buffer.write(char == '0' ? 'O' : char);
     }
-    return buffer.toString();
+
+    final text = buffer.toString();
+
+    // Rokta kasa anlam taşımıyor ve bazı dosyalar "o-o" yazıyor.
+    final upper = text.toUpperCase();
+    if (upper == 'OO' || upper == 'OOO') return upper;
+
+    // Terfi taşı da ayırt edici değil: "e8=q" ile "e8=Q" aynı hamle.
+    final equals = text.indexOf('=');
+    if (equals >= 0 && equals < text.length - 1) {
+      return text.substring(0, equals + 1) +
+          text.substring(equals + 1).toUpperCase();
+    }
+    return text;
   }
 
   // -------------------------------------------------------------------------
