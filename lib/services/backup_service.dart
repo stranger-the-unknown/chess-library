@@ -302,11 +302,15 @@ class BackupService {
   /// Kimlikli listelerde yedekteki kayıt aynı kimlikli eskisinin yerine
   /// geçer, geri kalanlar korunur. Haritalarda yedektinin anahtarları
   /// üste yazılır. Tanınmayan anahtarlara (ayarlar dâhil) dokunulmaz.
+  ///
+  /// Cihazdaki değer **yalnızca** birleştirilebilir anahtarlarda okunuyor.
+  /// Eskiden en başta `getString` çağrılıyordu; cihazda aynı adla bir
+  /// mantıksal ayar duruyorsa (ör. `soundEnabled`) bu çağrı tür hatasıyla
+  /// patlıyor ve birleştirme kipiyle geri yükleme çöküyordu.
   Object? _merged(SharedPreferences prefs, String key, Object? incoming) {
-    final current = prefs.getString(key);
-
     if (_mergeableLists.containsKey(key)) {
       if (incoming is! String) return null;
+      final current = prefs.getString(key);
       if (current == null) return incoming;
       final idField = _mergeableLists[key]!;
       final byId = <String, Map<String, dynamic>>{};
@@ -323,6 +327,7 @@ class BackupService {
 
     if (_mergeableMaps.contains(key)) {
       if (incoming is! String) return null;
+      final current = prefs.getString(key);
       if (current == null) return incoming;
       final merged = Map<String, dynamic>.from(jsonDecode(current) as Map)
         ..addAll(Map<String, dynamic>.from(jsonDecode(incoming) as Map));

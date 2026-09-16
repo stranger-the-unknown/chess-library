@@ -576,64 +576,52 @@ class _PlaylistDetailScreenState extends State<PlaylistDetailScreen> {
         ],
         bottom: total == 0
             ? null
+            // Arama kutusu ile süzgeç şeridinin genişliği birbirine
+            // bağlı: geniş pencerede kutu şeritten biraz uzun duruyor.
             : PreferredSize(
                 preferredSize: const Size.fromHeight(104),
-                child: Column(
-                  children: [
-                    // Arama kutusu da içerik genişliğinde: geniş pencerede
-                    // tek başına pencereye yapışık duruyordu.
-                    ContentWidth(
-                      child: Padding(
-                        padding: const EdgeInsets.fromLTRB(16, 0, 16, 8),
-                        child: TextField(
-                          controller: _searchController,
-                          onChanged: (value) => setState(() => _query = value),
-                          decoration: InputDecoration(
-                            hintText: t('lists.search'),
-                            prefixIcon: const Icon(
-                              Icons.search_rounded,
-                              size: 20,
-                            ),
-                            isDense: true,
-                            suffixIcon: _query.isEmpty
-                                ? null
-                                : IconButton(
-                                    icon: const Icon(
-                                      Icons.clear_rounded,
-                                      size: 18,
-                                    ),
-                                    onPressed: () {
-                                      _searchController.clear();
-                                      setState(() => _query = '');
-                                    },
-                                  ),
-                          ),
-                        ),
+                child: ListToolbar(
+                  search: Padding(
+                    padding: const EdgeInsets.fromLTRB(16, 0, 16, 8),
+                    child: TextField(
+                      controller: _searchController,
+                      onChanged: (value) => setState(() => _query = value),
+                      decoration: InputDecoration(
+                        hintText: t('lists.search'),
+                        prefixIcon: const Icon(Icons.search_rounded, size: 20),
+                        isDense: true,
+                        suffixIcon: _query.isEmpty
+                            ? null
+                            : IconButton(
+                                icon: const Icon(Icons.clear_rounded, size: 18),
+                                onPressed: () {
+                                  _searchController.clear();
+                                  setState(() => _query = '');
+                                },
+                              ),
                       ),
                     ),
-                    FilterStrip(
-                      options: [
-                        FilterOption(
-                          label: t('puzzles.filterAll'),
-                          selected: _filter == _GameFilter.all,
-                          onTap: () => _selectFilter(_GameFilter.all),
-                        ),
-                        FilterOption(
-                          label: t('lists.filterUnread'),
-                          selected: _filter == _GameFilter.unread,
-                          onTap: () => _selectFilter(_GameFilter.unread),
-                        ),
-                        FilterOption(
-                          label: t('lists.filterRead'),
-                          selected: _filter == _GameFilter.read,
-                          onTap: () => _selectFilter(_GameFilter.read),
-                        ),
-                        FilterOption(
-                          label: t('common.favorites'),
-                          selected: _filter == _GameFilter.favorites,
-                          onTap: () => _selectFilter(_GameFilter.favorites),
-                        ),
-                      ],
+                  ),
+                  options: [
+                    FilterOption(
+                      label: t('puzzles.filterAll'),
+                      selected: _filter == _GameFilter.all,
+                      onTap: () => _selectFilter(_GameFilter.all),
+                    ),
+                    FilterOption(
+                      label: t('lists.filterUnread'),
+                      selected: _filter == _GameFilter.unread,
+                      onTap: () => _selectFilter(_GameFilter.unread),
+                    ),
+                    FilterOption(
+                      label: t('lists.filterRead'),
+                      selected: _filter == _GameFilter.read,
+                      onTap: () => _selectFilter(_GameFilter.read),
+                    ),
+                    FilterOption(
+                      label: t('common.favorites'),
+                      selected: _filter == _GameFilter.favorites,
+                      onTap: () => _selectFilter(_GameFilter.favorites),
                     ),
                   ],
                 ),

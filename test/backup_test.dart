@@ -175,6 +175,62 @@ void main() {
       expect(playlists.first.name, 'Eski ad');
     });
 
+    test('cihazda mantıksal ayar varken birleştirme çökmüyor', () async {
+      // `_merged` en başta `getString` çağırıyordu; cihazda aynı adla bir
+      // bool ayar duruyorsa (ör. ses) tür hatasıyla patlıyordu. Yedekte
+      // ayarlar da bulunduğu için bu, gerçek bir geri yüklemede çöküyordu.
+      await _seed();
+      SettingsService.instance.soundEnabled = false;
+      final text = await BackupService.instance.exportAll();
+
+      await _resetAll();
+      SettingsService.instance.soundEnabled = true;
+      await StorageService.instance.createPlaylist('Kendi listem');
+
+      final (_, data) = await BackupService.instance.read(text);
+      expect(data.containsKey('soundEnabled'), isTrue,
+          reason: 'ayarlar yedeğe giriyor; senaryo geçerli');
+
+      await BackupService.instance.apply(data, mode: ImportMode.merge);
+
+      final names = (await StorageService.instance.loadPlaylists())
+          .map((p) => p.name)
+          .toList();
+      expect(names, containsAll(['Kendi listem', 'Tal']));
+      expect(SettingsService.instance.soundEnabled, isTrue,
+          reason: 'birleştirme ayarlara dokunmamalı');
+    });
+
+    test('v5 yedeği geri yüklenince ses seçimi korunuyor', () async {
+      // Yedek, "ses varsayılanları bir kez geri getirildi" işaretini de
+      // taşıyor; bu yüzden geri yükleme sonrası ezme tekrar çalışmıyor.
+      await _seed();
+      SettingsService.instance.soundEnabled = false;
+      final text = await BackupService.instance.exportAll();
+
+      await _resetAll();
+      final (_, data) = await BackupService.instance.read(text);
+      await BackupService.instance.apply(data);
+
+      expect(SettingsService.instance.soundEnabled, isFalse,
+          reason: 'kullanıcının seçimi geri yüklemeden sağ çıkmalı');
+    });
+
+    test('işaretsiz eski yedek ses varsayılanlarına dönüyor', () async {
+      // v5 öncesi bir yedekte işaret yok; takılı kalmış "ses kapalı"
+      // değeri geri gelmesin diye bir kez varsayılana dönülüyor.
+      await _seed();
+      final text = await BackupService.instance.exportAll();
+      final (_, data) = await BackupService.instance.read(text);
+      data['soundEnabled'] = false;
+      data.remove('soundDefaultsRestored');
+
+      await _resetAll();
+      await BackupService.instance.apply(data);
+
+      expect(SettingsService.instance.soundEnabled, isTrue);
+    });
+
     test('değiştirme kipinde cihazın kendi verisi silinir', () async {
       await _seed();
       final text = await BackupService.instance.exportAll();

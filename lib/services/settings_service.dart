@@ -1,5 +1,7 @@
+import 'dart:io' show Platform;
 import 'dart:math' as math;
 
+import 'package:flutter/foundation.dart' show kIsWeb, visibleForTesting;
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -34,12 +36,25 @@ class SettingsService extends ChangeNotifier {
 
   // Davranış
   bool _soundEnabled = true;
+  bool _vibrationEnabled = true;
   bool _confirmMoves = false;
   int _engineLevel = 2;
   bool _showEvaluationBar = true;
 
   /// Bulmaca listelerinde "bugün çözülen" sayısı gösterilsin mi?
   bool _showDailyCount = true;
+
+  /// Titreşim yalnızca telefonlarda var.
+  ///
+  /// Flutter'ın Windows gömülü katmanı dokunsal geri bildirimi
+  /// karşılamıyor; orada anahtarı göstermek boş bir söz olurdu.
+  static bool get vibrationSupported =>
+      debugVibrationSupported ??
+      (!kIsWeb && (Platform.isAndroid || Platform.isIOS));
+
+  /// Testlerde platform desteğini taklit etmek için.
+  @visibleForTesting
+  static bool? debugVibrationSupported;
 
   ThemeMode get themeMode => _themeMode;
   AppLanguage get language => _language;
@@ -50,10 +65,37 @@ class SettingsService extends ChangeNotifier {
   bool get highlightLastMove => _highlightLastMove;
   bool get animateMoves => _animateMoves;
   bool get soundEnabled => _soundEnabled;
+
+  /// Hamlelerde dokunsal geri bildirim.
+  ///
+  /// Sesten ayrı bir anahtar, ama ona bağımlı: ses kapatılınca titreşim
+  /// de kapanıyor ve açılamıyor. Ses yeniden açıldığında titreşim kendi
+  /// kendine geri gelmiyor; kullanıcı isterse açar.
+  bool get vibrationEnabled => _vibrationEnabled;
   bool get confirmMoves => _confirmMoves;
   int get engineLevel => _engineLevel;
   bool get showEvaluationBar => _showEvaluationBar;
   bool get showDailyCount => _showDailyCount;
+
+  /// Ses ve titreşim varsayılanlarını bir kez geri getirir.
+  ///
+  /// Bazı cihazlarda saklanmış bir `soundEnabled=false` duruyordu ve
+  /// Android'in otomatik yedeklemesi uygulama silinip yeniden kurulsa
+  /// bile onu geri getiriyordu: sesler her açılışta kapalı geliyordu ve
+  /// kullanıcı bunun sebebini göremiyordu.
+  ///
+  /// Bu sürümde iki ayar **bir kereliğine** varsayılana döndürülüyor ve
+  /// bir işaret bırakılıyor; işaret varsa bir daha dokunulmuyor, yani
+  /// kullanıcının bundan sonraki seçimi korunuyor. "Tüm verileri sıfırla"
+  /// işareti de sildiği için sıfırlamadan sonra yine varsayılana dönülür.
+  static const String _soundDefaultsKey = 'soundDefaultsRestored';
+
+  Future<void> _resetSoundDefaults(SharedPreferences prefs) async {
+    if (prefs.getBool(_soundDefaultsKey) == true) return;
+    await prefs.setBool('soundEnabled', true);
+    await prefs.setBool('vibrationEnabled', true);
+    await prefs.setBool(_soundDefaultsKey, true);
+  }
 
   /// Ayarları diskten okur.
   ///
@@ -64,6 +106,7 @@ class SettingsService extends ChangeNotifier {
   Future<void> load() async {
     final prefs = await SharedPreferences.getInstance();
     _prefs = prefs;
+    await _resetSoundDefaults(prefs);
     _themeMode = ThemeMode.values[
         (prefs.getInt('themeMode') ?? ThemeMode.system.index)
             .clamp(0, ThemeMode.values.length - 1)];
@@ -88,6 +131,7 @@ class SettingsService extends ChangeNotifier {
     _highlightLastMove = prefs.getBool('highlightLastMove') ?? true;
     _animateMoves = prefs.getBool('animateMoves') ?? true;
     _soundEnabled = prefs.getBool('soundEnabled') ?? true;
+    _vibrationEnabled = prefs.getBool('vibrationEnabled') ?? true;
     _confirmMoves = prefs.getBool('confirmMoves') ?? false;
     _engineLevel = prefs.getInt('engineLevel') ?? 2;
     _showEvaluationBar = prefs.getBool('showEvaluationBar') ?? true;
@@ -155,6 +199,20 @@ class SettingsService extends ChangeNotifier {
   set soundEnabled(bool value) {
     _soundEnabled = value;
     _set('soundEnabled', value);
+    // Ses kapatılınca titreşim de düşüyor. Geri açıldığında kendiliğinden
+    // dönmüyor: kullanıcı iki ayarı ayrı ayrı yönetiyor.
+    if (!value && _vibrationEnabled) {
+      _vibrationEnabled = false;
+      _set('vibrationEnabled', false);
+    }
+    notifyListeners();
+  }
+
+  set vibrationEnabled(bool value) {
+    // Ses kapalıyken açılamaz; arayüzde de anahtar sönük duruyor.
+    if (value && !_soundEnabled) return;
+    _vibrationEnabled = value;
+    _set('vibrationEnabled', value);
     notifyListeners();
   }
 

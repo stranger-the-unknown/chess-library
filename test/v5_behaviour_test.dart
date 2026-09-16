@@ -10,6 +10,7 @@ import 'package:chess_pgn_reader/models/pgn_parser.dart';
 import 'package:chess_pgn_reader/models/playlist.dart';
 import 'package:chess_pgn_reader/screens/home_screen.dart';
 import 'package:chess_pgn_reader/screens/openings/opening_list_screen.dart';
+import 'package:chess_pgn_reader/screens/board_editor_screen.dart';
 import 'package:chess_pgn_reader/screens/pgn_import_screen.dart';
 import 'package:chess_pgn_reader/screens/playlist_detail_screen.dart';
 import 'package:chess_pgn_reader/screens/settings_screen.dart';
@@ -22,6 +23,7 @@ import 'package:chess_pgn_reader/services/settings_service.dart';
 import 'package:chess_pgn_reader/services/sound_service.dart';
 import 'package:chess_pgn_reader/services/storage_service.dart';
 import 'package:chess_pgn_reader/widgets/app_dialogs.dart';
+import 'package:chess_pgn_reader/widgets/piece_widget.dart';
 import 'package:chess_pgn_reader/widgets/picker_panel.dart';
 
 /// Sürüm 5'te değişen davranışlar.
@@ -174,6 +176,30 @@ void main() {
         find.textContaining('· 2 seçili'),
         findsOneWidget,
         reason: 'gizlenen oyun kaydedilecek oyunlar arasında kalmamalı',
+      );
+    });
+
+    testWidgets('süzgeç açıkken yalnızca sağlam oyunlar kaydediliyor',
+        (tester) async {
+      // Süzgecin asıl işi bu: listeye giden oyunlar.
+      await _pump(
+        tester,
+        PgnImportScreen(games: games, suggestedName: 'Deneme'),
+      );
+      await tester.tap(find.byType(FilterChip));
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.text('Yeni liste'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Tamam'));
+      await tester.pumpAndSettle();
+
+      final saved = await StorageService.instance.loadPlaylists();
+      expect(saved, hasLength(1));
+      expect(
+        saved.first.games.map((g) => g.name),
+        ['Sağlam bir - Rakip', 'Sağlam iki - Rakip'],
+        reason: 'eksik hamleli oyun listeye girmemeli',
       );
     });
 
@@ -546,6 +572,218 @@ C00|French|İleri Varyant|e4 e6 d4 d5 e5
         find.textContaining('kayıt tutuyor'),
         findsOneWidget,
         reason: 'sınır aşıldığında sessiz kalmamalı',
+      );
+    });
+  });
+
+  group('Titreşim ayarı', () {
+    tearDown(() => SettingsService.debugVibrationSupported = null);
+
+    test('ses kapanınca titreşim de kapanıyor', () {
+      final settings = SettingsService.instance;
+      settings.soundEnabled = true;
+      settings.vibrationEnabled = true;
+
+      settings.soundEnabled = false;
+      expect(settings.vibrationEnabled, isFalse);
+    });
+
+    test('ses kapalıyken titreşim açılamıyor', () {
+      final settings = SettingsService.instance;
+      settings.soundEnabled = false;
+
+      settings.vibrationEnabled = true;
+      expect(settings.vibrationEnabled, isFalse);
+    });
+
+    test('ses geri açılınca titreşim kendiliğinden açılmıyor', () {
+      final settings = SettingsService.instance;
+      settings.soundEnabled = true;
+      settings.vibrationEnabled = true;
+
+      settings.soundEnabled = false;
+      settings.soundEnabled = true;
+
+      expect(
+        settings.vibrationEnabled,
+        isFalse,
+        reason: 'kullanıcı isterse kendisi açar',
+      );
+    });
+
+    testWidgets('telefonda anahtar var, ses kapalıyken sönük', (tester) async {
+      SettingsService.debugVibrationSupported = true;
+      await _pump(tester, const SettingsScreen());
+      // Ses bölümü listenin altında. Başlığa kadar kaydırılıyor;
+      // "Hamle sesleri"ne kadar gidilirse başlık yukarıda kalıyor ve
+      // liste onu ağaçtan düşürüyor.
+      await tester.scrollUntilVisible(
+        find.text('Ses ve titreşim'.toUpperCase()),
+        100,
+      );
+      await tester.pumpAndSettle();
+
+      expect(find.text('Ses ve titreşim'.toUpperCase()), findsOneWidget);
+      expect(find.text('Titreşim'), findsOneWidget);
+      expect(find.text('Kapalıyken titreşim de verilmez.'), findsOneWidget);
+
+      SwitchListTile vibrationTile() => tester.widget<SwitchListTile>(
+            find.ancestor(
+              of: find.text('Titreşim'),
+              matching: find.byType(SwitchListTile),
+            ),
+          );
+      expect(vibrationTile().onChanged, isNotNull);
+
+      await tester.tap(find.text('Hamle sesleri'));
+      await tester.pumpAndSettle();
+
+      expect(
+        vibrationTile().onChanged,
+        isNull,
+        reason: 'ses kapalıyken titreşim anahtarı sönük olmalı',
+      );
+      expect(vibrationTile().value, isFalse);
+    });
+
+    testWidgets("Windows'ta titreşim anahtarı ve açıklaması yok",
+        (tester) async {
+      SettingsService.debugVibrationSupported = false;
+      await _pump(tester, const SettingsScreen());
+      await tester.scrollUntilVisible(find.text('Ses'.toUpperCase()), 100);
+      await tester.pumpAndSettle();
+
+      expect(find.text('Titreşim'), findsNothing);
+      expect(find.text('Kapalıyken titreşim de verilmez.'), findsNothing);
+      expect(find.text('Ses ve titreşim'.toUpperCase()), findsNothing);
+      expect(find.text('Ses'.toUpperCase()), findsOneWidget);
+    });
+  });
+
+  group('Konum kurma taş paleti', () {
+    testWidgets('silgi taşların sağında ve iki sıranın ortasında',
+        (tester) async {
+      await _pump(
+        tester,
+        const BoardEditorScreen(
+          initialFen: 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1',
+        ),
+      );
+
+      // Tahtanın kendisi de taş çiziyor; yalnızca paletteki on iki taş.
+      final palette = find.ancestor(
+        of: find.byIcon(Icons.backspace_outlined),
+        matching: find.byType(FittedBox),
+      );
+      final pieces = find.descendant(
+        of: palette,
+        matching: find.byType(PieceWidget),
+      );
+      expect(pieces, findsNWidgets(12));
+
+      await tester.ensureVisible(find.byIcon(Icons.backspace_outlined));
+      await tester.pumpAndSettle();
+
+      final white = tester.getCenter(pieces.first);
+      final black = tester.getCenter(pieces.at(6));
+      final eraser = tester.getCenter(find.byIcon(Icons.backspace_outlined));
+
+      expect(
+        eraser.dx,
+        greaterThan(tester.getBottomRight(pieces.at(5)).dx),
+        reason: 'silgi taşların sağında olmalı',
+      );
+      expect(
+        eraser.dy,
+        closeTo((white.dy + black.dy) / 2, 1),
+        reason: 'silgi iki sıranın tam ortasında olmalı',
+      );
+    });
+
+    testWidgets('palet dar telefonda da taşmıyor', (tester) async {
+      // Yedi hücre en dar yaygın telefonda (360) kıl payı sığıyor;
+      // FittedBox gerekirse küçültüyor. Taşma olsaydı test düşerdi.
+      tester.view.devicePixelRatio = 1;
+      tester.view.physicalSize = const Size(360, 800);
+      await tester.pumpWidget(
+        KeyedSubtree(
+          key: UniqueKey(),
+          child: const MaterialApp(
+            home: BoardEditorScreen(
+              initialFen: '8/8/8/8/8/8/8/K6k w - - 0 1',
+            ),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      final palette = find.ancestor(
+        of: find.byIcon(Icons.backspace_outlined),
+        matching: find.byType(FittedBox),
+      );
+      expect(tester.getSize(palette).width, lessThanOrEqualTo(360));
+    });
+
+    testWidgets('masaüstünde de silgi sağda ve ortada', (tester) async {
+      tester.view.devicePixelRatio = 1;
+      tester.view.physicalSize = const Size(1400, 1000);
+      await tester.pumpWidget(
+        KeyedSubtree(
+          key: UniqueKey(),
+          child: const MaterialApp(
+            home: BoardEditorScreen(
+              initialFen: '8/8/8/8/8/8/8/K6k w - - 0 1',
+            ),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      final palette = find.ancestor(
+        of: find.byIcon(Icons.backspace_outlined),
+        matching: find.byType(FittedBox),
+      );
+      final pieces = find.descendant(
+        of: palette,
+        matching: find.byType(PieceWidget),
+      );
+      final eraser = tester.getCenter(find.byIcon(Icons.backspace_outlined));
+
+      expect(eraser.dx, greaterThan(tester.getBottomRight(pieces.at(5)).dx));
+      expect(
+        eraser.dy,
+        closeTo(
+          (tester.getCenter(pieces.first).dy +
+                  tester.getCenter(pieces.at(6)).dy) /
+              2,
+          1,
+        ),
+      );
+    });
+  });
+
+  group('Takılı kalmış ses ayarı', () {
+    // Telefonda saklanmış bir `soundEnabled=false` vardı ve Android'in
+    // otomatik yedeklemesi onu silip kurmaya rağmen geri getiriyordu.
+    test('bir kereliğine varsayılana dönülüyor', () async {
+      SharedPreferences.setMockInitialValues({'soundEnabled': false});
+      await SettingsService.instance.load();
+
+      expect(SettingsService.instance.soundEnabled, isTrue);
+      expect(SettingsService.instance.vibrationEnabled, isTrue);
+    });
+
+    test('kullanıcı sonradan kapatırsa kapalı kalıyor', () async {
+      SharedPreferences.setMockInitialValues({'soundEnabled': false});
+      await SettingsService.instance.load();
+
+      SettingsService.instance.soundEnabled = false;
+      await SettingsService.instance.load();
+
+      expect(
+        SettingsService.instance.soundEnabled,
+        isFalse,
+        reason: 'ezme yalnızca bir kez olmalı',
       );
     });
   });

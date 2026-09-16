@@ -73,7 +73,7 @@ class FilterStrip extends StatelessWidget {
   /// 0.3 piksel veriyor. On üç harflik "Beyaz kazanır" böylece dört
   /// piksel taşıp üç noktaya düşüyordu — İngilizcede etiketler kısa
   /// olduğu için fark görünmüyordu.
-  TextStyle _labelStyle(BuildContext context) {
+  static TextStyle _labelStyle(BuildContext context) {
     final theme = Theme.of(context);
     final label = theme.chipTheme.labelStyle ?? theme.textTheme.labelLarge;
     final ambient = DefaultTextStyle.of(context).style;
@@ -81,7 +81,7 @@ class FilterStrip extends StatelessWidget {
     return label.inherit ? ambient.merge(label) : label;
   }
 
-  double _chipWidth(BuildContext context, String label) {
+  static double _chipWidth(BuildContext context, String label) {
     final painter = TextPainter(
       text: TextSpan(text: label, style: _labelStyle(context)),
       textDirection: Directionality.of(context),
@@ -143,22 +143,34 @@ class FilterStrip extends StatelessWidget {
   /// izin verdiği ölçüde genişliyor. Hiç sığmazsa (çok dar bir masaüstü
   /// penceresi) telefondaki kaydırmalı şeride düşülüyor — böyle bir
   /// durumda bile bir süzgeç erişilemez kalmasın.
-  Widget? _segments(
+  /// Şeridin geniş pencerede kaplayacağı genişlik; sığmıyorsa null.
+  ///
+  /// Arama kutusu da bunu kullanıyor ([ListToolbar]): kutu şeritten dar
+  /// kalırsa ikisi hizasız görünüyor — yedi süzgeçli oyun sonu listesinde
+  /// şerit kutuyu açıkça geçiyordu.
+  static double? desktopWidth(
     BuildContext context,
-    BoxConstraints constraints,
-    List<double> widths,
+    List<FilterOption> options,
+    double available,
   ) {
+    if (options.isEmpty) return null;
+    final widths = [
+      for (final option in options) _chipWidth(context, option.label),
+    ];
     final count = options.length;
     final widest = math.max(widths.reduce(math.max), _minDesktopChip);
     final gaps = _gap * (count - 1) + _gap * 2;
 
     final needed = widest * count + gaps;
-    if (needed > constraints.maxWidth) return null;
+    if (needed > available) return null;
 
-    final width = math.min(
-      constraints.maxWidth,
-      math.max(Layout.maxContentWidth, needed),
-    );
+    return math.min(available, math.max(Layout.maxContentWidth, needed));
+  }
+
+  Widget? _segments(BuildContext context, BoxConstraints constraints) {
+    final count = options.length;
+    final width = desktopWidth(context, options, constraints.maxWidth);
+    if (width == null) return null;
 
     return Center(
       child: SizedBox(
@@ -188,7 +200,7 @@ class FilterStrip extends StatelessWidget {
               options.map((o) => _chipWidth(context, o.label)).toList();
 
           if (Layout.isWide(context)) {
-            final segments = _segments(context, constraints, widths);
+            final segments = _segments(context, constraints);
             if (segments != null) return segments;
           }
 
@@ -218,6 +230,51 @@ class FilterStrip extends StatelessWidget {
           );
         },
       ),
+    );
+  }
+}
+
+/// Arama kutusu ve süzgeç şeridini birlikte yerleştirir.
+///
+/// Geniş pencerede ikisinin genişliği birbirine bağlı: kutu şeritten
+/// [_searchExtra] kadar uzun. Ayrı ayrı kurulduklarında kutu içerik
+/// genişliğinde (760) kalıyor, yedi süzgeçli şerit ise etiketler için
+/// daha çok yer istediğinden onu geçiyordu.
+///
+/// Dar pencerede ikisi de eskisi gibi tüm genişliği kullanıyor.
+class ListToolbar extends StatelessWidget {
+  final Widget search;
+  final List<FilterOption> options;
+
+  /// Arama kutusunun şeritten ne kadar uzun olacağı.
+  static const double _searchExtra = 32;
+
+  const ListToolbar({
+    super.key,
+    required this.search,
+    required this.options,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      children: [
+        LayoutBuilder(
+          builder: (context, constraints) {
+            final strip = Layout.isWide(context)
+                ? FilterStrip.desktopWidth(context, options, constraints.maxWidth)
+                : null;
+            if (strip == null) return search;
+            return Center(
+              child: SizedBox(
+                width: math.min(constraints.maxWidth, strip + _searchExtra),
+                child: search,
+              ),
+            );
+          },
+        ),
+        FilterStrip(options: options),
+      ],
     );
   }
 }

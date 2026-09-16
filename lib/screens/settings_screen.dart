@@ -167,15 +167,37 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 ),
               ]),
               const SizedBox(height: 16),
-              _section(t('settings.soundSection')),
+              _section(
+                t(
+                  SettingsService.vibrationSupported
+                      ? 'settings.soundVibrationSection'
+                      : 'settings.soundSection',
+                ),
+              ),
               _card([
                 SwitchListTile(
                   secondary: const Icon(Icons.volume_up_rounded),
                   title: Text(t('settings.sound')),
-                  subtitle: Text(t('settings.soundSub')),
+                  // Açıklama yalnızca titreşimin olduğu yerde anlamlı.
+                  subtitle: SettingsService.vibrationSupported
+                      ? Text(t('settings.soundSub'))
+                      : null,
                   value: _settings.soundEnabled,
                   onChanged: (value) => _settings.soundEnabled = value,
                 ),
+                if (SettingsService.vibrationSupported) ...[
+                  const Divider(indent: 56),
+                  SwitchListTile(
+                    secondary: const Icon(Icons.vibration_rounded),
+                    title: Text(t('settings.vibration')),
+                    value: _settings.vibrationEnabled,
+                    // Ses kapalıyken anahtar sönük: titreşim zaten
+                    // kapandı ve oradan açılamaz.
+                    onChanged: _settings.soundEnabled
+                        ? (value) => _settings.vibrationEnabled = value
+                        : null,
+                  ),
+                ],
               ]),
               const SizedBox(height: 16),
               _section(t('backup.section')),

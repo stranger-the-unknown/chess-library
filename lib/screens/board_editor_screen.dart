@@ -428,27 +428,39 @@ class _BoardEditorScreenState extends State<BoardEditorScreen> {
       );
     }
 
-    return Column(
-      children: [
-        Row(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            for (final type in types)
-              cell(engine.Piece(type, engine.Color.white)),
-          ],
-        ),
-        Row(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            for (final type in types)
-              cell(engine.Piece(type, engine.Color.black)),
-          ],
-        ),
-        Row(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [cell(null)],
-        ),
-      ],
+    // Silgi taşların sağında ve iki sıranın tam ortasında duruyor:
+    // hem beyaza hem siyaha ait olduğu böyle anlaşılıyor. Altta tek
+    // başına bir satır olarak durduğunda kopuk görünüyordu.
+    //
+    // Yedi hücre dar telefonlarda kıl payı sığıyor; taşmaması için
+    // gerektiğinde küçültülüyor.
+    return FittedBox(
+      fit: BoxFit.scaleDown,
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  for (final type in types)
+                    cell(engine.Piece(type, engine.Color.white)),
+                ],
+              ),
+              Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  for (final type in types)
+                    cell(engine.Piece(type, engine.Color.black)),
+                ],
+              ),
+            ],
+          ),
+          cell(null),
+        ],
+      ),
     );
   }
 

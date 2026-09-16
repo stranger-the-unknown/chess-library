@@ -119,11 +119,11 @@ class SoundService {
 
   /// Dokunsal geri bildirim.
   ///
-  /// Ses ayarına bağlı: kullanıcı sesleri kapattığında telefonun her
-  /// hamlede titremesi "kapattım ama hâlâ tepki veriyor" demek oluyordu.
-  /// Ayrı bir titreşim ayarı yok; anahtarın açıklaması bunu söylüyor.
+  /// Kendi ayarı var ama sese bağımlı: ses kapatılınca titreşim de
+  /// kapanıyor (bkz. [SettingsService.soundEnabled]), o yüzden burada
+  /// tek bir denetim yetiyor.
   void _vibrate({bool strong = false}) {
-    if (!SettingsService.instance.soundEnabled) return;
+    if (!SettingsService.instance.vibrationEnabled) return;
     if (strong) {
       HapticFeedback.mediumImpact();
     } else {

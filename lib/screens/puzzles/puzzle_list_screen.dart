@@ -509,79 +509,74 @@ class _PuzzleListScreenState extends State<PuzzleListScreen> {
             ],
           ),
         ],
+        // Arama kutusu ile süzgeç şeridinin genişliği birbirine bağlı:
+        // geniş pencerede kutu şeritten biraz uzun duruyor. Oyun sonu
+        // listelerindeki yedi süzgeç şeridi genişletiyor; kutu sabit
+        // kalsaydı altındaki şeritten kısa görünürdü.
         bottom: PreferredSize(
           preferredSize: const Size.fromHeight(104),
-          child: Column(
-            children: [
-              // Arama kutusu da içerik genişliğinde: geniş pencerede
-              // tek başına pencereye yapışık duruyordu.
-              ContentWidth(
-                child: Padding(
-                  padding: const EdgeInsets.fromLTRB(16, 0, 16, 8),
-                  child: TextField(
-                    controller: _searchController,
-                    onChanged: (value) => setState(() => _query = value),
-                    decoration: InputDecoration(
-                      hintText: t('puzzles.search'),
-                      prefixIcon: const Icon(Icons.search_rounded, size: 20),
-                      isDense: true,
-                      suffixIcon: _query.isEmpty
-                          ? null
-                          : IconButton(
-                              icon: const Icon(Icons.clear_rounded, size: 18),
-                              onPressed: () {
-                                _searchController.clear();
-                                setState(() => _query = '');
-                              },
-                            ),
-                    ),
-                  ),
+          child: ListToolbar(
+            search: Padding(
+              padding: const EdgeInsets.fromLTRB(16, 0, 16, 8),
+              child: TextField(
+                controller: _searchController,
+                onChanged: (value) => setState(() => _query = value),
+                decoration: InputDecoration(
+                  hintText: t('puzzles.search'),
+                  prefixIcon: const Icon(Icons.search_rounded, size: 20),
+                  isDense: true,
+                  suffixIcon: _query.isEmpty
+                      ? null
+                      : IconButton(
+                          icon: const Icon(Icons.clear_rounded, size: 18),
+                          onPressed: () {
+                            _searchController.clear();
+                            setState(() => _query = '');
+                          },
+                        ),
                 ),
               ),
-              FilterStrip(
-                options: [
-                  FilterOption(
-                    label: t('puzzles.filterAll'),
-                    selected: _filter == _Filter.all,
-                    onTap: () => _selectFilter(_Filter.all),
-                  ),
-                  FilterOption(
-                    label: t('puzzles.filterUnsolved'),
-                    selected: _filter == _Filter.unsolved,
-                    onTap: () => _selectFilter(_Filter.unsolved),
-                  ),
-                  FilterOption(
-                    label: t('puzzles.filterSolved'),
-                    selected: _filter == _Filter.solved,
-                    onTap: () => _selectFilter(_Filter.solved),
-                  ),
-                  FilterOption(
-                    label: t('puzzles.filterFavorites'),
-                    selected: _filter == _Filter.favorites,
-                    onTap: () => _selectFilter(_Filter.favorites),
-                  ),
-                  // Sonuç süzgeçleri yalnızca oyun sonu listelerinde
-                  // anlamlı; başka listelerde yer kaplamasınlar. Yedi çip
-                  // sığmadığı için şerit orada kaydırmalı oluyor.
-                  if (widget.collection.isEndgame && _hasOutcomes) ...[
-                    FilterOption(
-                      label: t('puzzles.filterWhiteWin'),
-                      selected: _filter == _Filter.whiteWin,
-                      onTap: () => _selectFilter(_Filter.whiteWin),
-                    ),
-                    FilterOption(
-                      label: t('puzzles.filterDraw'),
-                      selected: _filter == _Filter.draw,
-                      onTap: () => _selectFilter(_Filter.draw),
-                    ),
-                    FilterOption(
-                      label: t('puzzles.filterBlackWin'),
-                      selected: _filter == _Filter.blackWin,
-                      onTap: () => _selectFilter(_Filter.blackWin),
-                    ),
-                  ],
-                ],
+            ),
+            options: [
+              FilterOption(
+                label: t('puzzles.filterAll'),
+                selected: _filter == _Filter.all,
+                onTap: () => _selectFilter(_Filter.all),
               ),
+              FilterOption(
+                label: t('puzzles.filterUnsolved'),
+                selected: _filter == _Filter.unsolved,
+                onTap: () => _selectFilter(_Filter.unsolved),
+              ),
+              FilterOption(
+                label: t('puzzles.filterSolved'),
+                selected: _filter == _Filter.solved,
+                onTap: () => _selectFilter(_Filter.solved),
+              ),
+              FilterOption(
+                label: t('puzzles.filterFavorites'),
+                selected: _filter == _Filter.favorites,
+                onTap: () => _selectFilter(_Filter.favorites),
+              ),
+              // Sonuç süzgeçleri yalnızca oyun sonu listelerinde
+              // anlamlı; başka listelerde yer kaplamasınlar.
+              if (widget.collection.isEndgame && _hasOutcomes) ...[
+                FilterOption(
+                  label: t('puzzles.filterWhiteWin'),
+                  selected: _filter == _Filter.whiteWin,
+                  onTap: () => _selectFilter(_Filter.whiteWin),
+                ),
+                FilterOption(
+                  label: t('puzzles.filterDraw'),
+                  selected: _filter == _Filter.draw,
+                  onTap: () => _selectFilter(_Filter.draw),
+                ),
+                FilterOption(
+                  label: t('puzzles.filterBlackWin'),
+                  selected: _filter == _Filter.blackWin,
+                  onTap: () => _selectFilter(_Filter.blackWin),
+                ),
+              ],
             ],
           ),
         ),

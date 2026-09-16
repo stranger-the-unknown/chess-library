@@ -318,7 +318,9 @@ giderse eski veri geri konur.
   değerlendirme çubuğu.
 - **Bugün çözülen sayısı** — bulmaca listesi kartlarında günlük sayacı
   gösterir.
-- **Hamle sesleri** — kapalıyken titreşim de verilmez.
+- **Hamle sesleri** ve **titreşim** — titreşim yalnızca telefonda
+  bulunur; sesler kapatılınca titreşim de kapanır ve ses yeniden
+  açılana kadar açılamaz.
 - **Veri** — yedek alma ve geri yükleme (yukarıya bakın).
 
 Seçtiğin tahta ve taş takımı yalnızca oyun tahtasında değil, bulmaca ve

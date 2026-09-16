@@ -369,6 +369,59 @@ void main() {
       return checked;
     }
 
+    testWidgets('arama kutusu süzgeç şeridinden uzun', (tester) async {
+      // Yedi süzgeçli oyun sonu listesinde şerit içerik genişliğini
+      // aşıyor; kutu sabit kalınca ondan kısa görünüyordu.
+      tester.view.devicePixelRatio = 1;
+      tester.view.physicalSize = _wide;
+      await tester.pumpWidget(
+        KeyedSubtree(
+          key: UniqueKey(),
+          child: MaterialApp(
+            theme: AppTheme.dark,
+            home: Scaffold(
+              appBar: AppBar(
+                title: const Text('Oyun sonu'),
+                bottom: PreferredSize(
+                  preferredSize: const Size.fromHeight(104),
+                  child: ListToolbar(
+                    search: const Padding(
+                      padding: EdgeInsets.fromLTRB(16, 0, 16, 8),
+                      child: TextField(),
+                    ),
+                    options: [
+                      for (final (i, label) in endgame.indexed)
+                        FilterOption(
+                          label: label,
+                          selected: i == 0,
+                          onTap: () {},
+                        ),
+                    ],
+                  ),
+                ),
+              ),
+              body: const SizedBox(),
+            ),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      final chips = find.descendant(
+        of: find.byType(FilterStrip),
+        matching: find.byType(InkWell),
+      );
+      final strip = tester.getTopRight(chips.at(endgame.length - 1)).dx -
+          tester.getTopLeft(chips.first).dx;
+      final search = tester.getSize(find.byType(TextField)).width;
+
+      expect(
+        search,
+        greaterThan(strip),
+        reason: 'arama kutusu şeritten kısa kalmamalı',
+      );
+    });
+
     testWidgets('masaüstünde uzun etiketler üç noktaya düşmüyor',
         (tester) async {
       await pumpInAppBar(tester, _wide);
