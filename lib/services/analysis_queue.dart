@@ -60,8 +60,22 @@ class AnalysisQueue extends ChangeNotifier {
   int _total = 0;
   String? _current;
 
-  /// Kuyruk çalışıyor mu?
-  bool get isRunning => _running;
+  /// Kuyruğun dışında süren tek oyunluk inceleme sayısı.
+  ///
+  /// Tahta ekranından başlatılan inceleme kuyruğa girmiyor — sonucu
+  /// ekranda anında görmek isteniyor. Ama kullanıcı ekrandan çıkarsa iş
+  /// sürüyor; şeritte görünmesi için burada sayılıyor.
+  int _external = 0;
+  String? _externalName;
+
+  /// Kuyruk ya da tek oyunluk bir inceleme sürüyor mu?
+  bool get isRunning => _running || _external > 0;
+
+  /// Yalnızca tek oyunluk bir inceleme mi sürüyor?
+  ///
+  /// Şerit buna göre değişiyor: tek incelemenin ilerleme sayısı ve iptali
+  /// yok (motorun durdurma yolu yok), yalnızca adı gösteriliyor.
+  bool get isSingleReview => !_running && _external > 0;
 
   /// Biten oyun sayısı.
   int get done => _done;
@@ -70,7 +84,29 @@ class AnalysisQueue extends ChangeNotifier {
   int get total => _total;
 
   /// Şu an incelenen oyunun adı.
-  String? get current => _current;
+  String? get current => _current ?? _externalName;
+
+  /// Tahta ekranındaki incelemeyi şeride bildirir.
+  ///
+  /// İş kuyruğa girmiyor, yalnızca "sürüyor" diye görünüyor. Sayaç
+  /// [Future] hata verse de `finally` içinde düşüyor; düşmezse şerit
+  /// sonsuza kadar ekranda kalırdı.
+  ///
+  /// Ekran kilidi bilerek alınmıyor: tek oyunluk inceleme kısa sürüyor ve
+  /// kilit burada da alınırsa, aynı anda süren bir toplu analiz varken
+  /// inceleme bitince kilit erkenden bırakılırdı.
+  Future<T> trackExternal<T>(String name, Future<T> Function() task) async {
+    _external++;
+    _externalName = name;
+    notifyListeners();
+    try {
+      return await task();
+    } finally {
+      _external--;
+      if (_external == 0) _externalName = null;
+      notifyListeners();
+    }
+  }
 
   /// Kuyruktaki işler derin inceleme mi?
   bool get deep => _jobs.isNotEmpty ? _jobs.first.deep : _lastDeep;

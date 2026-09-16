@@ -363,6 +363,7 @@ class Strings {
         'Analiz sürerken ekran açık kalır; şarjda yapman iyi olur.',
     'analysis.limitWarning':
         'Analiz listesi en fazla {limit} kayıt tutuyor; fazlası düşer.',
+    'analysis.singleRunning': 'Bir oyun inceleniyor…',
     'analysis.finished': 'Analiz bitti.',
     'analysis.deepList': 'Son Derin Analizler',
     'analysis.emptyList':
@@ -877,6 +878,7 @@ class Strings {
         'The screen stays on while analysing; best done on charge.',
     'analysis.limitWarning':
         'The analysis list keeps at most {limit} records; the rest drop off.',
+    'analysis.singleRunning': 'Reviewing one game…',
     'analysis.finished': 'Analysis finished.',
     'analysis.deepList': 'Recent Deep Analyses',
     'analysis.emptyList':

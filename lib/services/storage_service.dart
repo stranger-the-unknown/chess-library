@@ -263,9 +263,14 @@ class StorageService extends ChangeNotifier {
   /// yeni bir kayıt olarak eklenir — liste bir analiz geçmişi, bir
   /// oyun kümesi değil. Eskisini silmek "neden kayboldu" sorusunu ve
   /// hangi kaydın güncelleneceği belirsizliğini doğururdu.
+  /// [sourcePlaylistId] null olabilir: tahta ekranında oynanan ya da
+  /// PGN'den açılan bir oyunun kayıtlı bir listesi yoktur. O zaman kayıt
+  /// kendi başına durur — hamleleri, adı ve sonucu zaten içinde. Yalnızca
+  /// "okundu işaretlemek asıl oyunu da işaretler" bağı kurulmaz, çünkü
+  /// işaretlenecek bir asıl oyun yoktur.
   Future<void> addAnalysis({
     required SavedGame source,
-    required String sourcePlaylistId,
+    String? sourcePlaylistId,
     required StoredReview review,
   }) async {
     final lists = await loadAnalysisLists();
@@ -285,7 +290,7 @@ class StorageService extends ChangeNotifier {
         black: source.black,
         tags: source.tags,
         review: review,
-        sourceGameId: source.id,
+        sourceGameId: sourcePlaylistId == null ? null : source.id,
         sourcePlaylistId: sourcePlaylistId,
       ),
     );

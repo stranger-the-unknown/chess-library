@@ -5,9 +5,11 @@ import '../widgets/responsive.dart';
 import '../l10n/app_strings.dart';
 import '../models/chess_engine.dart' as engine;
 import '../models/move_entry.dart';
+import '../models/playlist.dart';
 import '../models/stored_review.dart';
 import '../services/analysis_queue.dart';
 import '../services/game_review.dart';
+import '../services/storage_service.dart';
 import '../services/sound_service.dart';
 import '../theme/app_theme.dart';
 import '../widgets/chess_board_widget.dart';
@@ -18,6 +20,18 @@ class GameReviewScreen extends StatefulWidget {
   final List<MoveEntry> history;
   final String? startFen;
   final String title;
+
+  /// Analiz bittiğinde kaydedilecek oyun (ad, hamleler, oyuncular).
+  ///
+  /// Null ise kaydedilecek bir şey yok (ör. henüz hamle oynanmamış).
+  final SavedGame? source;
+
+  /// Oyunun geldiği listenin kimliği; yoksa null.
+  ///
+  /// Verildiğinde kaydın kimliği **asıl oyunun** kimliği oluyor: analiz
+  /// listesindeki bir kaydı yeniden analiz ettiğinde bağ o kayda değil,
+  /// kaydın geldiği oyuna kuruluyor. Null ise kayıt kendi başına durur.
+  final String? sourcePlaylistId;
 
   /// Daha önce yapılmış ve kaydedilmiş analiz.
   ///
@@ -32,6 +46,8 @@ class GameReviewScreen extends StatefulWidget {
     this.startFen,
     this.title = '',
     this.saved,
+    this.source,
+    this.sourcePlaylistId,
   });
 
   @override
@@ -82,18 +98,27 @@ class _GameReviewScreenState extends State<GameReviewScreen> {
       _total = widget.history.length + 1;
     });
 
-    final review = await GameReviewer().review(
-      widget.history,
-      startFen: widget.startFen,
-      deep: _deep,
-      onProgress: (done, total) {
-        if (!mounted) return;
-        setState(() {
-          _done = done;
-          _total = total;
-        });
-      },
+    // Şeride bildiriliyor: kullanıcı ekrandan çıkarsa işin sürdüğünü
+    // listeler sekmesinde görsün.
+    final review = await AnalysisQueue.instance.trackExternal(
+      widget.title.isEmpty ? t('review.title') : widget.title,
+      () => GameReviewer().review(
+        widget.history,
+        startFen: widget.startFen,
+        deep: _deep,
+        onProgress: (done, total) {
+          if (!mounted) return;
+          setState(() {
+            _done = done;
+            _total = total;
+          });
+        },
+      ),
     );
+
+    // Kaydetme `mounted` denetiminden **önce**: kullanıcı ekrandan
+    // çıkmış olsa da analiz sürüyordu ve sonucu kaybolmamalı.
+    await _store(review);
 
     if (!mounted) return;
     setState(() {
@@ -101,6 +126,27 @@ class _GameReviewScreenState extends State<GameReviewScreen> {
       _running = false;
       _cursor = 0;
     });
+  }
+
+  /// Taze analizi kaynak oyunun kaydı olarak analiz listesine yazar.
+  ///
+  /// Kaydedilmiş bir analiz geri kurulduğunda buraya hiç gelinmiyor;
+  /// yalnızca motor gerçekten çalıştığında kayıt ekleniyor. Aynı oyunu
+  /// tekrar analiz etmek eskisini silmiyor, yeni bir kayıt ekliyor —
+  /// analiz listesi bir geçmiş.
+  Future<void> _store(GameReview review) async {
+    final source = widget.source;
+    if (source == null) return;
+    try {
+      await StorageService.instance.addAnalysis(
+        source: source,
+        sourcePlaylistId: widget.sourcePlaylistId,
+        review: toStoredReview(review, deep: _deep),
+      );
+    } catch (error) {
+      // Kayıt başarısız olursa sonuç yine de ekranda gösterilsin.
+      debugPrint('Analiz kaydedilemedi: $error');
+    }
   }
 
   /// İmleci taşır ve o hamlenin sesini çalar.

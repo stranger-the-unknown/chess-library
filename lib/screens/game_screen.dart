@@ -57,6 +57,16 @@ class GameScreen extends StatefulWidget {
   /// Bu oyun bir analiz kaydıysa, kaydedilmiş inceleme.
   final StoredReview? savedReview;
 
+  /// Oyunun kayıtlı listedeki kimliği ve listesi.
+  ///
+  /// İnceleme bitince analiz kaydı bunlarla bağlanıyor. Bir analiz
+  /// kaydından açıldığında **asıl oyunun** kimlikleri veriliyor, kaydın
+  /// kendisininki değil. Listesi olmayan oyunlarda (serbest tahta,
+  /// motora karşı oyun, PGN önizlemesi) ikisi de null olur; inceleme yine
+  /// kaydedilir, yalnızca asıl oyuna bağ kurulmaz.
+  final String? sourceGameId;
+  final String? sourcePlaylistId;
+
   const GameScreen({
     super.key,
     this.mode = GameMode.analysis,
@@ -70,6 +80,8 @@ class GameScreen extends StatefulWidget {
     this.whiteName,
     this.blackName,
     this.savedReview,
+    this.sourceGameId,
+    this.sourcePlaylistId,
   });
 
   @override
@@ -325,6 +337,19 @@ class _GameScreenState extends State<GameScreen> {
           saved: widget.savedReview,
           history: List<MoveEntry>.from(_history),
           startFen: _startFen == engine.ChessGame().fen ? null : _startFen,
+          title: widget.title ?? '',
+          // Analiz listesine yazılacak kayıt: tahtada ne varsa o.
+          source: SavedGame(
+            id: widget.sourceGameId,
+            name: widget.title ?? t('game.board'),
+            uciMoves: [for (final entry in _history) entry.move.uci],
+            createdAt: DateTime.now(),
+            result: widget.initialResult,
+            startFen: _startFen == engine.ChessGame().fen ? null : _startFen,
+            white: widget.whiteName,
+            black: widget.blackName,
+          ),
+          sourcePlaylistId: widget.sourcePlaylistId,
         ),
       ),
     );

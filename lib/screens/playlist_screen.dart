@@ -299,10 +299,14 @@ class _PlaylistScreenState extends State<PlaylistScreen> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  t('analysis.progress', {
-                    'done': queue.done,
-                    'total': queue.total,
-                  }),
+                  // Tek oyunluk incelemenin ilerleme sayısı yok; şeritte
+                  // yalnızca sürdüğü yazıyor.
+                  queue.isSingleReview
+                      ? t('analysis.singleRunning')
+                      : t('analysis.progress', {
+                          'done': queue.done,
+                          'total': queue.total,
+                        }),
                   style: TextStyle(
                     fontSize: 12.5,
                     fontWeight: FontWeight.w600,
@@ -322,10 +326,13 @@ class _PlaylistScreenState extends State<PlaylistScreen> {
               ],
             ),
           ),
-          TextButton(
-            onPressed: queue.cancel,
-            child: Text(t('common.cancel')),
-          ),
+          // Tek inceleme iptal edilemiyor: motorun durdurma yolu yok.
+          // Çalışmayan bir düğme göstermektense hiç göstermiyoruz.
+          if (!queue.isSingleReview)
+            TextButton(
+              onPressed: queue.cancel,
+              child: Text(t('common.cancel')),
+            ),
         ],
       ),
     );

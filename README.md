@@ -268,6 +268,12 @@ moved to another list or marked read in bulk; PGN cannot be imported into
 them either. Read and favorite marks, search, filters, sorting, showing a
 range, game details and copying PGN all work.
 
+A review you start from the board screen is saved here too. A game
+opened from one of your lists is linked to the original; a game with no
+list (a game against the engine, a free board, a PGN you just opened) is
+saved as a record that stands on its own. Leaving the screen does not
+throw the work away — the banner on the lists tab shows it running.
+
 Opening a saved analysis does not run the engine again. Analysing the
 same game a second time does not delete the old record, it adds a new one
 — the list is a history.

@@ -105,6 +105,12 @@ class _PlaylistDetailScreenState extends State<PlaylistDetailScreen> {
           whiteName: game.white,
           blackName: game.black,
           savedReview: game.review,
+          // Analiz kaydından açılıyorsa yeni analizin bağı **asıl
+          // oyuna** kurulmalı; kaydın kendisine kurulursa "analiz
+          // kaydının analizi" gibi kayıtlar birikir.
+          sourceGameId: _isAnalysisList ? game.sourceGameId : game.id,
+          sourcePlaylistId:
+              _isAnalysisList ? game.sourcePlaylistId : widget.playlistId,
         ),
       ),
     );

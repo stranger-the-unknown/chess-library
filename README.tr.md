@@ -259,6 +259,12 @@ başka listeye taşıma, toplu okundu işaretleme ve PGN ekleme burada
 yoktur. Okundu ve favori işaretleri, arama, süzgeçler, sıralama, aralık
 gösterme, oyun bilgileri ve PGN kopyalama çalışır.
 
+Tahta ekranından başlattığın inceleme de buraya kaydedilir.
+Listelerinden açtığın bir oyun asıl oyuna bağlanır; listesi olmayan bir
+oyun (motora karşı oyun, serbest tahta, yeni açılan bir PGN) kendi başına
+duran bir kayıt olur. Ekrandan çıkmak işi çöpe atmaz — listeler
+sekmesindeki şerit sürdüğünü gösterir.
+
 Kaydedilmiş bir analizi açtığında motor yeniden çalışmaz. Aynı oyunu
 tekrar analiz edersen eski kayıt silinmez, yeni bir kayıt eklenir — liste
 bir analiz geçmişidir.
