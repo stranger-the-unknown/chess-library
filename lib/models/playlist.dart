@@ -1,3 +1,4 @@
+import 'move_count.dart';
 import 'stored_review.dart';
 
 /// Kaydedilmiş bir oyun.
@@ -71,7 +72,8 @@ class SavedGame {
         id = id ??
             'g_${DateTime.now().microsecondsSinceEpoch}_${_sequence++}';
 
-  int get moveCount => uciMoves.length;
+  /// Beyazın oynadığı hamle sayısı; kural [countWhiteMoves] içinde.
+  int get moveCount => countWhiteMoves(uciMoves.length, startFen);
 
   /// Kartta gösterilecek tarih; yoksa null.
   ///

@@ -2,6 +2,7 @@ import 'dart:convert';
 
 import '../l10n/app_strings.dart';
 import 'chess_engine.dart' as engine;
+import 'move_count.dart';
 
 /// PGN metinlerini okur ve yazar.
 ///
@@ -381,7 +382,8 @@ class PgnGame {
   String get black => headers['Black'] ?? '?';
   String get event => headers['Event'] ?? '';
   String get date => headers['Date'] ?? '';
-  int get moveCount => uciMoves.length;
+  /// Beyazın oynadığı hamle sayısı; kural [countWhiteMoves] içinde.
+  int get moveCount => countWhiteMoves(uciMoves.length, startFen);
 
   /// Listede gösterilecek ad: "Karpov - Kasparov".
   String get title {

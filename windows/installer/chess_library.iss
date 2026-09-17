@@ -10,10 +10,13 @@
 ; klasörüne kurulur. Böylece kullanıcı UAC uyarısıyla karşılaşmaz.
 
 #define AppName "Chess Library"
-#define AppVersion "5.1.0"
+#define AppVersion "6.0.0"
 #define AppPublisher "stranger-the-unknown"
 #define AppExeName "ChessLibrary.exe"
 #define BuildDir "..\..\build\windows\x64\runner\Release"
+; Uygulamanın verisi bu klasörde: %APPDATA%\<yayıncı>\<ad>.
+#define DataDir "{userappdata}\io.github.strangertheunknown\Chess Library"
+#define DataParent "{userappdata}\io.github.strangertheunknown"
 
 [Setup]
 AppId={{7C3E1B24-9A5D-4F86-B0E7-2D9C4A1F6E38}
@@ -68,3 +71,31 @@ Name: "{autodesktop}\{#AppName}"; Filename: "{app}\{#AppExeName}"; \
 Filename: "{app}\{#AppExeName}"; \
     Description: "{cm:LaunchProgram,{#AppName}}"; \
     Flags: nowait postinstall skipifsilent
+
+[CustomMessages]
+turkish.RemoveData=Kayıtlı oyunların, listelerin ve ayarların da silinsin mi?%n%nHayır dersen veriler bilgisayarda kalır ve uygulamayı yeniden kurunca geri gelir.
+english.RemoveData=Also delete your saved games, lists and settings?%n%nIf you answer No, the data stays on this computer and comes back when you install the app again.
+
+[Code]
+// Kullanıcı verisi kaldırma sırasında soruluyor.
+//
+// Uygulamanın verisi kurulum klasörünün içinde değil,
+// %APPDATA% altında duruyor; kaldırma işlemi oraya dokunmadığı için
+// uygulama silinip yeniden kurulunca eski listeler ve ayarlar geri
+// geliyordu. Soruluyor çünkü yeni sürüme geçmek için önce kaldıran bir
+// kullanıcının kitaplığını habersiz silmek olmaz.
+procedure CurUninstallStepChanged(CurUninstallStep: TUninstallStep);
+var
+  DataDir: String;
+begin
+  if CurUninstallStep <> usPostUninstall then Exit;
+  DataDir := ExpandConstant('{#DataDir}');
+  if not DirExists(DataDir) then Exit;
+  if SuppressibleMsgBox(CustomMessage('RemoveData'), mbConfirmation,
+      MB_YESNO, IDYES) = IDYES then
+  begin
+    DelTree(DataDir, True, True, True);
+    // Yayıncı klasörü yalnızca boşsa gidiyor.
+    RemoveDir(ExpandConstant('{#DataParent}'));
+  end;
+end;

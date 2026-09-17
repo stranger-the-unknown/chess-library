@@ -9,6 +9,7 @@ import '../widgets/responsive.dart';
 import 'package:flutter/services.dart';
 
 import '../l10n/app_strings.dart';
+import '../models/game_filter.dart';
 import '../models/pgn_parser.dart';
 import '../models/playlist.dart';
 import '../models/puzzle_search.dart';
@@ -16,6 +17,7 @@ import '../services/pgn_import_service.dart';
 import '../services/storage_service.dart';
 import '../theme/app_theme.dart';
 import '../widgets/app_dialogs.dart';
+import '../widgets/game_filter_dialog.dart';
 import '../widgets/range_dialog.dart';
 import 'game_screen.dart';
 import '../widgets/cursors.dart';
@@ -41,6 +43,9 @@ class _PlaylistDetailScreenState extends State<PlaylistDetailScreen> {
   bool _loading = true;
   String _query = '';
   _GameFilter _filter = _GameFilter.all;
+
+  /// Oyuncu ve sonuç süzgeci; üç nokta menüsünden kuruluyor.
+  GameFilter _gameFilter = GameFilter.none;
   /// Liste kitaptaki sırayla gelir; ok bunu tersine çevirir.
   bool _descending = false;
 
@@ -299,6 +304,7 @@ class _PlaylistDetailScreenState extends State<PlaylistDetailScreen> {
         case _GameFilter.all:
           break;
       }
+      if (!_gameFilter.matches(game)) return false;
       if (query.isEmpty) return true;
 
       // Yalnızca rakam yazıldıysa arama sıra numarasıyla sınırlı kalır.
@@ -582,6 +588,7 @@ class _PlaylistDetailScreenState extends State<PlaylistDetailScreen> {
               if (value == 'allUnread') _setAllRead(false);
               if (value == 'range') _markRange();
               if (value == 'showRange') _pickRange();
+              if (value == 'filter') _pickFilter();
               if (value == 'select') {
                 setState(() => _selecting = true);
               }
@@ -601,6 +608,10 @@ class _PlaylistDetailScreenState extends State<PlaylistDetailScreen> {
                   child: Text(t('lists.markRange')),
                 ),
               ],
+              PopupMenuItem(
+                value: 'filter',
+                child: Text(t('lists.filterGames')),
+              ),
               PopupMenuItem(
                 value: 'showRange',
                 child: Text(t('lists.showRange')),
@@ -673,6 +684,8 @@ class _PlaylistDetailScreenState extends State<PlaylistDetailScreen> {
               : Column(
                   children: [
                     if (_range != null) _rangeBanner(scheme),
+                    if (_gameFilter.isActive)
+                      _filterBanner(scheme, visible.length),
                     Expanded(child: _list(visible, scheme)),
                     if (_selecting) _selectionBar(visible, scheme),
                   ],
@@ -769,6 +782,75 @@ class _PlaylistDetailScreenState extends State<PlaylistDetailScreen> {
             ),
           ],
         ),
+      ),
+    );
+  }
+
+  /// Oyuncu ve sonuç süzgecini soran pencere.
+  Future<void> _pickFilter() async {
+    final chosen = await showDialog<GameFilter>(
+      context: context,
+      builder: (_) => GameFilterDialog(filter: _gameFilter),
+    );
+    if (chosen == null || !mounted) return;
+    setState(() => _gameFilter = chosen);
+  }
+
+  /// Şeritte yazan özet: yalnızca doldurulmuş alanlar.
+  String get _filterSummary {
+    final parts = <String>[];
+    if (_gameFilter.white.isNotEmpty) {
+      parts.add("${t('lists.filterWhite')}: ${_gameFilter.white}");
+    }
+    if (_gameFilter.black.isNotEmpty) {
+      parts.add("${t('lists.filterBlack')}: ${_gameFilter.black}");
+    }
+    switch (_gameFilter.result) {
+      case ResultFilter.any:
+        break;
+      case ResultFilter.whiteWins:
+        parts.add(t('lists.resultWhiteWins'));
+        break;
+      case ResultFilter.draw:
+        parts.add(t('lists.resultDraw'));
+        break;
+      case ResultFilter.blackWins:
+        parts.add(t('lists.resultBlackWins'));
+        break;
+      case ResultFilter.playerWins:
+        if (_gameFilter.winner.isNotEmpty) {
+          parts.add("${t('lists.filterWinner')}: ${_gameFilter.winner}");
+        }
+        break;
+    }
+    return parts.join(' · ');
+  }
+
+  /// Süzgeç şeridi: ne süzüldüğü ve kaç oyun kaldığı.
+  Widget _filterBanner(ColorScheme scheme, int count) {
+    return Container(
+      width: double.infinity,
+      color: scheme.secondaryContainer,
+      padding: const EdgeInsets.fromLTRB(16, 6, 8, 6),
+      child: Row(
+        children: [
+          Expanded(
+            child: Text(
+              "${t('lists.filterActive', {'summary': _filterSummary})}"
+              " · ${t('lists.filterMatches', {'count': count})}",
+              style: TextStyle(
+                fontSize: 12.5,
+                color: scheme.onSecondaryContainer,
+              ),
+            ),
+          ),
+          IconButton(
+            tooltip: t('lists.filterClear'),
+            icon: const Icon(Icons.close_rounded, size: 18),
+            color: scheme.onSecondaryContainer,
+            onPressed: () => setState(() => _gameFilter = GameFilter.none),
+          ),
+        ],
       ),
     );
   }

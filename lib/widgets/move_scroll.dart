@@ -29,6 +29,7 @@ class MoveScroller {
   int? _followed;
 
   static const Duration _duration = Duration(milliseconds: 220);
+  static const int _maxTries = 16;
   static const Curve _curve = Curves.easeOut;
 
   /// Hamlenin çizildiği kutuya verilecek anahtar.
@@ -47,28 +48,49 @@ class MoveScroller {
   }) {
     if (_followed == index) return;
     _followed = index;
+    _step(index, rowCount, rowOf ?? (i) => i ~/ 2, 0);
+  }
 
+  /// Hedefe yaklaşma denemesi; her deneme bir kare sürüyor.
+  ///
+  /// `ListView.builder` görmediği satırların genişliğini gördüklerinin
+  /// ortalamasından tahmin eder. Açılışta satırlar kısa ("e4"), sonunda
+  /// uzun ("Raxf7+") olduğu için baştan sona atlarken tahmin edilen son,
+  /// gerçek sondan kısa kalıyor: tek atlayış şeridi ortalarda bırakıyordu.
+  /// Her atlayış yeni satırlar kurduruyor, tahmin de düzeliyor; hedef
+  /// kurulana kadar tekrarlanıyor.
+  void _step(int index, int rowCount, int Function(int index) rowOf, int tries) {
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!controller.hasClients) return;
+      // Bu arada başka bir hamle istendiyse eski hedefin peşine düşme.
+      if (_followed != index) return;
       final position = controller.position;
 
       if (index < 0) {
-        controller.animateTo(
-          position.minScrollExtent,
-          duration: _duration,
-          curve: _curve,
-        );
+        // Uzaktan animasyonla dönmek aradaki her satırı kurdurur; uzun
+        // oyunlarda şerit takılıyor, hatta yerinden kıpırdamıyor gibi
+        // görünüyordu. Yakınsa kayarak, uzaksa atlayarak dönüyor.
+        final distance = position.pixels - position.minScrollExtent;
+        if (distance > position.viewportDimension * 3) {
+          controller.jumpTo(position.minScrollExtent);
+        } else {
+          controller.animateTo(
+            position.minScrollExtent,
+            duration: _duration,
+            curve: _curve,
+          );
+        }
         return;
       }
 
       if (_ensureVisible(index)) return;
+      if (tries >= _maxTries) return;
 
-      controller.jumpTo(
-        _estimate(position, index, rowCount, rowOf ?? (i) => i ~/ 2),
-      );
-      WidgetsBinding.instance.addPostFrameCallback((_) {
-        if (controller.hasClients) _ensureVisible(index);
-      });
+      final target = _estimate(position, index, rowCount, rowOf);
+      // Tahmin olduğu yeri gösteriyorsa ilerleme yok; döngüyü kes.
+      if ((target - position.pixels).abs() < 0.5) return;
+      controller.jumpTo(target);
+      _step(index, rowCount, rowOf, tries + 1);
     });
   }
 

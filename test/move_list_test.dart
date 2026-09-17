@@ -49,6 +49,28 @@ List<MoveEntry> _longGame() {
   return history;
 }
 
+/// Satırları eşit olmayan bir oyun.
+///
+/// Gerçek bir oyunda açılış hamleleri kısa ("e4"), sonrakiler uzundur
+/// ("Raxf7+"). `ListView.builder` görmediği satırların genişliğini
+/// gördüklerinin ortalamasından tahmin eder; baştan sona atlarken tahmin
+/// gerçek sondan kısa kalıyor ve şerit sona varamıyor. Şeridi ilgilendiren
+/// tek şey yazının kendisi olduğu için hamle nesnesi tekrar kullanılıyor.
+List<MoveEntry> _unevenGame() {
+  final position = engine.ChessGame();
+  final sample = position.moveFromUci('e2e4')!;
+  final fen = position.fen;
+  const files = 'abcdefgh';
+  return [
+    for (int i = 0; i < 160; i++)
+      MoveEntry(
+        move: sample,
+        san: i < 40 ? '${files[i % 8]}4' : 'R${files[i % 8]}xf7+',
+        fenAfter: fen,
+      ),
+  ];
+}
+
 class _Harness extends StatefulWidget {
   final List<MoveEntry> moves;
   const _Harness(this.moves);
@@ -134,6 +156,34 @@ void main() {
       0,
       reason: 'başa dönüldüğünde şerit de başa dönmeli',
     );
+  });
+
+  testWidgets('satırlar eşit genişlikte değilken de sona gidiyor',
+      (tester) async {
+    final moves = _unevenGame();
+    await tester.pumpWidget(_Harness(moves));
+    await tester.pumpAndSettle();
+
+    await _setCursor(tester, moves.length - 1);
+
+    final position = _position(tester);
+    expect(
+      position.pixels,
+      moreOrLessEquals(position.maxScrollExtent, epsilon: 1),
+      reason: 'şerit sona varamadı: tek tahmin yetmiyor',
+    );
+  });
+
+  testWidgets('satırlar eşit genişlikte değilken de başa dönüyor',
+      (tester) async {
+    final moves = _unevenGame();
+    await tester.pumpWidget(_Harness(moves));
+    await tester.pumpAndSettle();
+
+    await _setCursor(tester, moves.length - 1);
+    await _setCursor(tester, -1);
+
+    expect(_position(tester).pixels, 0, reason: 'şerit başa dönmedi');
   });
 
   testWidgets('ortadaki bir hamleye atlayınca o hamle görünüyor',
