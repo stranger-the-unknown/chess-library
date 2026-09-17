@@ -126,6 +126,44 @@ void main() {
     expect(find.byType(OpeningVisibilityScreen), findsOneWidget);
   });
 
+  testWidgets('sarı kart gizli olmayan varyantları sayar, sıfır öğrenildi yazmaz',
+      (tester) async {
+    tester.view.physicalSize = const Size(1200, 1600);
+    tester.view.devicePixelRatio = 1;
+    await tester.pumpWidget(const MaterialApp(home: OpeningListScreen()));
+    await tester.pumpAndSettle();
+
+    expect(find.text('3 varyant'), findsOneWidget);
+    expect(find.textContaining('öğrendin'), findsNothing);
+    expect(find.textContaining('öğrenildi'), findsNothing);
+  });
+
+  testWidgets('gizli ailenin varyantları sarı kartta sayılmaz', (tester) async {
+    await OpeningService.instance.setFamilyHidden('French', true);
+
+    tester.view.physicalSize = const Size(1200, 1600);
+    tester.view.devicePixelRatio = 1;
+    await tester.pumpWidget(const MaterialApp(home: OpeningListScreen()));
+    await tester.pumpAndSettle();
+
+    expect(find.text('French'), findsNothing);
+    expect(find.text('2 varyant'), findsOneWidget);
+    expect(find.textContaining('öğrendin'), findsNothing);
+  });
+
+  testWidgets('en az bir varyant öğrenilince sayı yazılır', (tester) async {
+    final all = await OpeningService.instance.all();
+    await OpeningService.instance.markLearned(all.first.id);
+
+    tester.view.physicalSize = const Size(1200, 1600);
+    tester.view.devicePixelRatio = 1;
+    await tester.pumpWidget(const MaterialApp(home: OpeningListScreen()));
+    await tester.pumpAndSettle();
+
+    expect(find.textContaining('1 tanesini öğrendin'), findsOneWidget);
+    expect(find.textContaining('1 öğrenildi'), findsOneWidget);
+  });
+
   testWidgets('hepsini göster gizlilikleri kaldırır', (tester) async {
     await OpeningService.instance.hideAllExcept(<String>{});
     await _pumpVisibility(tester);

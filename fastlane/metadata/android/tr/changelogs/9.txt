@@ -1,0 +1,12 @@
+Sürüm 6.1.0
+
+Oyun listeleri
+- Oyun filtrele: yıl, renk fark etmesin (tek oyuncu veya iki oyuncu
+  birbirine karşı) ve sonuç birlikte çalışır.
+- Kartlarda soyad görünür; tam ad kayıtta kalır. Çevrimiçi kullanıcı
+  adları kesilmez.
+- Çevrimiçi PGN dışa aktarırken oyuncu adları ve tarih korunur.
+
+Açılışlar
+- Sarı kart gizli olmayan varyantları sayar.
+- Hiç öğrenilmemişken "0 öğrenildi" yazılmaz.

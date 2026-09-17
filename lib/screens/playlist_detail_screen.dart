@@ -170,11 +170,21 @@ class _PlaylistDetailScreenState extends State<PlaylistDetailScreen> {
   }
 
   Future<void> _copyPgn(SavedGame game) async {
+    final tags = Map<String, String>.from(game.tags);
+    if (game.white != null && game.white!.trim().isNotEmpty) {
+      tags['White'] = game.white!;
+    }
+    if (game.black != null && game.black!.trim().isNotEmpty) {
+      tags['Black'] = game.black!;
+    }
+    if ((tags['Event'] ?? '').trim().isEmpty) {
+      tags['Event'] = game.name;
+    }
     final pgn = PgnParser.buildPgn(
       uciMoves: game.uciMoves,
       startFen: game.startFen,
       result: game.result,
-      tags: {'Event': game.name},
+      tags: tags,
     );
     await Clipboard.setData(ClipboardData(text: pgn));
     if (mounted) AppDialogs.snack(context, t('lists.pgnCopied'));
@@ -799,11 +809,26 @@ class _PlaylistDetailScreenState extends State<PlaylistDetailScreen> {
   /// Şeritte yazan özet: yalnızca doldurulmuş alanlar.
   String get _filterSummary {
     final parts = <String>[];
-    if (_gameFilter.white.isNotEmpty) {
-      parts.add("${t('lists.filterWhite')}: ${_gameFilter.white}");
+    final a = _gameFilter.white.trim();
+    final b = _gameFilter.black.trim();
+    if (_gameFilter.ignoreColor) {
+      if (a.isNotEmpty && b.isNotEmpty) {
+        parts.add('$a – $b');
+      } else if (a.isNotEmpty) {
+        parts.add(a);
+      } else if (b.isNotEmpty) {
+        parts.add(b);
+      }
+    } else {
+      if (a.isNotEmpty) {
+        parts.add("${t('lists.filterWhite')}: $a");
+      }
+      if (b.isNotEmpty) {
+        parts.add("${t('lists.filterBlack')}: $b");
+      }
     }
-    if (_gameFilter.black.isNotEmpty) {
-      parts.add("${t('lists.filterBlack')}: ${_gameFilter.black}");
+    if (_gameFilter.year != null) {
+      parts.add('${_gameFilter.year}');
     }
     switch (_gameFilter.result) {
       case ResultFilter.any:
@@ -1027,7 +1052,9 @@ class _PlaylistDetailScreenState extends State<PlaylistDetailScreen> {
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
                               Text(
-                                game.white ?? game.name,
+                                game.cardWhite.isNotEmpty
+                                    ? game.cardWhite
+                                    : (game.white ?? game.name),
                                 maxLines: 1,
                                 overflow: TextOverflow.ellipsis,
                                 style: TextStyle(
@@ -1038,11 +1065,11 @@ class _PlaylistDetailScreenState extends State<PlaylistDetailScreen> {
                                       : scheme.onSurface,
                                 ),
                               ),
-                              if (game.white != null && game.black != null)
+                              if (game.cardBlack.isNotEmpty)
                                 Padding(
                                   padding: const EdgeInsets.only(top: 1),
                                   child: Text(
-                                    game.black!,
+                                    game.cardBlack,
                                     maxLines: 1,
                                     overflow: TextOverflow.ellipsis,
                                     style: TextStyle(

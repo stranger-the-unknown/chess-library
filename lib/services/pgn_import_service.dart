@@ -127,19 +127,39 @@ Future<String> buildListPgnAsync(
 }
 
 String _gameToPgn(Playlist playlist, SavedGame game) {
+  final tags = Map<String, String>.from(game.tags);
+  final event = tags['Event']?.trim();
+  if (event == null || event.isEmpty || event == '?' || event == '-') {
+    tags['Event'] = playlist.name;
+  }
+  final white = game.white?.trim();
+  if (white != null && white.isNotEmpty && white != '?' && white != '-') {
+    tags['White'] = white;
+  } else if ((tags['White'] ?? '').trim().isEmpty ||
+      tags['White'] == '?' ||
+      tags['White'] == '-') {
+    tags['White'] = game.name;
+  }
+  final black = game.black?.trim();
+  if (black != null && black.isNotEmpty && black != '?' && black != '-') {
+    tags['Black'] = black;
+  }
+  final date = tags['Date']?.trim();
+  if (date == null || date.isEmpty || date == '?' || date.startsWith('?')) {
+    final utc = tags['UTCDate']?.trim();
+    tags['Date'] = (utc != null && utc.isNotEmpty && !utc.startsWith('?'))
+        ? utc
+        : game.createdAt
+            .toIso8601String()
+            .substring(0, 10)
+            .replaceAll('-', '.');
+  }
+  if (game.result != null) tags['Result'] = game.result!;
   return PgnParser.buildPgn(
     uciMoves: game.uciMoves,
     startFen: game.startFen,
     result: game.result,
-    tags: {
-      'Event': playlist.name,
-      'White': game.white ?? game.name,
-      'Black': game.black ?? '?',
-      'Date': game.createdAt
-          .toIso8601String()
-          .substring(0, 10)
-          .replaceAll('-', '.'),
-    },
+    tags: tags,
   );
 }
 

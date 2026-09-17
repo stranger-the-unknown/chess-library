@@ -798,8 +798,8 @@ C00|French|İleri Varyant|e4 e6 d4 d5 e5
       // birbirinden kayıyordu.
       final playlist = await StorageService.instance.createPlaylist('Hiza');
       final pgn = List.generate(12, (i) => """
-[White "Beyaz ${i + 1}"]
-[Black "Siyah ${i + 1}"]
+[White "Alpha${i + 1}"]
+[Black "Beta${i + 1}"]
 
 1. e4 e5 *
 """).join();
@@ -821,10 +821,10 @@ C00|French|İleri Varyant|e4 e6 d4 d5 e5
       double left(String name) => tester.getTopLeft(find.text(name)).dx;
 
       // Tek haneli ve iki haneli numaralı satırlar.
-      expect(left('Beyaz 1'), left('Siyah 1'),
+      expect(left('Alpha1'), left('Beta1'),
           reason: 'aynı satırdaki iki ad hizasız');
-      expect(left('Beyaz 12'), left('Siyah 12'));
-      expect(left('Beyaz 1'), left('Beyaz 12'),
+      expect(left('Alpha12'), left('Beta12'));
+      expect(left('Alpha1'), left('Alpha12'),
           reason: 'numara haneleri satırları kaydırıyor');
     });
   });

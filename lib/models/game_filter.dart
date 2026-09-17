@@ -18,11 +18,16 @@ enum ResultFilter {
   playerWins,
 }
 
-/// Oyun listesindeki oyuncu ve sonuç süzgeci.
+/// Oyun listesindeki oyuncu, sonuç ve yıl filtresi.
 ///
-/// Arama kutusu tek bir metni her alanda arıyor; bu süzgeç ise "beyaz
-/// şu, siyah bu" diye sorabilmek için var. Boş bırakılan alan
-/// aranmıyor, yani yalnız siyah oyuncuyu yazmak da geçerli bir süzgeç.
+/// Arama kutusu tek bir metni her alanda arıyor; bu pencere ise "beyaz
+/// şu, siyah bu, yıl 2018" diye sorabilmek için var. Boş bırakılan alan
+/// aranmıyor.
+///
+/// [ignoreColor] kapalıyken ad alanları renk bağlar: üstteki beyaz, alttaki
+/// siyah. Açıkken (varsayılan kapalı) renk düşer: tek ad o oyuncunun
+/// bütün oyunlarını, iki ad da o iki kişinin birbirine karşı oynadığı
+/// bütün oyunları getirir.
 ///
 /// Eşleştirme parça parça: "magnus carlsen" yazınca "Carlsen, Magnus"
 /// da eşleşiyor, çünkü PGN dosyalarında ad sırası dosyadan dosyaya
@@ -36,29 +41,39 @@ class GameFilter {
   /// [ResultFilter.playerWins] seçiliyken kazanan oyuncunun adı.
   final String winner;
 
+  /// Ad alanları renk fark etmeksizin eşleşsin.
+  final bool ignoreColor;
+
+  /// PGN tarihindeki yıl; null ise yıla bakılmaz.
+  final int? year;
+
   const GameFilter({
     this.white = '',
     this.black = '',
     this.result = ResultFilter.any,
     this.winner = '',
+    this.ignoreColor = false,
+    this.year,
   });
 
   static const GameFilter none = GameFilter();
 
-  /// Süzgeç gerçekten bir şey eliyor mu?
+  /// Filtre gerçekten bir şey eliyor mu?
   ///
   /// "Şu oyuncu kazanır" seçili ama ad yazılmamışsa hiçbir şey elenmez;
-  /// şerit de bu yüzden görünmez.
+  /// şerit de bu yüzden görünmez. Yalnızca [ignoreColor] işaretliyse
+  /// de elenmez: o bir kip, tek başına süzgeç değil.
   bool get isActive =>
       white.trim().isNotEmpty ||
       black.trim().isNotEmpty ||
+      year != null ||
       (result == ResultFilter.playerWins
           ? winner.trim().isNotEmpty
           : result != ResultFilter.any);
 
   bool matches(SavedGame game) {
-    if (!_nameMatches(game.white, white)) return false;
-    if (!_nameMatches(game.black, black)) return false;
+    if (!_playersMatch(game)) return false;
+    if (!_yearMatches(game)) return false;
 
     final outcome = _outcome(game.result);
     switch (result) {
@@ -78,17 +93,49 @@ class GameFilter {
     }
   }
 
+  bool _yearMatches(SavedGame game) {
+    if (year == null) return true;
+    return game.year == year;
+  }
+
+  bool _playersMatch(SavedGame game) {
+    final a = white.trim();
+    final b = black.trim();
+    if (a.isEmpty && b.isEmpty) return true;
+
+    if (ignoreColor) {
+      if (b.isEmpty) {
+        return _nameMatches(game.white, a) || _nameMatches(game.black, a);
+      }
+      if (a.isEmpty) {
+        return _nameMatches(game.white, b) || _nameMatches(game.black, b);
+      }
+      final direct =
+          _nameMatches(game.white, a) && _nameMatches(game.black, b);
+      final swapped =
+          _nameMatches(game.white, b) && _nameMatches(game.black, a);
+      return direct || swapped;
+    }
+
+    return _nameMatches(game.white, white) && _nameMatches(game.black, black);
+  }
+
   GameFilter copyWith({
     String? white,
     String? black,
     ResultFilter? result,
     String? winner,
+    bool? ignoreColor,
+    int? year,
+    bool clearYear = false,
   }) =>
       GameFilter(
         white: white ?? this.white,
         black: black ?? this.black,
         result: result ?? this.result,
         winner: winner ?? this.winner,
+        ignoreColor: ignoreColor ?? this.ignoreColor,
+        year: clearYear ? null : (year ?? this.year),
       );
 }
 

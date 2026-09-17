@@ -40,6 +40,7 @@ class PgnParser {
     gameResult = null;
 
     try {
+      pgn = pgn.replaceFirst('\uFEFF', '');
       _readHeaders(pgn);
 
       final fenHeader = headers['FEN'];
@@ -75,18 +76,68 @@ class PgnParser {
   void _readHeaders(String pgn) {
     final regex = RegExp(r'\[\s*(\w+)\s*"([^"]*)"\s*\]');
     for (final match in regex.allMatches(pgn)) {
-      headers[match.group(1)!] = match.group(2)!;
+      headers[_canonicalTag(match.group(1)!)] = match.group(2)!;
     }
+  }
+
+  /// Bilinen PGN başlıklarını standart yazıma çeker.
+  ///
+  /// Çevrimiçi sitelerin kimi dışa aktarması `[white "ad"]` gibi küçük
+  /// harfle yazıyor; o zaman oyuncu adı okunmuyordu ve kartta tek satır
+  /// kalıyordu.
+  static String _canonicalTag(String key) {
+    const known = {
+      'event': 'Event',
+      'site': 'Site',
+      'date': 'Date',
+      'round': 'Round',
+      'white': 'White',
+      'black': 'Black',
+      'result': 'Result',
+      'fen': 'FEN',
+      'setup': 'SetUp',
+      'utcdate': 'UTCDate',
+      'utctime': 'UTCTime',
+      'whiteelo': 'WhiteElo',
+      'blackelo': 'BlackElo',
+      'timecontrol': 'TimeControl',
+      'termination': 'Termination',
+      'eco': 'ECO',
+      'opening': 'Opening',
+    };
+    return known[key.toLowerCase()] ?? key;
   }
 
   /// Başlıkları, yorumları, varyasyonları ve NAG işaretlerini temizler.
   String _stripDecorations(String pgn) {
-    var clean = pgn.replaceAll(RegExp(r'\[[^\]]*\]'), ' ');
-    clean = clean.replaceAll(RegExp(r'\{[^}]*\}', dotAll: true), ' ');
+    var clean = pgn.replaceAll(RegExp(r'^\s*%.*$', multiLine: true), ' ');
+    clean = clean.replaceAll(RegExp(r'\[[^\]]*\]'), ' ');
+    clean = _stripBraces(clean);
     clean = clean.replaceAll(RegExp(r';[^\n]*'), ' ');
     clean = _stripParentheses(clean);
     clean = clean.replaceAll(RegExp(r'\$\d+'), ' ');
     return clean;
+  }
+
+  /// Süslü parantezli yorumları, iç içe olsalar da kaldırır.
+  ///
+  /// Çevrimiçi PGN'lerde saat ve değerlendirme `{[%clk 0:10:00]}`
+  /// biçiminde gelir; düz regex iç içe parantezde artan `}` bırakıyordu
+  /// ve hamleler okunamıyordu.
+  static String _stripBraces(String input) {
+    final buffer = StringBuffer();
+    int depth = 0;
+    for (final rune in input.runes) {
+      final char = String.fromCharCode(rune);
+      if (char == '{') {
+        depth++;
+      } else if (char == '}') {
+        if (depth > 0) depth--;
+      } else if (depth == 0) {
+        buffer.write(char);
+      }
+    }
+    return buffer.toString();
   }
 
   /// İç içe olsa dahi parantezli varyasyonları kaldırır.
@@ -239,6 +290,7 @@ class PgnParser {
 
     for (final line in const LineSplitter().convert(text)) {
       final trimmed = line.trim();
+      if (trimmed.startsWith('%')) continue;
       final isTag = trimmed.startsWith('[') && trimmed.endsWith(']');
       if (isTag && seenMoves) flush();
       if (!isTag && trimmed.isNotEmpty) seenMoves = true;
@@ -317,6 +369,7 @@ class PgnParser {
               .toIso8601String()
               .substring(0, 10)
               .replaceAll('-', '.'),
+      'Round': tags?['Round'] ?? '-',
       'White': tags?['White'] ?? '?',
       'Black': tags?['Black'] ?? '?',
       'Result': result ?? tags?['Result'] ?? '*',
@@ -325,7 +378,17 @@ class PgnParser {
       headerTags['SetUp'] = '1';
       headerTags['FEN'] = startFen;
     }
-    headerTags.forEach((key, value) => buffer.writeln('[$key "$value"]'));
+    if (tags != null) {
+      for (final entry in tags.entries) {
+        if (headerTags.containsKey(entry.key)) continue;
+        final value = entry.value.trim();
+        if (value.isEmpty || value == '?' || value == '-') continue;
+        headerTags[entry.key] = entry.value;
+      }
+    }
+    headerTags.forEach((key, value) {
+      buffer.writeln('[$key "${_escapeTag(value)}"]');
+    });
     buffer.writeln();
 
     final parts = <String>[];
@@ -358,6 +421,10 @@ class PgnParser {
 
     return buffer.toString();
   }
+
+  /// PGN başlık değerindeki tırnak ve ters eğik çizgi.
+  static String _escapeTag(String value) =>
+      value.replaceAll('\\', r'\\').replaceAll('"', r'\"');
 }
 
 /// Bir PGN dosyasından okunmuş tek oyun.
@@ -378,8 +445,16 @@ class PgnGame {
     this.skippedCount = 0,
   });
 
-  String get white => headers['White'] ?? '?';
-  String get black => headers['Black'] ?? '?';
+  String get white => _headerOrUnknown('White');
+  String get black => _headerOrUnknown('Black');
+
+  String _headerOrUnknown(String key) {
+    final value = headers[key]?.trim();
+    if (value == null || value.isEmpty || value == '?' || value == '-') {
+      return '?';
+    }
+    return value;
+  }
   String get event => headers['Event'] ?? '';
   String get date => headers['Date'] ?? '';
   /// Beyazın oynadığı hamle sayısı; kural [countWhiteMoves] içinde.

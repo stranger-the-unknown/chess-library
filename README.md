@@ -233,18 +233,23 @@ delete them.
   numbers**; there is an unread / read filter. The number you have read
   is shown on the card without opening the list.
 - **Favorites**: set with the star on a row, with a filter of their own.
-- **Filter by player and result** — in the title menu. White player,
-  black player, or both; either can be left blank. The result can be
-  white wins, a draw, black wins, or the games a named player won with
-  either colour. Names are matched loosely: upper and lower case,
-  Turkish letters and the order of the words make no difference, and a
-  part of the name is enough ("carl" finds "Magnus Carlsen"). While it
-  is on, a banner says what is filtered and how many games are left.
+- **Filter games** — in the title menu. White player, black player, or
+  both; either can be left blank. **Ignore colour** finds a named
+  player with either colour, or — with two names — every game those
+  two played against each other. A year field looks at the PGN date.
+  The result can be white wins, a draw, black wins, or the games a
+  named player won with either colour. Names are matched loosely:
+  upper and lower case, Turkish letters and the order of the words
+  make no difference, and a part of the name is enough ("carl" finds
+  "Magnus Carlsen"). While it is on, a banner says what is filtered
+  and how many games are left.
 - **Sorting** is reversed with the arrow in the title bar and goes back
   to the default when the filter changes.
 - **Show a range** narrows the list to a stretch of numbers and is closed
   again from the banner at the top.
-- The card shows both player names in full, the number of moves White
+- The card shows last names (online usernames stay as they are); full
+  names stay stored for search and filters. White is on top, black
+  underneath. It also shows the number of moves White
   played, and the date from the PGN if there is one (the year alone if
   the date is incomplete, nothing if there is no year).
 - **Game details** in the row menu shows the PGN tags: event, site,

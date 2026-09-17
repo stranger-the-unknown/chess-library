@@ -339,7 +339,8 @@ class _OpeningListScreenState extends State<OpeningListScreen> {
     final grouped = _grouped;
     final families = grouped.keys.toList();
 
-    final learned = _all.where((o) => _progress[o.id]?.learned == true).length;
+    final learned =
+        _shown.where((o) => _progress[o.id]?.learned == true).length;
 
     return Scaffold(
       appBar: AppBar(
@@ -456,7 +457,7 @@ class _OpeningListScreenState extends State<OpeningListScreen> {
               builder: (context, padding) => ListView(
                 padding: padding,
                 children: [
-                  if (_all.isNotEmpty)
+                  if (_shown.isNotEmpty)
                     Container(
                       padding: const EdgeInsets.all(14),
                       decoration: BoxDecoration(
@@ -473,10 +474,14 @@ class _OpeningListScreenState extends State<OpeningListScreen> {
                           const SizedBox(width: 12),
                           Expanded(
                             child: Text(
-                              t('openings.summary', {
-                                'total': _all.length,
-                                'learned': learned,
-                              }),
+                              learned == 0
+                                  ? t('openings.summaryCount', {
+                                      'total': _shown.length,
+                                    })
+                                  : t('openings.summary', {
+                                      'total': _shown.length,
+                                      'learned': learned,
+                                    }),
                               style: TextStyle(
                                 fontSize: 12.5,
                                 color: scheme.onSecondaryContainer,
@@ -486,7 +491,7 @@ class _OpeningListScreenState extends State<OpeningListScreen> {
                         ],
                       ),
                     ),
-                  if (_all.isNotEmpty) const SizedBox(height: 12),
+                  if (_shown.isNotEmpty) const SizedBox(height: 12),
                   if (_all.isEmpty)
                     _emptyState(scheme)
                   // Her şey gizliyken "eşleşen yok" demek yanıltıcı ve
@@ -629,10 +634,14 @@ class _OpeningListScreenState extends State<OpeningListScreen> {
               ],
             ),
             subtitle: Text(
-              t('openings.familySummary', {
-                'count': openings.length,
-                'learned': learned,
-              }),
+              learned == 0
+                  ? t('openings.familySummaryShort', {
+                      'count': openings.length,
+                    })
+                  : t('openings.familySummary', {
+                      'count': openings.length,
+                      'learned': learned,
+                    }),
               style: TextStyle(fontSize: 12, color: scheme.onSurfaceVariant),
             ),
             children: [

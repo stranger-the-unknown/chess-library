@@ -109,16 +109,104 @@ void main() {
     });
   });
 
+  group('Kart adı', () {
+    test('First Last ve Last, First aynı soyadı verir', () {
+      expect(playerLastName('Magnus Carlsen'), 'Carlsen');
+      expect(playerLastName('Carlsen, Magnus'), 'Carlsen');
+      expect(playerLastName('GM Magnus Carlsen'), 'Carlsen');
+    });
+
+    test('tek parça kullanıcı adı olduğu gibi kalır', () {
+      expect(playerLastName('Hikaru'), 'Hikaru');
+      expect(playerLastName('DrNykterstein'), 'DrNykterstein');
+      expect(playerLastName('?'), '');
+      expect(playerLastName(''), '');
+    });
+  });
+
+  group('PGN dışa aktarma', () {
+    test('çevrimiçi oyunun adı ve tarihi korunur', () {
+      final game = SavedGame(
+        name: 'Hikaru - Faker',
+        uciMoves: const ['e2e4', 'e7e5'],
+        createdAt: DateTime(2020, 1, 1),
+        white: 'Hikaru',
+        black: 'Faker',
+        result: '1-0',
+        tags: const {
+          'Event': 'Live Chess',
+          'Site': 'Chess.com',
+          'Date': '2024.03.15',
+          'WhiteElo': '2800',
+        },
+      );
+      final pgn = buildListPgn(Playlist(name: 'Online', games: [game]));
+      expect(pgn, contains('[White "Hikaru"]'));
+      expect(pgn, contains('[Black "Faker"]'));
+      expect(pgn, contains('[Date "2024.03.15"]'));
+      expect(pgn, contains('[WhiteElo "2800"]'));
+      expect(pgn, isNot(contains('[Date "2020.01.01"]')));
+    });
+
+    test('saat yorumlu çevrimiçi PGN okunur', () {
+      const pgn = '''
+[Event "Live Chess"]
+[Site "Chess.com"]
+[Date "2024.03.15"]
+[White "Hikaru"]
+[Black "Faker"]
+[Result "1-0"]
+
+1. e4 {[%clk 0:09:59]} e5 {[%clk 0:09:58]} 2. Nf3 {[%clk 0:09:50]} 1-0
+''';
+      final games = PgnParser.parseAll(pgn);
+      expect(games, hasLength(1));
+      expect(games.single.white, 'Hikaru');
+      expect(games.single.black, 'Faker');
+      expect(games.single.uciMoves.length, 3);
+    });
+
+    test('küçük harfli white başlığı oyuncu adına yazılır', () {
+      const pgn = '''
+[event "x"]
+[white "alice"]
+[black "bob"]
+[result "1-0"]
+
+1. e4 e5 1-0
+''';
+      final games = PgnParser.parseAll(pgn);
+      expect(games.single.white, 'alice');
+      expect(games.single.black, 'bob');
+    });
+  });
+
   group('Kart', () {
-    testWidgets('iki oyuncunun adı da tam görünüyor', (tester) async {
-      // Tek satıra sığdırılınca siyahın adı kırpılıyordu.
+    testWidgets('kartta soyad görünür, tam ad durur', (tester) async {
       const white = 'Çok Uzun Bir Beyaz Oyuncu Adı';
       const black = 'Çok Uzun Bir Siyah Oyuncu Adı';
       final playlist = await _seed(_pgn(white: white, black: black));
       await _pump(tester, playlist.id);
 
-      expect(find.text(white), findsOneWidget);
-      expect(find.text(black), findsOneWidget);
+      expect(find.text('Adı'), findsNWidgets(2));
+      expect(find.text(white), findsNothing);
+      expect(find.text(black), findsNothing);
+    });
+
+    testWidgets('kullanıcı adı soyad gibi kesilmez', (tester) async {
+      final playlist = await _seed(_pgn(white: 'Hikaru', black: 'DrNykterstein'));
+      await _pump(tester, playlist.id);
+      expect(find.text('Hikaru'), findsOneWidget);
+      expect(find.text('DrNykterstein'), findsOneWidget);
+    });
+
+    testWidgets('arama hâlâ ilk ada bakıyor', (tester) async {
+      final playlist = await _seed(_pgn(white: 'Magnus Carlsen', black: 'Ian Nepomniachtchi'));
+      await _pump(tester, playlist.id);
+      await tester.enterText(find.byType(TextField), 'magnus');
+      await tester.pumpAndSettle();
+      expect(find.text('Carlsen'), findsOneWidget);
+      expect(find.text('Nepomniachtchi'), findsOneWidget);
     });
 
     testWidgets('tarih kartta görünüyor', (tester) async {

@@ -1,14 +1,15 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 
 import '../l10n/app_strings.dart';
 import '../models/game_filter.dart';
 
-/// Oyuncu ve sonuç süzgecini soran pencere.
+/// Oyun listesi filtresini soran pencere.
 ///
-/// Süzgeç şeridinde değil üç nokta menüsünde duruyor: şeritteki dört
+/// Filtre şeridinde değil üç nokta menüsünde duruyor: şeritteki dört
 /// düğme birbirini dışlayan tek bir seçim (hepsi/okunmuş/okunmamış/
-/// favori), buradaki ise birlikte çalışan üç alan ve ikisi yazıyla
-/// doldurulmak zorunda. Aynı şeride sıkıştırılınca ikisi de bozulurdu.
+/// favori), buradaki ise birlikte çalışan alanlar ve çoğu yazıyla
+/// dolduruluyor. Aynı şeride sıkıştırınca ikisi de bozulurdu.
 class GameFilterDialog extends StatefulWidget {
   final GameFilter filter;
 
@@ -25,14 +26,27 @@ class _GameFilterDialogState extends State<GameFilterDialog> {
       TextEditingController(text: widget.filter.black);
   late final TextEditingController _winner =
       TextEditingController(text: widget.filter.winner);
+  late final TextEditingController _year = TextEditingController(
+    text: widget.filter.year?.toString() ?? '',
+  );
   late ResultFilter _result = widget.filter.result;
+  late bool _ignoreColor = widget.filter.ignoreColor;
 
   @override
   void dispose() {
     _white.dispose();
     _black.dispose();
     _winner.dispose();
+    _year.dispose();
     super.dispose();
+  }
+
+  int? get _parsedYear {
+    final raw = _year.text.trim();
+    if (raw.isEmpty) return null;
+    final value = int.tryParse(raw);
+    if (value == null || value < 1000 || value > 2099) return null;
+    return value;
   }
 
   void _submit() {
@@ -43,17 +57,27 @@ class _GameFilterDialogState extends State<GameFilterDialog> {
         black: _black.text.trim(),
         result: _result,
         winner: _winner.text.trim(),
+        ignoreColor: _ignoreColor,
+        year: _parsedYear,
       ),
     );
   }
 
-  Widget _field(TextEditingController controller, String label,
-      {bool autofocus = false, bool last = false}) {
+  Widget _field(
+    TextEditingController controller,
+    String label, {
+    bool autofocus = false,
+    bool last = false,
+    TextInputType? keyboardType,
+    List<TextInputFormatter>? inputFormatters,
+  }) {
     return Padding(
       padding: const EdgeInsets.only(bottom: 12),
       child: TextField(
         controller: controller,
         autofocus: autofocus,
+        keyboardType: keyboardType,
+        inputFormatters: inputFormatters,
         textInputAction: last ? TextInputAction.done : TextInputAction.next,
         onSubmitted: last ? (_) => _submit() : null,
         decoration: InputDecoration(labelText: label, isDense: true),
@@ -84,8 +108,39 @@ class _GameFilterDialogState extends State<GameFilterDialog> {
               style: TextStyle(fontSize: 12, color: scheme.onSurfaceVariant),
             ),
             const SizedBox(height: 12),
-            _field(_white, t('lists.filterWhite'), autofocus: true),
-            _field(_black, t('lists.filterBlack')),
+            _field(
+              _white,
+              _ignoreColor ? t('lists.filterPlayer') : t('lists.filterWhite'),
+              autofocus: true,
+            ),
+            _field(
+              _black,
+              _ignoreColor
+                  ? t('lists.filterOpponent')
+                  : t('lists.filterBlack'),
+            ),
+            CheckboxListTile(
+              contentPadding: EdgeInsets.zero,
+              value: _ignoreColor,
+              onChanged: (value) =>
+                  setState(() => _ignoreColor = value ?? false),
+              title: Text(t('lists.filterIgnoreColor')),
+              subtitle: Text(
+                t('lists.filterIgnoreColorHint'),
+                style: TextStyle(fontSize: 12, color: scheme.onSurfaceVariant),
+              ),
+              controlAffinity: ListTileControlAffinity.leading,
+            ),
+            const SizedBox(height: 4),
+            _field(
+              _year,
+              t('lists.filterYear'),
+              keyboardType: TextInputType.number,
+              inputFormatters: [
+                FilteringTextInputFormatter.digitsOnly,
+                LengthLimitingTextInputFormatter(4),
+              ],
+            ),
             Text(
               t('lists.filterResult'),
               style: TextStyle(

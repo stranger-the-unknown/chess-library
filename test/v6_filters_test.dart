@@ -13,15 +13,24 @@ import 'package:chess_pgn_reader/services/settings_service.dart';
 import 'package:chess_pgn_reader/services/storage_service.dart';
 import 'package:chess_pgn_reader/widgets/game_filter_dialog.dart';
 
-/// Sürüm 6: oyuncu/sonuç süzgeci ve hamle sayısı.
+/// Sürüm 6 / 6.1: oyun filtresi, hamle sayısı, yıl ve renk-bağımsız ad.
 
-SavedGame _game(String white, String black, String result) => SavedGame(
+SavedGame _game(
+  String white,
+  String black,
+  String result, {
+  String? date,
+}) =>
+    SavedGame(
       name: '$white - $black',
       uciMoves: const ['e2e4', 'e7e5'],
       createdAt: DateTime.now(),
       white: white,
       black: black,
       result: result,
+      tags: {
+        if (date != null) 'Date': date,
+      },
     );
 
 final _carlsenNepo = _game('Magnus Carlsen', 'Ian Nepomniachtchi', '1-0');
@@ -168,6 +177,163 @@ void main() {
     });
   });
 
+  group('Renk fark etmesin', () {
+    test('kapalıyken eski kural duruyor', () {
+      expect(
+        const GameFilter(white: 'Carlsen', ignoreColor: false).isActive,
+        isTrue,
+      );
+      expect(_filtered(const GameFilter(white: 'Carlsen')), hasLength(2));
+      expect(_filtered(const GameFilter(black: 'Carlsen')), hasLength(1));
+    });
+
+    test('yalnız işaretliyse filtre sayılmıyor', () {
+      const filter = GameFilter(ignoreColor: true);
+      expect(filter.isActive, isFalse);
+      expect(_filtered(filter), hasLength(3));
+    });
+
+    test('tek ad, iki renkte de', () {
+      final games = _filtered(
+        const GameFilter(white: 'Carlsen', ignoreColor: true),
+      );
+      expect(games, hasLength(3));
+    });
+
+    test('tek ad alt alana yazılınca da aynı', () {
+      expect(
+        _filtered(const GameFilter(black: 'Carlsen', ignoreColor: true)),
+        hasLength(3),
+      );
+    });
+
+    test('iki ad, renk sırası fark etmez', () {
+      expect(
+        _filtered(const GameFilter(
+          white: 'Carlsen',
+          black: 'Aronian',
+          ignoreColor: true,
+        )),
+        hasLength(1),
+      );
+      expect(
+        _filtered(const GameFilter(
+          white: 'Aronian',
+          black: 'Carlsen',
+          ignoreColor: true,
+        )),
+        hasLength(1),
+      );
+      expect(
+        _filtered(const GameFilter(
+          white: 'Carlsen',
+          black: 'Caruana',
+          ignoreColor: true,
+        )),
+        hasLength(1),
+      );
+    });
+
+    test('iki ad kapalıyken ters renk boş kalır', () {
+      expect(
+        _filtered(const GameFilter(white: 'Carlsen', black: 'Aronian')),
+        isEmpty,
+      );
+    });
+
+    test('renk-bağımsız ad ve sonuç birlikte', () {
+      expect(
+        _filtered(const GameFilter(
+          white: 'Carlsen',
+          ignoreColor: true,
+          result: ResultFilter.draw,
+        )),
+        hasLength(1),
+      );
+      expect(
+        _filtered(const GameFilter(
+          white: 'Carlsen',
+          black: 'Aronian',
+          ignoreColor: true,
+          result: ResultFilter.whiteWins,
+        )),
+        isEmpty,
+        reason: 'Aronian-Carlsen 0-1 bitti, beyaz kazanmadı',
+      );
+      expect(
+        _filtered(const GameFilter(
+          white: 'Carlsen',
+          black: 'Aronian',
+          ignoreColor: true,
+          result: ResultFilter.blackWins,
+        )),
+        hasLength(1),
+      );
+    });
+  });
+
+  group('Yıl filtresi', () {
+    final dated = [
+      _game('Magnus Carlsen', 'Ian Nepomniachtchi', '1-0', date: '2021.11.26'),
+      _game('Levon Aronian', 'Magnus Carlsen', '0-1', date: '2018.07.14'),
+      _game('Magnus Carlsen', 'Fabiano Caruana', '1/2-1/2', date: '2021.??.??'),
+      _game('Ali', 'Veli', '1-0'),
+    ];
+
+    test('yıl PGN Date ve UTCDate üzerinden okunur', () {
+      expect(dated[0].year, 2021);
+      expect(dated[1].year, 2018);
+      expect(dated[2].year, 2021);
+      expect(dated[3].year, isNull);
+      expect(
+        SavedGame(
+          name: 'x',
+          uciMoves: const [],
+          createdAt: DateTime(2020),
+          tags: const {'UTCDate': '2019.01.02'},
+        ).year,
+        2019,
+      );
+    });
+
+    test('yıla göre eler', () {
+      expect(dated.where(const GameFilter(year: 2021).matches), hasLength(2));
+      expect(dated.where(const GameFilter(year: 2018).matches), hasLength(1));
+      expect(dated.where(const GameFilter(year: 1999).matches), isEmpty);
+    });
+
+    test('tarihi olmayan oyun yıl filtresine takılır', () {
+      expect(const GameFilter(year: 2021).matches(dated[3]), isFalse);
+    });
+
+    test('yıl ve oyuncu birlikte', () {
+      expect(
+        dated.where(const GameFilter(white: 'Carlsen', year: 2021).matches),
+        hasLength(2),
+      );
+      expect(
+        dated.where(const GameFilter(
+          white: 'Carlsen',
+          ignoreColor: true,
+          year: 2018,
+        ).matches),
+        hasLength(1),
+      );
+    });
+
+    test('yıl, renk-bağımsız ad ve sonuç üçü birden', () {
+      final filter = const GameFilter(
+        white: 'Carlsen',
+        ignoreColor: true,
+        year: 2021,
+        result: ResultFilter.draw,
+      );
+      final games = dated.where(filter.matches).toList();
+      expect(games, hasLength(1));
+      expect(games.single.black, 'Fabiano Caruana');
+    });
+  });
+
   group('Hamle sayısı', () {
     test('beyazın hamlesi yazılıyor, ikisinin toplamı değil', () {
       // 1. e4 e5 2. Nf3 -> beyaz iki hamle yaptı.
@@ -223,7 +389,7 @@ void main() {
         ),
       );
       await tester.pumpAndSettle();
-      expect(find.text('Levon Aronian'), findsOneWidget);
+      expect(find.text('Aronian'), findsOneWidget);
 
       // Oyun kartlarının da menüsü var; aranan başlıktaki.
       await tester.tap(
@@ -233,7 +399,7 @@ void main() {
         ),
       );
       await tester.pumpAndSettle();
-      await tester.tap(find.text('Oyuncu ve sonuca göre süz').last);
+      await tester.tap(find.text('Oyun filtrele').last);
       await tester.pumpAndSettle();
 
       await tester.enterText(
@@ -243,22 +409,22 @@ void main() {
         ),
         'carl',
       );
-      await tester.tap(find.widgetWithText(FilledButton, 'Süz'));
+      await tester.tap(find.widgetWithText(FilledButton, 'Filtrele'));
       await tester.pumpAndSettle();
 
-      expect(find.text('Levon Aronian'), findsNothing,
-          reason: 'süzgece takılan oyun listede kalmamalı');
-      expect(find.text('Ian Nepomniachtchi'), findsOneWidget);
-      expect(find.text('Fabiano Caruana'), findsOneWidget);
+      expect(find.text('Aronian'), findsNothing,
+          reason: 'filtreye takılan oyun listede kalmamalı');
+      expect(find.text('Nepomniachtchi'), findsOneWidget);
+      expect(find.text('Caruana'), findsOneWidget);
       expect(find.textContaining('Beyaz oyuncu: carl'), findsOneWidget,
-          reason: 'şerit hangi süzgecin açık olduğunu yazmalı');
+          reason: 'şerit hangi filtrenin açık olduğunu yazmalı');
       expect(find.textContaining('2 oyun'), findsOneWidget,
           reason: 'kaç oyun kaldığı yazmalı');
 
-      // Şeritteki çarpı süzgeci kaldırıyor.
-      await tester.tap(find.byTooltip('Süzgeci temizle'));
+      // Şeritteki çarpı filtreyi kaldırıyor.
+      await tester.tap(find.byTooltip('Filtreyi temizle'));
       await tester.pumpAndSettle();
-      expect(find.text('Levon Aronian'), findsOneWidget);
+      expect(find.text('Aronian'), findsOneWidget);
     });
 
     testWidgets('analiz listesinde de çalışıyor', (tester) async {
@@ -303,7 +469,7 @@ void main() {
         ),
       );
       await tester.pumpAndSettle();
-      expect(find.text('Levon Aronian'), findsOneWidget);
+      expect(find.text('Aronian'), findsOneWidget);
 
       await tester.tap(
         find.descendant(
@@ -312,7 +478,7 @@ void main() {
         ),
       );
       await tester.pumpAndSettle();
-      await tester.tap(find.text('Oyuncu ve sonuca göre süz').last);
+      await tester.tap(find.text('Oyun filtrele').last);
       await tester.pumpAndSettle();
       await tester.enterText(
         find.ancestor(
@@ -321,11 +487,11 @@ void main() {
         ),
         'carlsen',
       );
-      await tester.tap(find.widgetWithText(FilledButton, 'Süz'));
+      await tester.tap(find.widgetWithText(FilledButton, 'Filtrele'));
       await tester.pumpAndSettle();
 
-      expect(find.text('Levon Aronian'), findsNothing);
-      expect(find.text('Ian Nepomniachtchi'), findsOneWidget);
+      expect(find.text('Aronian'), findsNothing);
+      expect(find.text('Nepomniachtchi'), findsOneWidget);
     });
 
     testWidgets('dar telefonda taşmıyor', (tester) async {
@@ -357,7 +523,56 @@ void main() {
       // taşma olsaydı test kendiliğinden düşerdi.
       expect(find.text('Şu oyuncu kazanır'), findsOneWidget);
       expect(find.text('Kazanan oyuncu'), findsOneWidget);
-      expect(find.widgetWithText(FilledButton, 'Süz'), findsOneWidget);
+      expect(find.widgetWithText(FilledButton, 'Filtrele'), findsOneWidget);
+      expect(find.text('Renk fark etmesin'), findsOneWidget);
+      expect(find.text('Yıl'), findsOneWidget);
+    });
+
+    testWidgets('renk fark etmesin tek adla iki rengi de getiriyor',
+        (tester) async {
+      final playlist = await _seed();
+      tester.view.devicePixelRatio = 1;
+      tester.view.physicalSize = const Size(600, 1200);
+      addTearDown(() {
+        tester.view.resetPhysicalSize();
+        tester.view.resetDevicePixelRatio();
+      });
+      await tester.pumpWidget(
+        MaterialApp(
+          home: KeyedSubtree(
+            key: UniqueKey(),
+            child: PlaylistDetailScreen(playlistId: playlist.id),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      await tester.tap(
+        find.descendant(
+          of: find.byType(AppBar),
+          matching: find.byType(PopupMenuButton<String>),
+        ),
+      );
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Oyun filtrele').last);
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.byType(CheckboxListTile));
+      await tester.pumpAndSettle();
+      await tester.enterText(
+        find.ancestor(
+          of: find.text('Oyuncu'),
+          matching: find.byType(TextField),
+        ),
+        'aronian',
+      );
+      await tester.tap(find.widgetWithText(FilledButton, 'Filtrele'));
+      await tester.pumpAndSettle();
+
+      expect(find.text('Aronian'), findsOneWidget);
+      expect(find.text('Carlsen'), findsOneWidget);
+      expect(find.text('Nepomniachtchi'), findsNothing);
+      expect(find.textContaining('1 oyun'), findsOneWidget);
     });
   });
 }

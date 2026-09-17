@@ -80,7 +80,7 @@ Uygulama hazır bulmaca ile gelmez; listeleri kendin oluşturursun.
 
 **Liste oluşturma** — Sağ üstteki **+** ile yeni bir liste açarsın. Adı
 verirken listeyi **oyun sonu listesi** olarak da işaretleyebilirsin; bu
-işaret sonuç süzgeçlerini açar (aşağıda). Sonradan da liste menüsünden
+işaret sonuç filtrelerini açar (aşağıda). Sonradan da liste menüsünden
 değiştirilebilir. Listeyi üç yolla doldurabilirsin:
 
 1. **Tek tek ekleme** — Menüden "Bulmaca ekle", pozisyonu tahtada kurarsın.
@@ -123,12 +123,12 @@ başlığında ve üstteki bilgi satırında hep aynı sayıyı okursun.
 **Sıralama** — Liste baştan sona gelir; kitaptaki sıra neyse o. Başlık
 çubuğundaki okla ters çevirip en son eklediklerini üste alabilirsin.
 Süzgeci değiştirdiğinde sıralama baştan sonaya döner: ters sıralama
-çoğunlukla tek bir bakış için açılıyor, süzgeç değişince o iş bitmiş
+çoğunlukla tek bir bakış için açılıyor, filtre değişince o iş bitmiş
 oluyor.
 
-**Arama ve süzgeçler** — Tümü / çözülmemiş / çözülen / favoriler.
+**Arama ve filtreler** — Tümü / çözülmemiş / çözülen / favoriler.
 Liste oyun sonu listesi olarak işaretliyse ayrıca **beyaz
-kazanır / beraberlik / siyah kazanır** süzgeçleri görünür; bir bulmacanın
+kazanır / beraberlik / siyah kazanır** filtreleri görünür; bir bulmacanın
 sonucu satır menüsünden işaretlenir ya da alınan dosyada etiket olarak
 verilir (`beyaz-kazanir`, `beraberlik`, `siyah-kazanir`; İngilizce yazımı
 da tanınır).
@@ -138,7 +138,7 @@ Arama kutusu sıra numarası (`#128`), etiketler, ad, not ve FEN üzerinde
 
 **Aralık işaretleme** — Menüdeki "Aralığı işaretle" ile iki numara arası
 bulmacayı tek seferde çözüldü ya da çözülmedi yaparsın. Numaralar
-süzgeçten bağımsızdır: ekranda gördüğün numarayı yazarsın.
+filtreden bağımsızdır: ekranda gördüğün numarayı yazarsın.
 
 **Bugün çözülen** — Gece yarısından beri kaç bulmaca çözdüğün, bulmaca
 listeleri ekranındaki liste kartlarında görünür. Ayarlardan
@@ -223,23 +223,27 @@ taşıma, silme.
 - Listedeki oyunlar numaralandırılır; arama numara (`#42`), oyun adı,
   oyuncu, sonuç ve not üzerinde çalışır.
 - **Okundu işareti**: tek tek, tümü birden ya da **numara aralığı vererek**
-  işaretleme; "okunmamış / okunan" süzgeci. Okunan sayısı listeye girmeden
+  işaretleme; "okunmamış / okunan" filtresi. Okunan sayısı listeye girmeden
   kartta görünür.
-- **Favoriler**: satırdaki yıldızla işaretlenir, kendi süzgeci vardır.
-- **Oyuncu ve sonuca göre süz** — başlık menüsünden. Beyaz oyuncu, siyah
-  oyuncu ya da ikisi; biri boş bırakılabilir. Sonuç beyaz kazanır,
-  beraberlik, siyah kazanır ya da adı yazılan oyuncunun iki renkle de
-  kazandığı oyunlar olabilir. Adlar gevşek eşleşir: büyük-küçük harf,
-  Türkçe harfler ve kelime sırası fark etmez, adın bir parçası yeter
-  ("carl" ile "Magnus Carlsen" bulunur). Açıkken üstteki şerit neyin
-  süzüldüğünü ve kaç oyun kaldığını yazar.
-- **Sıralama** başlıktaki okla tersine çevrilir; süzgeç değişince
+- **Favoriler**: satırdaki yıldızla işaretlenir, kendi filtresi vardır.
+- **Oyun filtrele** — başlık menüsünden. Beyaz oyuncu, siyah oyuncu ya da
+  ikisi; biri boş bırakılabilir. **Renk fark etmesin** işaretlenirse tek
+  ad o oyuncunun bütün oyunlarını, iki ad da o iki kişinin birbirine
+  karşı oynadığı oyunları getirir. Yıl alanı PGN tarihine bakar. Sonuç
+  beyaz kazanır, beraberlik, siyah kazanır ya da adı yazılan oyuncunun
+  iki renkle de kazandığı oyunlar olabilir. Adlar gevşek eşleşir:
+  büyük-küçük harf, Türkçe harfler ve kelime sırası fark etmez, adın
+  bir parçası yeter ("carl" ile "Magnus Carlsen" bulunur). Açıkken
+  üstteki şerit neyin filtrelendiğini ve kaç oyun kaldığını yazar.
+- **Sıralama** başlıktaki okla tersine çevrilir; filtre değişince
   varsayılana döner.
 - **Aralık göster**: listeyi belirli bir numara aralığına daraltır, üstteki
   şeritten kapatılır.
-- Kartta iki oyuncunun adı da tam görünür, beyazın kaç hamle yaptığı
-  yazar; PGN'de tarih varsa o da yazılır (tam tarih yoksa yalnızca yıl,
-  yıl da yoksa hiçbir şey).
+- Kartta oyuncuların soyadları görünür (çevrimiçi kullanıcı adları
+  olduğu gibi kalır); asıl adlar kayıtta durur, arama ve filtre onlara
+  bakar. Beyaz üstte, siyah altta; beyazın kaç hamle yaptığı yazar;
+  PGN'de tarih varsa o da yazılır (tam tarih yoksa yalnızca yıl, yıl
+  da yoksa hiçbir şey).
 - Satır menüsündeki **oyun bilgileri** PGN başlıklarını gösterir: turnuva,
   yer, tur, ECO, derece.
 - Oyunlara not düşebilir, notu sonradan silebilirsin.
@@ -264,7 +268,7 @@ olur ve yüzü aşınca en eski düşer.
 Bu iki liste kullanıcının değil sistemindir: silinemez, yeniden
 adlandırılamaz. Kayıtları da yerinde durur — yeniden adlandırma, silme,
 başka listeye taşıma, toplu okundu işaretleme ve PGN ekleme burada
-yoktur. Okundu ve favori işaretleri, arama, süzgeçler, sıralama, aralık
+yoktur. Okundu ve favori işaretleri, arama, filtreler, sıralama, aralık
 gösterme, oyun bilgileri ve PGN kopyalama çalışır.
 
 Tahta ekranından başlattığın inceleme de buraya kaydedilir.

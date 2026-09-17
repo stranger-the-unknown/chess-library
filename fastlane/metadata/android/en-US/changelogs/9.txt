@@ -1,0 +1,12 @@
+Version 6.1.0
+
+Game lists
+- Filter games by year, ignore colour (one player, or two against each
+  other) and result, together.
+- Cards show last names; full names stay stored. Online usernames are
+  left as they are.
+- Exporting online games keeps player names and the original date.
+
+Openings
+- The summary counts variants that are not hidden.
+- "0 learned" is hidden until at least one line is learned.

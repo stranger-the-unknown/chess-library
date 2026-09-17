@@ -75,6 +75,15 @@ class SavedGame {
   /// Beyazın oynadığı hamle sayısı; kural [countWhiteMoves] içinde.
   int get moveCount => countWhiteMoves(uciMoves.length, startFen);
 
+  /// PGN tarihindeki yıl; yoksa veya `????` ise null.
+  int? get year {
+    final raw = tags['Date'] ?? tags['UTCDate'];
+    if (raw == null) return null;
+    final token = raw.trim().split('.').first;
+    if (token.length != 4) return null;
+    return int.tryParse(token);
+  }
+
   /// Kartta gösterilecek tarih; yoksa null.
   ///
   /// PGN tarihi `YYYY.MM.DD` biçiminde ve eksik parçalar `?` ile
@@ -94,6 +103,12 @@ class SavedGame {
     if (month < 1 || month > 12 || day < 1 || day > 31) return year;
     return '$day.${month.toString().padLeft(2, '0')}.$year';
   }
+
+  /// Kartta beyazın soyadı (ya da kullanıcı adı).
+  String get cardWhite => playerLastName(white);
+
+  /// Kartta siyahın soyadı (ya da kullanıcı adı).
+  String get cardBlack => playerLastName(black);
 
   Map<String, dynamic> toJson() => {
         'id': id,
@@ -138,6 +153,33 @@ class SavedGame {
         sourceGameId: json['srcGame'] as String?,
         sourcePlaylistId: json['srcList'] as String?,
       );
+}
+
+/// Kartta gösterilecek oyuncu adı: soyad.
+///
+/// PGN'de hem "Magnus Carlsen" hem "Carlsen, Magnus" geçer. Çevrimiçi
+/// oyunlarda ise ad çoğu zaman tek parça bir kullanıcı adıdır; onu
+/// kesmek kartı boş bırakırdı, o yüzden tek kelime olduğu gibi kalır.
+String playerLastName(String? full) {
+  if (full == null) return '';
+  var name = full.trim();
+  if (name.isEmpty || name == '?' || name == '-') return '';
+
+  name = name.replaceFirst(
+    RegExp(r'^(?:W?GM|W?IM|W?FM|W?CM|NM|WH)\s+', caseSensitive: false),
+    '',
+  );
+
+  final comma = name.indexOf(',');
+  if (comma >= 0) {
+    final last = name.substring(0, comma).trim();
+    return last.isEmpty ? name : last;
+  }
+
+  final parts =
+      name.split(RegExp(r'\s+')).where((part) => part.isNotEmpty).toList();
+  if (parts.length <= 1) return name;
+  return parts.last;
 }
 
 /// Oyun listesi (kullanıcının kendi klasörü).
