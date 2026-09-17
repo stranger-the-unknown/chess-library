@@ -233,13 +233,20 @@ delete them.
   numbers**; there is an unread / read filter. The number you have read
   is shown on the card without opening the list.
 - **Favorites**: set with the star on a row, with a filter of their own.
+- **Filter by player and result** — in the title menu. White player,
+  black player, or both; either can be left blank. The result can be
+  white wins, a draw, black wins, or the games a named player won with
+  either colour. Names are matched loosely: upper and lower case,
+  Turkish letters and the order of the words make no difference, and a
+  part of the name is enough ("carl" finds "Magnus Carlsen"). While it
+  is on, a banner says what is filtered and how many games are left.
 - **Sorting** is reversed with the arrow in the title bar and goes back
   to the default when the filter changes.
 - **Show a range** narrows the list to a stretch of numbers and is closed
   again from the banner at the top.
-- The card shows both player names in full, and the date from the PGN if
-  there is one (the year alone if the date is incomplete, nothing if
-  there is no year).
+- The card shows both player names in full, the number of moves White
+  played, and the date from the PGN if there is one (the year alone if
+  the date is incomplete, nothing if there is no year).
 - **Game details** in the row menu shows the PGN tags: event, site,
   round, ECO code, ratings.
 - Games can carry a note, which can be deleted later.
@@ -313,6 +320,12 @@ you are offered two modes:
 A checksum is written into the file, so a backup that downloaded
 half-way or was damaged is caught before it is loaded. If something goes
 wrong while writing, the old data is put back.
+
+**Uninstalling the app removes its data.** Android is not asked to keep a
+copy in the cloud and the data is not carried over to a new phone, so a
+reinstall starts empty. On Windows the uninstaller asks whether your
+saved games, lists and settings should go as well. This file is the way
+to keep them: take a backup before you uninstall.
 
 ---
 

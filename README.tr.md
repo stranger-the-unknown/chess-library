@@ -226,12 +226,20 @@ taşıma, silme.
   işaretleme; "okunmamış / okunan" süzgeci. Okunan sayısı listeye girmeden
   kartta görünür.
 - **Favoriler**: satırdaki yıldızla işaretlenir, kendi süzgeci vardır.
+- **Oyuncu ve sonuca göre süz** — başlık menüsünden. Beyaz oyuncu, siyah
+  oyuncu ya da ikisi; biri boş bırakılabilir. Sonuç beyaz kazanır,
+  beraberlik, siyah kazanır ya da adı yazılan oyuncunun iki renkle de
+  kazandığı oyunlar olabilir. Adlar gevşek eşleşir: büyük-küçük harf,
+  Türkçe harfler ve kelime sırası fark etmez, adın bir parçası yeter
+  ("carl" ile "Magnus Carlsen" bulunur). Açıkken üstteki şerit neyin
+  süzüldüğünü ve kaç oyun kaldığını yazar.
 - **Sıralama** başlıktaki okla tersine çevrilir; süzgeç değişince
   varsayılana döner.
 - **Aralık göster**: listeyi belirli bir numara aralığına daraltır, üstteki
   şeritten kapatılır.
-- Kartta iki oyuncunun adı da tam görünür; PGN'de tarih varsa yazılır (tam
-  tarih yoksa yalnızca yıl, yıl da yoksa hiçbir şey).
+- Kartta iki oyuncunun adı da tam görünür, beyazın kaç hamle yaptığı
+  yazar; PGN'de tarih varsa o da yazılır (tam tarih yoksa yalnızca yıl,
+  yıl da yoksa hiçbir şey).
 - Satır menüsündeki **oyun bilgileri** PGN başlıklarını gösterir: turnuva,
   yer, tur, ECO, derece.
 - Oyunlara not düşebilir, notu sonradan silebilirsin.
@@ -304,6 +312,12 @@ iki seçenek sunulur:
 Dosyanın içine bir sağlama damgası yazılır: yarım inen ya da bozulan bir
 yedek yüklenmeden önce fark edilir. Yazma sırasında bir şey ters
 giderse eski veri geri konur.
+
+**Uygulama silinince verisi de gider.** Android'de veri buluta
+yedeklenmez ve yeni telefona aktarılmaz, yeniden kurulunca uygulama boş
+açılır. Windows'ta kaldırma sırasında kayıtlı oyunların, listelerinin ve
+ayarlarının da silinip silinmeyeceği sorulur. Saklamanın yolu bu dosya:
+silmeden önce yedek al.
 
 ---
 
