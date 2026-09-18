@@ -1,0 +1,1 @@
+Removed the vertical evaluation bar; live engine score stays in the text line only.

@@ -152,13 +152,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   onChanged: (value) => _settings.animateMoves = value,
                 ),
                 SwitchListTile(
-                  secondary: const Icon(Icons.equalizer_rounded),
-                  title: Text(t('settings.evalBar')),
-                  subtitle: Text(t('settings.evalBarSub')),
-                  value: _settings.showEvaluationBar,
-                  onChanged: (value) => _settings.showEvaluationBar = value,
-                ),
-                SwitchListTile(
                   secondary: const Icon(Icons.today_rounded),
                   title: Text(t('settings.dailyCount')),
                   subtitle: Text(t('settings.dailyCountSub')),

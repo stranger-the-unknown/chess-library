@@ -20,7 +20,6 @@ import '../theme/app_theme.dart';
 import '../widgets/app_dialogs.dart';
 import '../widgets/captured_pieces.dart';
 import '../widgets/chess_board_widget.dart';
-import '../widgets/eval_bar.dart';
 import '../widgets/move_list.dart';
 import 'board_editor_screen.dart';
 import '../widgets/cursors.dart';
@@ -124,7 +123,6 @@ class _GameScreenState extends State<GameScreen> {
   SearchResult? _analysis;
   /// Beyaz bakisi; hamle degisse bile yeni sonuc gelene kadar sabit.
   int? _evalScoreCp;
-  int? _evalMate;
   Timer? _analysisDebounce;
   int _analysisToken = 0;
 
@@ -357,9 +355,6 @@ class _GameScreenState extends State<GameScreen> {
     setState(() {
       _analysis = result;
       _evalScoreCp = result.scoreCp * sign;
-      _evalMate = result.mateIn == null
-          ? null
-          : (side == engine.Color.white ? result.mateIn! : -result.mateIn!);
       _thinking = false;
     });
   }
@@ -420,9 +415,6 @@ class _GameScreenState extends State<GameScreen> {
       _thinking = false;
       _analysis = result;
       _evalScoreCp = result.scoreCp * sign;
-      _evalMate = result.mateIn == null
-          ? null
-          : (side == engine.Color.white ? result.mateIn! : -result.mateIn!);
       _analysisOn = true;
     });
   }
@@ -546,7 +538,6 @@ class _GameScreenState extends State<GameScreen> {
       _resultText = null;
       _analysis = null;
       _evalScoreCp = null;
-      _evalMate = null;
       _resigned = false;
     });
     if (widget.mode == GameMode.versusEngine) _maybePlayEngineMove();
@@ -689,7 +680,6 @@ class _GameScreenState extends State<GameScreen> {
   @override
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
-    final settings = SettingsService.instance;
     final atLive = _cursor == _history.length - 1 && !_resigned;
 
     final arrows = <BoardArrow>[];
@@ -737,7 +727,6 @@ class _GameScreenState extends State<GameScreen> {
                 setState(() {
                   _analysis = null;
                   _evalScoreCp = null;
-                  _evalMate = null;
                   _thinking = false;
                 });
               }
@@ -842,33 +831,15 @@ class _GameScreenState extends State<GameScreen> {
                     ),
                     child: LayoutBuilder(
                       builder: (context, constraints) {
-                        final showBar =
-                            settings.showEvaluationBar && _analysisOn;
-                        final barWidth = showBar ? 26.0 : 0.0;
-                        // Geniş pencerede tahta sınırsız büyümesin.
+                        // Genis pencerede tahta sinirsiz buyumesin.
                         final side = Layout.boardSide(
-                          constraints.maxWidth - barWidth,
+                          constraints.maxWidth,
                           constraints.maxHeight,
                         );
-                        return Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            if (showBar) ...[
-                              SizedBox(
-                                height: side,
-                                child: EvalBar(
-                                  scoreCp: _evalScoreCp,
-                                  mateIn: _evalMate,
-                                  flipped: _flipped,
-                                  thinking: widget.mode == GameMode.versusEngine && _thinking,
-                                ),
-                              ),
-                              const SizedBox(width: 8),
-                            ],
-                            SizedBox(
-                              width: side,
-                              height: side,
-                              child: ChessBoardWidget(
+                        return SizedBox(
+                          width: side,
+                          height: side,
+                          child: ChessBoardWidget(
                                 game: _game,
                                 flipped: _flipped,
                                 // Kayıtlı oyunda hamle oynamak oyunu
@@ -885,9 +856,7 @@ class _GameScreenState extends State<GameScreen> {
                                         : null),
                                 onMove: _onBoardMove,
                                 arrows: arrows,
-                              ),
-                            ),
-                          ],
+                          ),
                         );
                       },
                     ),

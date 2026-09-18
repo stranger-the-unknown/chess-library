@@ -1,0 +1,1 @@
+Dikey değerlendirme çubuğu kaldırıldı; canlı motor skoru yalnızca satırda.
