@@ -1,4 +1,4 @@
-; Chess Library — Windows kurulum dosyası (Inno Setup 6)
+﻿; Chess Library — Windows kurulum dosyası (Inno Setup 6)
 ;
 ; Derlemek için:
 ;   flutter build windows --release
@@ -10,7 +10,7 @@
 ; klasörüne kurulur. Böylece kullanıcı UAC uyarısıyla karşılaşmaz.
 
 #define AppName "Chess Library"
-#define AppVersion "6.1.0"
+#define AppVersion "6.2.0"
 #define AppPublisher "stranger-the-unknown"
 #define AppExeName "ChessLibrary.exe"
 #define BuildDir "..\..\build\windows\x64\runner\Release"
