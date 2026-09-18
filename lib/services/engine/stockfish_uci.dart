@@ -9,13 +9,24 @@ import 'search_result.dart';
 /// Süreç çökerse `null` döner; Dart motoru yedek olarak kullanılmaz. SF
 /// uygulamanın içinde değil, ayrı süreçte çalıştığı için ölmesi uygulamayı
 /// götürmez. Uygun olduğunda süreç yeniden başlatılır.
+///
+/// stdout satırları tek bir abonelikten dispatch ile dağıtılır.
+/// Bekleyiciler / analiz dinleyicileri **komut yazılmadan önce** silahlanır;
+/// böylece broadcast StreamController yarışı (uciok / bestmove kaçırma)
+/// olmaz. Eski satır taraması yapılmaz (yanlış eşleşme riski).
 class StockfishUci {
   Process? _process;
   StreamSubscription<String>? _outSub;
-  final _lines = StreamController<String>.broadcast();
   bool _ready = false;
   String? _binaryPath;
   Completer<SearchResult?>? _activeSearch;
+
+  /// Komut yanıtı için tek-seferlik bekleyiciler (stdout dispatch).
+  final List<_LineWaiter> _waiters = <_LineWaiter>[];
+
+  /// analyze sırasında satır dinleyicileri (go yazılmadan önce eklenir).
+  final List<void Function(String line)> _lineListeners =
+      <void Function(String line)>[];
 
   /// Son uygulanan güç ayarları (gereksiz setoption'ları azaltmak için).
   int? _appliedSkill;
@@ -45,7 +56,7 @@ class StockfishUci {
           .transform(utf8.decoder)
           .transform(const LineSplitter())
           .listen(
-        _lines.add,
+        _dispatchLine,
         onError: (_) {},
         onDone: () {
           _ready = false;
@@ -53,6 +64,7 @@ class StockfishUci {
           _appliedSkill = null;
           _appliedLimitStrength = null;
           _appliedElo = null;
+          _failAllWaiters();
           final pending = _activeSearch;
           if (pending != null && !pending.isCompleted) {
             pending.complete(null);
@@ -64,20 +76,24 @@ class StockfishUci {
           .transform(const LineSplitter())
           .listen((_) {});
 
+      // Bekleyiciyi yazmadan önce silahla (broadcast yarışı yok).
+      final uciOk = _armWait((l) => l == 'uciok', const Duration(seconds: 5));
       _write('uci');
-      if (!await _waitFor((l) => l == 'uciok', const Duration(seconds: 5))) {
+      if (!await uciOk) {
         await dispose();
         return false;
       }
+      final ready1 = _armWait((l) => l == 'readyok', const Duration(seconds: 5));
       _write('isready');
-      if (!await _waitFor((l) => l == 'readyok', const Duration(seconds: 5))) {
+      if (!await ready1) {
         await dispose();
         return false;
       }
       _write('setoption name Hash value 64');
       _write('setoption name Threads value 1');
+      final ready2 = _armWait((l) => l == 'readyok', const Duration(seconds: 5));
       _write('isready');
-      await _waitFor((l) => l == 'readyok', const Duration(seconds: 5));
+      await ready2;
       _ready = true;
       _appliedSkill = null;
       _appliedLimitStrength = null;
@@ -127,8 +143,9 @@ class StockfishUci {
       if (limitStrength && useElo != null) {
         _write('setoption name UCI_Elo value $useElo');
       }
+      final ready = _armWait((l) => l == 'readyok', const Duration(seconds: 3));
       _write('isready');
-      if (!await _waitFor((l) => l == 'readyok', const Duration(seconds: 3))) {
+      if (!await ready) {
         await _restart();
         return isRunning;
       }
@@ -180,8 +197,9 @@ class StockfishUci {
       }
 
       _write('ucinewgame');
+      final readyNg = _armWait((l) => l == 'readyok', const Duration(seconds: 3));
       _write('isready');
-      if (!await _waitFor((l) => l == 'readyok', const Duration(seconds: 3))) {
+      if (!await readyNg) {
         await _restart();
         if (!isRunning) return null;
         if (!await applyStrength(
@@ -194,9 +212,6 @@ class StockfishUci {
       }
 
       _write('position fen $fen');
-      // movetime duvar saati; yüksek depth tavanı SF'nin movetime içinde
-      // gidebildiği kadar derine inmesine izin verir.
-      _write('go movetime $movetimeMs depth $depth');
 
       var best = '';
       var scoreCp = 0;
@@ -216,7 +231,8 @@ class StockfishUci {
         }
       });
 
-      final sub = _lines.stream.listen((line) {
+      // Dinleyiciyi go yazılmadan önce ekle (yarış yok).
+      void onLine(String line) {
         if (line.startsWith('info ')) {
           final partial = _parseInfo(line);
           if (partial == null) return;
@@ -259,10 +275,15 @@ class StockfishUci {
             );
           }
         }
-      });
+      }
+
+      _lineListeners.add(onLine);
+      // movetime duvar saati; yüksek depth tavanı SF'nin movetime içinde
+      // gidebildiği kadar derine inmesine izin verir.
+      _write('go movetime $movetimeMs depth $depth');
 
       final result = await done.future;
-      await sub.cancel();
+      _lineListeners.remove(onLine);
       timer.cancel();
       if (identical(_activeSearch, done)) _activeSearch = null;
       return result;
@@ -282,6 +303,8 @@ class StockfishUci {
       pending.complete(null);
     }
     _activeSearch = null;
+    _failAllWaiters();
+    _lineListeners.clear();
     try {
       _write('quit');
     } catch (_) {}
@@ -308,19 +331,50 @@ class StockfishUci {
     } catch (_) {}
   }
 
-  Future<bool> _waitFor(bool Function(String) match, Duration timeout) async {
+  void _dispatchLine(String line) {
+    // Bekleyicileri önce çöz (tek-seferlik).
+    if (_waiters.isNotEmpty) {
+      final snapshot = List<_LineWaiter>.from(_waiters);
+      for (final w in snapshot) {
+        if (w.completer.isCompleted) {
+          _waiters.remove(w);
+          continue;
+        }
+        if (w.match(line)) {
+          w.completer.complete(true);
+          _waiters.remove(w);
+        }
+      }
+    }
+    // Analiz dinleyicileri.
+    if (_lineListeners.isNotEmpty) {
+      for (final listener in List<void Function(String)>.from(_lineListeners)) {
+        listener(line);
+      }
+    }
+  }
+
+  /// Yanıt bekleyicisini kaydeder; çağıran **sonra** komutu yazmalıdır.
+  Future<bool> _armWait(bool Function(String) match, Duration timeout) {
     final completer = Completer<bool>();
-    late final StreamSubscription<String> sub;
-    final timer = Timer(timeout, () {
-      if (!completer.isCompleted) completer.complete(false);
+    final waiter = _LineWaiter(match, completer);
+    _waiters.add(waiter);
+    Timer(timeout, () {
+      if (!completer.isCompleted) {
+        completer.complete(false);
+      }
+      _waiters.remove(waiter);
     });
-    sub = _lines.stream.listen((line) {
-      if (match(line) && !completer.isCompleted) completer.complete(true);
-    });
-    final ok = await completer.future;
-    await sub.cancel();
-    timer.cancel();
-    return ok;
+    return completer.future;
+  }
+
+  void _failAllWaiters() {
+    for (final w in List<_LineWaiter>.from(_waiters)) {
+      if (!w.completer.isCompleted) {
+        w.completer.complete(false);
+      }
+    }
+    _waiters.clear();
   }
 
   static SearchResult? _parseInfo(String line) {
@@ -392,8 +446,13 @@ class StockfishUci {
         candidates.add(File(buildStockfish).absolute.path);
       } catch (_) {}
     } else if (Platform.isAndroid) {
-      // Geliştirme / manuel kopya yolları; APK içi çıkartma
-      // [ensureAndroidStockfishBinary] ile cachedBinaryPath'e yazılır.
+      // Önce nativeLibraryDir/libstockfish.so (jniLibs); W^X uyumlu.
+      // Asset extract yolu [ensureAndroidStockfishBinary] ile cache'e yazılır.
+      try {
+        final exeDir = File(Platform.resolvedExecutable).parent.path;
+        candidates.add(<String>[exeDir, 'libstockfish.so'].join(sep));
+        candidates.add(<String>[exeDir, 'stockfish'].join(sep));
+      } catch (_) {}
       candidates.add(
         <String>[
           Directory.current.path,
@@ -410,11 +469,6 @@ class StockfishUci {
           'stockfish-armeabi-v7a',
         ].join(sep),
       );
-      try {
-        final exeDir = File(Platform.resolvedExecutable).parent.path;
-        candidates.add(<String>[exeDir, 'stockfish'].join(sep));
-        candidates.add(<String>[exeDir, 'libstockfish.so'].join(sep));
-      } catch (_) {}
     } else {
       // Linux/macOS: smoke / CI
       candidates.add(
@@ -429,4 +483,11 @@ class StockfishUci {
     }
     return null;
   }
+}
+
+class _LineWaiter {
+  final bool Function(String) match;
+  final Completer<bool> completer;
+
+  _LineWaiter(this.match, this.completer);
 }

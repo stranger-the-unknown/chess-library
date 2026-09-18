@@ -7,7 +7,6 @@ import 'package:flutter/services.dart';
 import '../l10n/app_strings.dart';
 import '../models/playlist.dart';
 import '../services/pgn_import_service.dart';
-import '../services/analysis_queue.dart';
 import '../services/storage_service.dart';
 import '../widgets/app_dialogs.dart';
 import 'playlist_detail_screen.dart';
@@ -43,8 +42,10 @@ class _PlaylistScreenState extends State<PlaylistScreen> {
   Future<void> _load() async {
     // Analiz listeleri her zaman en üstte; silinemez ve yeniden
     // adlandırılamazlar.
-    final analysis = await _storage.loadAnalysisLists();
-    final playlists = [...analysis, ...await _storage.loadPlaylists()];
+    // Sabit Son Analizler listesi kaldırıldı.
+    final playlists = (await _storage.loadPlaylists())
+        .where((p) => !StorageService.isSystemList(p.id))
+        .toList();
     if (!mounted) return;
     setState(() {
       _playlists = playlists;
@@ -140,16 +141,7 @@ class _PlaylistScreenState extends State<PlaylistScreen> {
           ),
         ],
       ),
-      body: ListenableBuilder(
-        // Kuyruk ilerledikçe şerit kendini tazelesin.
-        listenable: AnalysisQueue.instance,
-        builder: (context, _) => Column(
-          children: [
-            if (AnalysisQueue.instance.isRunning) _queueBanner(scheme),
-            Expanded(child: _body(scheme)),
-          ],
-        ),
-      ),
+      body: _body(scheme),
     );
   }
 
@@ -276,67 +268,6 @@ class _PlaylistScreenState extends State<PlaylistScreen> {
                 );
   }
 
-  /// Toplu analiz sürerken görünen ilerleme şeridi.
-  ///
-  /// Listeler sekmesinde duruyor: kullanıcı analizi başlatıp başka yere
-  /// gidiyor, işin sürdüğünü bir yerde görmesi gerekiyor.
-  Widget _queueBanner(ColorScheme scheme) {
-    final queue = AnalysisQueue.instance;
-    return Container(
-      width: double.infinity,
-      color: scheme.secondaryContainer,
-      padding: const EdgeInsets.fromLTRB(16, 8, 8, 8),
-      child: Row(
-        children: [
-          const SizedBox(
-            width: 16,
-            height: 16,
-            child: CircularProgressIndicator(strokeWidth: 2),
-          ),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  // Tek oyunluk incelemenin ilerleme sayısı yok; şeritte
-                  // yalnızca sürdüğü yazıyor.
-                  queue.isSingleReview
-                      ? t('analysis.singleRunning')
-                      : t('analysis.progress', {
-                          'done': queue.done,
-                          'total': queue.total,
-                        }),
-                  style: TextStyle(
-                    fontSize: 12.5,
-                    fontWeight: FontWeight.w600,
-                    color: scheme.onSecondaryContainer,
-                  ),
-                ),
-                if (queue.current != null)
-                  Text(
-                    queue.current!,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: TextStyle(
-                      fontSize: 11.5,
-                      color: scheme.onSecondaryContainer,
-                    ),
-                  ),
-              ],
-            ),
-          ),
-          // Tek inceleme iptal edilemiyor: motorun durdurma yolu yok.
-          // Çalışmayan bir düğme göstermektense hiç göstermiyoruz.
-          if (!queue.isSingleReview)
-            TextButton(
-              onPressed: queue.cancel,
-              child: Text(t('common.cancel')),
-            ),
-        ],
-      ),
-    );
-  }
 
   Widget _empty(ColorScheme scheme) {
     return Center(

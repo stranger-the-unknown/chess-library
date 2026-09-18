@@ -1,0 +1,4 @@
+• Analiz birleştirildi: tek Analiz düğmesi ve tek Son Analizler listesi
+• Android Stockfish: jniLibs/libstockfish.so (W^X uyumlu nativeLibraryDir)
+• Asset çıkarma+chmod yedek; her motor başlatmadan önce ensure
+• Sürüm 8.0.2

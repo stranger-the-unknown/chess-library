@@ -3,12 +3,12 @@
 /// İncelemenin tamamını değil, yeniden kurmak için gereken en küçük
 /// veriyi saklar: hamlelerin kendisi zaten oyunun içinde duruyor, burada
 /// yalnızca motorun her hamle için söyledikleri var. Kırk hamlelik bir
-/// oyun için yaklaşık üç kilobayt; yüz kayıtlık iki liste bu yüzden
+/// oyun için yaklaşık üç kilobayt; yüz kayıtlık liste bu yüzden
 /// makul bir yer kaplıyor.
 ///
 /// Yedeğe girmez: cihaza özel, başka cihazda yeniden üretilebilir.
 class StoredReview {
-  /// Derin inceleme mi, hızlı inceleme mi?
+  /// Eski hızlı/derin ayrımı; artık hep `true` kaydedilir (uyumluluk).
   final bool deep;
 
   /// İncelemenin yapıldığı an.

@@ -1,4 +1,4 @@
-import 'dart:ui' show PlatformDispatcher;
+﻿import 'dart:ui' show PlatformDispatcher;
 
 import 'package:flutter/foundation.dart' show visibleForTesting;
 
@@ -316,9 +316,6 @@ class Strings {
 
     // Oyun incelemesi
     'review.title': 'Oyun incelemesi',
-    'review.quick': 'Hızlı incele',
-    'review.deep': 'Derin incele',
-    'review.runningDeep': 'Derin inceleme sürüyor',
     'review.running': 'Oyun inceleniyor',
     'review.offlineNote': 'Tüm hesap cihazında yapılır, internet gerekmez.',
     'review.progress': '{done} / {total} pozisyon',
@@ -352,19 +349,17 @@ class Strings {
     'analysis.selectGames': 'Analiz için oyun seç',
     'analysis.selectedCount': '{count} oyun seçildi',
     'analysis.selectAll': 'Tümünü seç',
-    'analysis.quick': 'Hızlı analiz',
-    'analysis.deep': 'Derin analiz',
+    'analysis.run': 'Analiz',
     'analysis.screenHint':
         'Analiz sürerken ekran açık kalır; şarjda yapman iyi olur.',
     'analysis.limitWarning':
         'Analiz listesi en fazla {limit} kayıt tutuyor; fazlası düşer.',
     'analysis.singleRunning': 'Bir oyun inceleniyor…',
     'analysis.finished': 'Analiz bitti.',
-    'analysis.deepList': 'Son Derin Analizler',
+    'analysis.recentList': 'Son Analizler',
     'analysis.emptyList':
         'Henüz analiz yok. Bir oyun listesinden oyun seçip analiz '
         'başlattığında sonuçlar burada birikir.',
-    'analysis.quickList': 'Son Hızlı Analizler',
     'analysis.progress': '{done}/{total} oyun analiz edildi',
     'lists.showRange': 'Aralık göster',
     'lists.rangeActive': '{from}-{to} arası gösteriliyor',
@@ -847,9 +842,6 @@ class Strings {
     'editor.enPassantSquare': 'En passant square',
     'editor.replaceWithClipboard': 'Paste from clipboard',
     'review.title': 'Game review',
-    'review.quick': 'Quick review',
-    'review.deep': 'Deep review',
-    'review.runningDeep': 'Deep review in progress',
     'review.running': 'Reviewing the game',
     'review.offlineNote': 'Everything is computed on your device, no internet '
         'needed.',
@@ -882,19 +874,17 @@ class Strings {
     'analysis.selectGames': 'Select games to analyse',
     'analysis.selectedCount': '{count} games selected',
     'analysis.selectAll': 'Select all',
-    'analysis.quick': 'Quick analysis',
-    'analysis.deep': 'Deep analysis',
+    'analysis.run': 'Analyze',
     'analysis.screenHint':
         'The screen stays on while analysing; best done on charge.',
     'analysis.limitWarning':
         'The analysis list keeps at most {limit} records; the rest drop off.',
     'analysis.singleRunning': 'Reviewing one game…',
     'analysis.finished': 'Analysis finished.',
-    'analysis.deepList': 'Recent Deep Analyses',
+    'analysis.recentList': 'Recent Analyses',
     'analysis.emptyList':
         'No analyses yet. Pick games from a list and start an '
         'analysis; the results collect here.',
-    'analysis.quickList': 'Recent Quick Analyses',
     'analysis.progress': '{done}/{total} games analysed',
     'lists.showRange': 'Show a range',
     'lists.rangeActive': 'Showing {from}-{to}',

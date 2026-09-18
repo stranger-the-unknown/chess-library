@@ -1,10 +1,7 @@
 # Stockfish (Android)
 
-Chess Library 7.0 hibrit motoru: inceleme/analiz için ayrı UCI süreci.
-
-- İnceleme / canlı analiz / oyun incelemesi → Stockfish (ayrı process)
-- Motora karşı oyun + bulmaca cevap/ipucu → Dart motoru
-- `flutter_stockfish` **KULLANILMAZ**
+Chess Library 8+: inceleme / canlı analiz / motora karşı oyun — yalnızca
+Stockfish UCI (ayrı süreç). `flutter_stockfish` **KULLANILMAZ**.
 
 İkili dosyalar GPLv3 ve büyüktür; **git'e girmez**.
 
@@ -24,17 +21,31 @@ tar -xzf sf-armv7.tar.gz
 cp stockfish/stockfish-android-armv7-neon ./stockfish-armeabi-v7a
 ```
 
-## Flutter asset'e kopyala (APK'ya girsin)
+## APK'ya paketleme (iki yol)
+
+### 1) Tercih edilen: jniLibs → nativeLibraryDir
+
+Android 10+ W^X / SELinux, uygulama veri dizininden çalıştırmayı
+engeller; `chmod` yetmez. Paket yöneticisinin çıkardığı
+`nativeLibraryDir/libstockfish.so` yürütülebilir.
+
+```bash
+mkdir -p ../app/src/main/jniLibs/arm64-v8a ../app/src/main/jniLibs/armeabi-v7a
+cp stockfish-arm64-v8a ../app/src/main/jniLibs/arm64-v8a/libstockfish.so
+cp stockfish-armeabi-v7a ../app/src/main/jniLibs/armeabi-v7a/libstockfish.so
+```
+
+### 2) Yedek: Flutter assets + runtime extract
 
 ```bash
 mkdir -p ../../assets/stockfish
 cp stockfish-arm64-v8a ../../assets/stockfish/arm64-v8a
 cp stockfish-armeabi-v7a ../../assets/stockfish/armeabi-v7a
-# İsteğe bağlı: yalnızca hedef ABI'yi kopyalayarak APK boyutunu küçült.
 ```
 
-Uygulama ilk çalıştırmada asset'ten `getApplicationSupportDirectory()/stockfish`
-yoluna çıkarır ve `chmod 755` uygular.
+Çalışma zamanında önce `libstockfish.so` (nativeLibraryDir) aranır;
+yoksa asset'ten `getApplicationSupportDirectory()/stockfish` çıkarılır
+ve `chmod 755` denenir.
 
 Alternatif: `STOCKFISH_PATH` ortam değişkeni (test / özel derleme).
 

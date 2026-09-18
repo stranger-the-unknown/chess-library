@@ -57,8 +57,6 @@ class _PlaylistDetailScreenState extends State<PlaylistDetailScreen> {
   /// Seçim kipi ayrı bir kip: satıra dokunmak normalde oyunu açıyor,
   /// seçim kipinde ise işaretliyor. İki davranışı aynı anda vermek
   /// (uzun basma gibi) telefonda yanlış dokunuşa çok açık.
-  bool _selecting = false;
-  final Set<String> _selected = <String>{};
 
   /// Oyun kimliği -> listedeki sıra numarası (1'den başlar). Süzgeç
   /// uygulansa da numara değişmez, böylece "#42" ile aranabilir.
@@ -446,43 +444,10 @@ class _PlaylistDetailScreenState extends State<PlaylistDetailScreen> {
   ///
   /// Numaralar süzgeçten bağımsızdır; kullanıcı satırda gördüğü numarayı
   /// yazar.
-  void _toggleSelected(String gameId) {
-    setState(() {
-      if (!_selected.remove(gameId)) _selected.add(gameId);
-    });
-  }
 
-  void _endSelection() {
-    setState(() {
-      _selecting = false;
-      _selected.clear();
-    });
-  }
 
   /// Seçilen oyunları toplu analize gönderir.
   /// Seçilen oyunları kuyruğa verir; sıra [analysisOrder] ile kuruluyor.
-  Future<void> _analyseSelected({required bool deep}) async {
-    final games = analysisOrder(
-      (_playlist?.games ?? const <SavedGame>[])
-          .where((g) => _selected.contains(g.id))
-          .toList(),
-      _numbers,
-    );
-    if (games.isEmpty) return;
-
-    // Başladığını söyleyen bir bildirim yok: listeler sekmesinin
-    // üstündeki ilerleme şeridi zaten beliriyor ve kaç oyunun kaldığını
-    // da gösteriyor. Bitişte bildirim kalıyor, çünkü kullanıcı o sırada
-    // telefonun başında olmayabilir.
-    _endSelection();
-    await AnalysisQueue.instance.enqueue(
-      playlistId: widget.playlistId,
-      games: games,
-      deep: deep,
-    );
-    if (!mounted) return;
-    AppDialogs.snack(context, t('analysis.finished'));
-  }
 
   /// Listeyi bir numara aralığına daraltır.
   Future<void> _pickRange() async {
@@ -558,7 +523,7 @@ class _PlaylistDetailScreenState extends State<PlaylistDetailScreen> {
 
     return Scaffold(
       appBar: AppBar(
-        // Analiz listelerinin adı uzun ("Son Hızlı Analizler"); telefonda
+        // Analiz listesinin adı uzun ("Son Analizler"); telefonda
         // başlık çubuğuna sığmıyordu. Sığmadığında küçülüyor, kırpılmıyor.
         title: FittedBox(
           fit: BoxFit.scaleDown,
@@ -599,9 +564,7 @@ class _PlaylistDetailScreenState extends State<PlaylistDetailScreen> {
               if (value == 'range') _markRange();
               if (value == 'showRange') _pickRange();
               if (value == 'filter') _pickFilter();
-              if (value == 'select') {
-                setState(() => _selecting = true);
-              }
+              
             },
             itemBuilder: (context) => [
               if (!_isAnalysisList) ...[
@@ -626,11 +589,6 @@ class _PlaylistDetailScreenState extends State<PlaylistDetailScreen> {
                 value: 'showRange',
                 child: Text(t('lists.showRange')),
               ),
-              if (!_isAnalysisList)
-                PopupMenuItem(
-                  value: 'select',
-                  child: Text(t('analysis.selectGames')),
-                ),
             ],
           ),
         ],
@@ -697,102 +655,8 @@ class _PlaylistDetailScreenState extends State<PlaylistDetailScreen> {
                     if (_gameFilter.isActive)
                       _filterBanner(scheme, visible.length),
                     Expanded(child: _list(visible, scheme)),
-                    if (_selecting) _selectionBar(visible, scheme),
                   ],
                 ),
-    );
-  }
-
-  /// Seçim kipindeki alt şerit: seçim sayısı ve iki analiz düğmesi.
-  ///
-  /// Gezinme çubuğu payı ekleniyor; düğmeler telefonun tuşlarının
-  /// altında kalmasın.
-  Widget _selectionBar(List<SavedGame> visible, ColorScheme scheme) {
-    final count = _selected.length;
-    final allSelected =
-        visible.isNotEmpty && visible.every((g) => _selected.contains(g.id));
-
-    return Material(
-      color: scheme.surfaceContainerHigh,
-      child: Padding(
-        padding: EdgeInsets.fromLTRB(
-          12,
-          8,
-          12,
-          8 + MediaQuery.viewPaddingOf(context).bottom,
-        ),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Row(
-              children: [
-                IconButton(
-                  tooltip: t('common.cancel'),
-                  icon: const Icon(Icons.close_rounded),
-                  onPressed: _endSelection,
-                ),
-                Expanded(
-                  child: Text(
-                    t('analysis.selectedCount', {'count': count}),
-                    style: const TextStyle(fontWeight: FontWeight.w600),
-                  ),
-                ),
-                TextButton(
-                  onPressed: () => setState(() {
-                    if (allSelected) {
-                      _selected.clear();
-                    } else {
-                      _selected.addAll(visible.map((g) => g.id));
-                    }
-                  }),
-                  child: Text(
-                    allSelected
-                        ? t('common.clearSelection')
-                        : t('analysis.selectAll'),
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 4),
-            Text(
-              t('analysis.screenHint'),
-              style: TextStyle(fontSize: 11.5, color: scheme.onSurfaceVariant),
-            ),
-            // Analiz listeleri yüz kayıtla sınırlı; daha fazlası
-            // seçilirse iş bitince en son analiz edilenler listede
-            // görünmüyor. Saatler süren bir işin sessizce kırpılmaması
-            // için önceden söyleniyor.
-            if (count > StorageService.analysisLimit) ...[
-              const SizedBox(height: 4),
-              Text(
-                t('analysis.limitWarning',
-                    {'limit': StorageService.analysisLimit}),
-                style: TextStyle(fontSize: 11.5, color: scheme.error),
-              ),
-            ],
-            const SizedBox(height: 8),
-            Row(
-              children: [
-                Expanded(
-                  child: OutlinedButton(
-                    onPressed:
-                        count == 0 ? null : () => _analyseSelected(deep: false),
-                    child: Text(t('analysis.quick')),
-                  ),
-                ),
-                const SizedBox(width: 10),
-                Expanded(
-                  child: FilledButton(
-                    onPressed:
-                        count == 0 ? null : () => _analyseSelected(deep: true),
-                    child: Text(t('analysis.deep')),
-                  ),
-                ),
-              ],
-            ),
-          ],
-        ),
-      ),
     );
   }
 
@@ -990,16 +854,11 @@ class _PlaylistDetailScreenState extends State<PlaylistDetailScreen> {
         mouseCursor: kClickable,
         borderRadius: BorderRadius.circular(14),
         onTap: () =>
-            _selecting ? _toggleSelected(game.id) : _openGame(game),
+            _openGame(game),
         child: Padding(
           padding: const EdgeInsets.fromLTRB(6, 10, 6, 10),
           child: Row(
             children: [
-              if (_selecting)
-                Checkbox(
-                  value: _selected.contains(game.id),
-                  onChanged: (_) => _toggleSelected(game.id),
-                ),
               IconButton(
                 tooltip:
                     game.read ? t('lists.markUnread') : t('lists.markRead'),

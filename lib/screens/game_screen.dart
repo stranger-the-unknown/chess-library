@@ -23,7 +23,6 @@ import '../widgets/chess_board_widget.dart';
 import '../widgets/eval_bar.dart';
 import '../widgets/move_list.dart';
 import 'board_editor_screen.dart';
-import 'game_review_screen.dart';
 import '../widgets/cursors.dart';
 
 enum GameMode {
@@ -307,57 +306,11 @@ class _GameScreenState extends State<GameScreen> {
 
     if (!replay && gameOver) {
       setState(() => _resultText = _autoResult());
-      _offerReview();
+      // review removed
     }
   }
 
   /// Oyun bitince incelemeyi teklif eder.
-  void _offerReview() {
-    if (!mounted || _history.isEmpty) return;
-    ScaffoldMessenger.of(context)
-      ..hideCurrentSnackBar()
-      ..showSnackBar(
-        SnackBar(
-          content: Text(t('game.finishedOfferReview')),
-          duration: const Duration(seconds: 8),
-          action: SnackBarAction(
-            label: t('game.review'),
-            onPressed: _openReview,
-          ),
-        ),
-      );
-  }
-
-  void _openReview() {
-    if (_history.isEmpty) {
-      AppDialogs.snack(context, t('game.nothingToReview'));
-      return;
-    }
-    Navigator.push(
-      context,
-      MaterialPageRoute(
-        builder: (_) => GameReviewScreen(
-          saved: widget.savedReview,
-          history: List<MoveEntry>.from(_history),
-          startFen: _startFen == engine.ChessGame().fen ? null : _startFen,
-          title: widget.title ?? '',
-          // Analiz listesine yazılacak kayıt: tahtada ne varsa o.
-          source: SavedGame(
-            id: widget.sourceGameId,
-            name: widget.title ?? t('game.board'),
-            uciMoves: [for (final entry in _history) entry.move.uci],
-            createdAt: DateTime.now(),
-            result: widget.initialResult,
-            startFen: _startFen == engine.ChessGame().fen ? null : _startFen,
-            white: widget.whiteName,
-            black: widget.blackName,
-          ),
-          sourcePlaylistId: widget.sourcePlaylistId,
-        ),
-      ),
-    );
-  }
-
   String? _autoResult() {
     if (_game.isCheckmate) {
       return _game.sideToMove == engine.Color.white ? '0-1' : '1-0';
@@ -373,7 +326,8 @@ class _GameScreenState extends State<GameScreen> {
     _analysisDebounce?.cancel();
     _analysisToken++;
     EngineService.instance.stopAnalysis();
-    _analysisDebounce = Timer(const Duration(milliseconds: 220), _runAnalysis);
+    // Eski değerlendirme dursun; yeni sonuç gelene kadar sayı zıplamasın.
+    _analysisDebounce = Timer(const Duration(milliseconds: 700), _runAnalysis);
   }
 
   // -------------------------------------------------------------------------
@@ -384,20 +338,13 @@ class _GameScreenState extends State<GameScreen> {
     if (!_analysisOn) return;
     final fen = _game.fen;
     final token = ++_analysisToken;
-    setState(() => _thinking = true);
-
-    // Canli tahta: kisa movetime, yuksek depth tavani (SF movetime hakim).
+    // Ara skor / spinner yok; sadece nihai sonuç.
     final result = await EngineService.instance.analyze(
       fen,
       depth: 22,
-      movetimeMs: 500,
-      onProgress: (partial) {
-        if (token != _analysisToken || !mounted) return;
-        setState(() => _analysis = partial);
-      },
+      movetimeMs: 800,
     );
-
-    if (token != _analysisToken || !mounted) return;
+    if (!mounted || token != _analysisToken) return;
     setState(() {
       _analysis = result;
       _thinking = false;
@@ -561,7 +508,7 @@ class _GameScreenState extends State<GameScreen> {
       _resultText = loser == engine.Color.white ? '0-1' : '1-0';
     });
     SoundService.instance.playGameEnd();
-    _offerReview();
+    // review removed
   }
 
   Future<void> _restart() async {
@@ -776,9 +723,6 @@ class _GameScreenState extends State<GameScreen> {
           PopupMenuButton<String>(
             onSelected: (value) {
               switch (value) {
-                case 'review':
-                  _openReview();
-                  break;
                 case 'save':
                   _saveGame();
                   break;
@@ -803,13 +747,6 @@ class _GameScreenState extends State<GameScreen> {
               }
             },
             itemBuilder: (context) => [
-              PopupMenuItem(
-                value: 'review',
-                child: ListTile(
-                  leading: const Icon(Icons.query_stats_rounded),
-                  title: Text(t('game.reviewGame')),
-                ),
-              ),
               PopupMenuItem(
                 value: 'save',
                 child: ListTile(
@@ -900,7 +837,7 @@ class _GameScreenState extends State<GameScreen> {
                                   scoreCp: _whiteScore,
                                   mateIn: _whiteMate,
                                   flipped: _flipped,
-                                  thinking: _thinking,
+                                  thinking: widget.mode == GameMode.versusEngine && _thinking,
                                 ),
                               ),
                               const SizedBox(width: 8),
@@ -1044,14 +981,6 @@ class _GameScreenState extends State<GameScreen> {
               ),
             ),
           ),
-          if (toMove && _thinking) ...[
-            const SizedBox(width: 8),
-            const SizedBox(
-              width: 12,
-              height: 12,
-              child: CircularProgressIndicator(strokeWidth: 2),
-            ),
-          ],
           const SizedBox(width: 12),
           Expanded(
             child: CapturedPieces(side: side, game: _game, size: 16),
@@ -1124,9 +1053,9 @@ class _GameScreenState extends State<GameScreen> {
 
   Widget _engineLine(ColorScheme scheme) {
     final analysis = _analysis;
-    final text = analysis == null
-        ? t('game.enginePreparing')
-        : _describeAnalysis(analysis);
+    // Sonuç yokken boş kutu / hazırlanıyor yazısı gösterme.
+    if (analysis == null) return const SizedBox.shrink();
+    final text = _describeAnalysis(analysis);
 
     return Container(
       width: double.infinity,

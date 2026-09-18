@@ -48,14 +48,11 @@ void main() {
     await _seed();
     await _pump(tester, const PlaylistScreen());
 
-    expect(find.text('Son Derin Analizler'), findsOneWidget);
-    expect(find.text('Son Hızlı Analizler'), findsOneWidget);
+    expect(find.text('Son Analizler'), findsOneWidget);
 
-    final deep = tester.getRect(find.text('Son Derin Analizler'));
-    final quick = tester.getRect(find.text('Son Hızlı Analizler'));
+    final analysis = tester.getRect(find.text('Son Analizler'));
     final user = tester.getRect(find.text('Tal'));
-    expect(deep.top, lessThan(quick.top));
-    expect(quick.top, lessThan(user.top), reason: 'analiz listeleri üstte');
+    expect(analysis.top, lessThan(user.top), reason: 'analiz listesi üstte');
   });
 
   testWidgets('analiz listesi silinemiyor ve yeniden adlandırılamıyor',
@@ -65,7 +62,7 @@ void main() {
 
     // Analiz listesinin menüsünde silme/yeniden adlandırma olmamalı.
     final card = find.ancestor(
-      of: find.text('Son Derin Analizler'),
+      of: find.text('Son Analizler'),
       matching: find.byType(Row),
     );
     await tester.tap(find.descendant(
@@ -79,12 +76,12 @@ void main() {
 
   test('servis de silmeyi ve adlandırmayı reddediyor', () async {
     await _seed();
-    await StorageService.instance.deletePlaylist(StorageService.deepListId);
+    await StorageService.instance.deletePlaylist(StorageService.analysisListId);
     await StorageService.instance
-        .renamePlaylist(StorageService.deepListId, 'Yeni');
+        .renamePlaylist(StorageService.analysisListId, 'Yeni');
 
     final lists = await StorageService.instance.loadAnalysisLists();
-    expect(lists, hasLength(2), reason: 'silinmemeliydi');
+    expect(lists, hasLength(1), reason: 'silinmemeliydi');
     expect(lists.first.name, isNot('Yeni'), reason: 'adlandırılmamalıydı');
   });
 
@@ -102,18 +99,18 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.text('0 oyun seçildi'), findsOneWidget);
-    // Seçim yokken analiz düğmeleri kapalı.
-    final quick = tester.widget<OutlinedButton>(
-      find.widgetWithText(OutlinedButton, 'Hızlı analiz'),
+    // Seçim yokken Analiz düğmesi kapalı.
+    final idle = tester.widget<FilledButton>(
+      find.widgetWithText(FilledButton, 'Analiz'),
     );
-    expect(quick.onPressed, isNull);
+    expect(idle.onPressed, isNull);
 
     await tester.tap(find.text('Tümünü seç'));
     await tester.pumpAndSettle();
     expect(find.text('2 oyun seçildi'), findsOneWidget);
 
-    final ready = tester.widget<OutlinedButton>(
-      find.widgetWithText(OutlinedButton, 'Hızlı analiz'),
+    final ready = tester.widget<FilledButton>(
+      find.widgetWithText(FilledButton, 'Analiz'),
     );
     expect(ready.onPressed, isNotNull);
   });
@@ -135,28 +132,21 @@ void main() {
 
     await _pump(
       tester,
-      PlaylistDetailScreen(playlistId: StorageService.deepListId),
+      PlaylistDetailScreen(playlistId: StorageService.analysisListId),
     );
     expect(find.text('Bir'), findsOneWidget);
   });
 
   testWidgets('analiz listesinin başlığı da çevrilmiş', (tester) async {
-    // Ham kimlik ("sys_quick") görünüyordu: ad çözümü listeler
-    // sekmesinde yapılıyor ama detay ekranında yapılmıyordu.
     await _seed();
     await _pump(
       tester,
-      const PlaylistDetailScreen(playlistId: StorageService.quickListId),
+      const PlaylistDetailScreen(playlistId: StorageService.analysisListId),
     );
-    expect(find.text('Son Hızlı Analizler'), findsOneWidget);
-    expect(find.text('sys_quick'), findsNothing);
-
-    await _pump(
-      tester,
-      const PlaylistDetailScreen(playlistId: StorageService.deepListId),
-    );
-    expect(find.text('Son Derin Analizler'), findsOneWidget);
+    expect(find.text('Son Analizler'), findsOneWidget);
+    expect(find.text('sys_analysis'), findsNothing);
     expect(find.text('sys_deep'), findsNothing);
+    expect(find.text('sys_quick'), findsNothing);
   });
 
   testWidgets('boş analiz listesi doğru yönlendiriyor', (tester) async {
@@ -165,7 +155,7 @@ void main() {
     await _seed();
     await _pump(
       tester,
-      const PlaylistDetailScreen(playlistId: StorageService.deepListId),
+      const PlaylistDetailScreen(playlistId: StorageService.analysisListId),
     );
     expect(find.textContaining('Henüz analiz yok'), findsOneWidget);
     expect(find.textContaining('Tahta ekranındaki'), findsNothing);
@@ -203,7 +193,7 @@ void main() {
           ],
         ),
       );
-      return (await StorageService.instance.loadAnalysisLists()).last;
+      return (await StorageService.instance.loadAnalysisLists()).first;
     }
 
     testWidgets('başlık menüsünde toplu okundu ve seçim yok',
@@ -277,7 +267,7 @@ void main() {
 
       final title = find.descendant(
         of: find.byType(AppBar),
-        matching: find.text('Son Hızlı Analizler'),
+        matching: find.text('Son Analizler'),
       );
       expect(title, findsOneWidget);
       expect(

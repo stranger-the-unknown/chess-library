@@ -95,8 +95,8 @@ Future<void> _pumpReview(
   await tester.pumpAndSettle();
 }
 
-Future<List<SavedGame>> _quickRecords() async =>
-    (await StorageService.instance.loadAnalysisLists()).last.games;
+Future<List<SavedGame>> _analysisRecords() async =>
+    (await StorageService.instance.loadAnalysisLists()).first.games;
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
@@ -112,7 +112,7 @@ void main() {
 
       await _pumpReview(tester, source: game, sourcePlaylistId: playlist.id);
 
-      final records = await _quickRecords();
+      final records = await _analysisRecords();
       expect(records, hasLength(1), reason: 'inceleme kaydedilmedi');
       expect(records.first.name, 'Tal - Botvinnik');
       expect(records.first.sourceGameId, game.id);
@@ -125,7 +125,7 @@ void main() {
       // başına duruyor, asıl oyuna bağ kurulmuyor.
       await _pumpReview(tester, source: _game('Serbest oyun'));
 
-      final records = await _quickRecords();
+      final records = await _analysisRecords();
       expect(records, hasLength(1));
       expect(records.first.name, 'Serbest oyun');
       expect(records.first.sourceGameId, isNull);
@@ -161,7 +161,7 @@ void main() {
       await _pumpReview(tester, source: game, saved: saved);
 
       expect(
-        await _quickRecords(),
+        await _analysisRecords(),
         isEmpty,
         reason: 'motor çalışmadı, kaydedilecek yeni bir analiz yok',
       );
@@ -169,7 +169,7 @@ void main() {
 
     testWidgets('kaynak verilmezse kaydedilmiyor', (tester) async {
       await _pumpReview(tester);
-      expect(await _quickRecords(), isEmpty);
+      expect(await _analysisRecords(), isEmpty);
     }, timeout: _timeout);
   });
 
@@ -191,7 +191,7 @@ void main() {
         ),
       );
 
-      final analysis = (await StorageService.instance.loadAnalysisLists()).last;
+      final analysis = (await StorageService.instance.loadAnalysisLists()).first;
       tester.view.devicePixelRatio = 1;
       tester.view.physicalSize = const Size(500, 1200);
       addTearDown(() {
@@ -265,7 +265,7 @@ void main() {
           moves: const [],
         ),
       );
-      final list = (await StorageService.instance.loadAnalysisLists()).last;
+      final list = (await StorageService.instance.loadAnalysisLists()).first;
       final record = list.games.first;
       expect(record.sourcePlaylistId, isNull);
 
@@ -276,7 +276,7 @@ void main() {
           await StorageService.instance.toggleGameFavorite(list.id, record.id);
       expect(favorite, isTrue);
 
-      final again = (await StorageService.instance.loadAnalysisLists()).last;
+      final again = (await StorageService.instance.loadAnalysisLists()).first;
       expect(again.games.first.read, isTrue);
       expect(again.games.first.favorite, isTrue);
     });

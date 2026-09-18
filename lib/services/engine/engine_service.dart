@@ -148,11 +148,17 @@ class EngineService {
       if (!Platform.isLinux && !Platform.isMacOS) return null;
     }
     if (_stockfish != null && _stockfish!.isRunning) return _stockfish;
-    if (_binaryMissing) return null;
 
+    // Android: her denemede ensure + başarılıysa kalıcı "missing" bayrağını aç.
+    // Geçici çıkartma/exec hatası sonrasında motorun sonsuza kilitlenmesini önler.
     if (Platform.isAndroid) {
-      await ensureAndroidStockfishBinary();
+      final ensured = await ensureAndroidStockfishBinary();
+      if (ensured != null) {
+        _binaryMissing = false;
+      }
     }
+
+    if (_binaryMissing) return null;
 
     final resolved = await StockfishUci.resolveBinaryPath();
     if (resolved == null && !forceViaEnv) {
@@ -163,11 +169,12 @@ class EngineService {
     final engine = StockfishUci();
     if (await engine.start()) {
       _stockfish = engine;
+      _binaryMissing = false;
       return engine;
     }
     await engine.dispose();
     _stockfish = null;
-    // İkili vardı ama start başarısız: sonraki çağrıda tekrar dene.
+    // İkili vardı ama start başarısız: bayrağı kilitleme; sonraki çağrıda tekrar dene.
     return null;
   }
 

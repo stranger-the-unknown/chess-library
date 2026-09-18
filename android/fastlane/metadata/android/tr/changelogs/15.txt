@@ -1,0 +1,3 @@
+﻿• Android Stockfish jniLibs ile (Android 10+ W^X düzeltmesi)
+• Daha sakin canlı motor (dönen ikon / sürekli skor yok)
+• Oyun incelemesi ve Son Analizler listesi kaldırıldı

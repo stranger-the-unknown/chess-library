@@ -58,12 +58,6 @@ class _GameReviewScreenState extends State<GameReviewScreen> {
   GameReview? _review;
   int _done = 0;
   int _total = 0;
-  bool _deep = false;
-  bool _running = false;
-
-  /// Kullanıcı kayıtlı analizi görmezden gelip yeniden analiz
-  /// istedi mi?
-  bool _reanalysed = false;
   bool _flipped = false;
   int _cursor = 0;
 
@@ -75,7 +69,7 @@ class _GameReviewScreenState extends State<GameReviewScreen> {
 
   Future<void> _run() async {
     final saved = widget.saved;
-    if (saved != null && !_reanalysed) {
+    if (saved != null) {
       final restored = fromStoredReview(
         saved,
         widget.history,
@@ -84,15 +78,12 @@ class _GameReviewScreenState extends State<GameReviewScreen> {
       if (restored != null) {
         setState(() {
           _review = restored;
-          _running = false;
-          _deep = saved.deep;
         });
         return;
       }
     }
 
     setState(() {
-      _running = true;
       _review = null;
       _done = 0;
       _total = widget.history.length + 1;
@@ -105,7 +96,6 @@ class _GameReviewScreenState extends State<GameReviewScreen> {
       () => GameReviewer().review(
         widget.history,
         startFen: widget.startFen,
-        deep: _deep,
         onProgress: (done, total) {
           if (!mounted) return;
           setState(() {
@@ -123,7 +113,6 @@ class _GameReviewScreenState extends State<GameReviewScreen> {
     if (!mounted) return;
     setState(() {
       _review = review;
-      _running = false;
       _cursor = 0;
     });
   }
@@ -141,7 +130,7 @@ class _GameReviewScreenState extends State<GameReviewScreen> {
       await StorageService.instance.addAnalysis(
         source: source,
         sourcePlaylistId: widget.sourcePlaylistId,
-        review: toStoredReview(review, deep: _deep),
+        review: toStoredReview(review),
       );
     } catch (error) {
       // Kayıt başarısız olursa sonuç yine de ekranda gösterilsin.
@@ -196,22 +185,6 @@ class _GameReviewScreenState extends State<GameReviewScreen> {
             icon: const Icon(Icons.swap_vert_rounded),
             onPressed: () => setState(() => _flipped = !_flipped),
           ),
-          if (!_running)
-            IconButton(
-              tooltip: _deep ? t('review.quick') : t('review.deep'),
-              icon: Icon(
-                _deep ? Icons.flash_on_rounded : Icons.travel_explore_rounded,
-              ),
-              onPressed: () {
-                // Kullanıcı derinliği değiştirdiyse kayıtlı analiz artık
-                // istediği şey değil; motor yeniden çalışır.
-                setState(() {
-                  _deep = !_deep;
-                  _reanalysed = true;
-                });
-                _run();
-              },
-            ),
         ],
       ),
       body: review == null
@@ -231,7 +204,7 @@ class _GameReviewScreenState extends State<GameReviewScreen> {
             Icon(Icons.memory_rounded, size: 42, color: scheme.primary),
             const SizedBox(height: 18),
             Text(
-              _deep ? t('review.runningDeep') : t('review.running'),
+              t('review.running'),
               style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w700),
             ),
             const SizedBox(height: 6),
