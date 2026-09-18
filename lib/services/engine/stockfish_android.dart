@@ -1,22 +1,23 @@
 import 'dart:io';
 
 import 'package:flutter/foundation.dart' show kIsWeb;
-import 'package:flutter/services.dart' show rootBundle;
+import 'package:flutter/services.dart' show MethodChannel, rootBundle;
 import 'package:path_provider/path_provider.dart';
 
 import 'stockfish_uci.dart';
 
+const _nativeChannel = MethodChannel('chess_library/native');
+
 /// Android'de Stockfish ikili yolunu hazırlar.
 ///
-/// **Kök neden (8.0.1 ve öncesi):** Asset'ten `getApplicationSupportDirectory`
-/// altına çıkarılan ikili `chmod 755` ile +x alsa bile Android 10+ W^X /
-/// SELinux, yazılabilir uygulama veri dizininden `Process.start` ile
-/// yürütmeyi engeller. Windows'ta sorun yoktu.
+/// **Kök neden:** Asset'ten uygulama veri dizinine çıkarılan ikili Android 10+
+/// W^X / SELinux yüzünden `Process.start` ile çalışmaz. Ayrıca AGP varsayılanı
+/// `extractNativeLibs=false` iken jniLibs APK içinde kalır ve dosya olarak
+/// görünmez. `Platform.resolvedExecutable` ebeveyni de güvenilir nativeLibraryDir
+/// değildir.
 ///
-/// **Sağlam yol:** `jniLibs/<abi>/libstockfish.so` → paket yöneticisi
-/// `nativeLibraryDir`'e çıkarır (yürütülebilir). Asset extract yedek kalır.
-///
-/// Her motor başlatmadan önce [EngineService] bunu çağırır.
+/// **Sağlam yol:** `jniLibs` + `extractNativeLibs=true` +
+/// `applicationInfo.nativeLibraryDir/libstockfish.so` (MethodChannel).
 Future<String?> ensureAndroidStockfishBinary() async {
   if (kIsWeb || !Platform.isAndroid) return null;
 
@@ -27,6 +28,7 @@ Future<String?> ensureAndroidStockfishBinary() async {
       return native;
     }
 
+    // Yedek: eski extract yolu (çoğu cihazda W^X ile başarısız olur).
     final support = await getApplicationSupportDirectory();
     final dest = File('${support.path}/stockfish');
     if (await dest.exists()) {
@@ -48,31 +50,48 @@ Future<String?> ensureAndroidStockfishBinary() async {
         await _makeExecutable(dest);
         StockfishUci.cachedBinaryPath = dest.path;
         return dest.path;
-      } catch (_) {
-        // Bu ABI asset'te yok; sonrakini dene.
-      }
+      } catch (_) {}
     }
   } catch (_) {}
 
   return StockfishUci.resolveBinaryPath();
 }
 
-/// Flutter APK'da `Platform.resolvedExecutable` genelde
-/// `…/lib/<abi>/libapp.so` (veya benzeri); ebeveyn dizin = nativeLibraryDir.
 Future<String?> _nativeLibraryStockfish() async {
+  try {
+    final fromChannel =
+        await _nativeChannel.invokeMethod<String>('stockfishPath');
+    if (fromChannel != null && fromChannel.isNotEmpty) {
+      final f = File(fromChannel);
+      if (await f.exists() && await f.length() > 1024 * 1024) {
+        return f.path;
+      }
+    }
+  } catch (_) {}
+
+  try {
+    final dir =
+        await _nativeChannel.invokeMethod<String>('nativeLibraryDir');
+    if (dir != null && dir.isNotEmpty) {
+      final candidate = File('$dir${Platform.pathSeparator}libstockfish.so');
+      if (await candidate.exists() && await candidate.length() > 1024 * 1024) {
+        return candidate.path;
+      }
+    }
+  } catch (_) {}
+
+  // Son çare: resolvedExecutable ebeveyni (Flutter sürümüne göre kırılgan).
   try {
     final dir = File(Platform.resolvedExecutable).parent.path;
     final candidate = File('$dir${Platform.pathSeparator}libstockfish.so');
-    if (!await candidate.exists()) return null;
-    final len = await candidate.length();
-    if (len <= 1024 * 1024) return null;
-    return candidate.path;
-  } catch (_) {
-    return null;
-  }
+    if (await candidate.exists() && await candidate.length() > 1024 * 1024) {
+      return candidate.path;
+    }
+  } catch (_) {}
+
+  return null;
 }
 
-/// Yürütme bitini uygular (yalnızca asset-extract yedek yolu).
 Future<void> _makeExecutable(File dest) async {
   final path = dest.path;
   final attempts = <List<String>>[
@@ -85,8 +104,6 @@ Future<void> _makeExecutable(File dest) async {
     try {
       final result = await Process.run(args.first, args.sublist(1));
       if (result.exitCode == 0) return;
-    } catch (_) {
-      // Sonraki yolu dene.
-    }
+    } catch (_) {}
   }
 }

@@ -1,0 +1,3 @@
+﻿• Android Stockfish via jniLibs (Android 10+ W^X fix)
+• Calmer live engine (no spinner / live score flicker)
+• Removed Game Review and Recent Analyses list
