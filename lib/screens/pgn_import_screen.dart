@@ -76,6 +76,8 @@ class _PgnImportScreenState extends State<PgnImportScreen> {
           startFen: game.startFen,
           title: game.title,
           initialResult: game.result,
+          whiteName: game.white == '?' ? null : game.white,
+          blackName: game.black == '?' ? null : game.black,
         ),
       ),
     );

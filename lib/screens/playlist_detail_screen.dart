@@ -1054,7 +1054,11 @@ class _PlaylistDetailScreenState extends State<PlaylistDetailScreen> {
                               Text(
                                 game.cardWhite.isNotEmpty
                                     ? game.cardWhite
-                                    : (game.white ?? game.name),
+                                    : (game.resolvedWhite ??
+                                        (game.name.trim() == '?' ||
+                                                game.name.trim().isEmpty
+                                            ? 'PGN'
+                                            : game.name)),
                                 maxLines: 1,
                                 overflow: TextOverflow.ellipsis,
                                 style: TextStyle(

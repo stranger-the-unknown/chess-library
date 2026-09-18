@@ -111,7 +111,6 @@ class _GameFilterDialogState extends State<GameFilterDialog> {
             _field(
               _white,
               _ignoreColor ? t('lists.filterPlayer') : t('lists.filterWhite'),
-              autofocus: true,
             ),
             _field(
               _black,

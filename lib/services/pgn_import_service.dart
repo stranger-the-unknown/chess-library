@@ -82,17 +82,25 @@ class PgnImportService {
     );
   }
 
-  static SavedGame _toSavedGame(PgnGame game) => SavedGame(
-        name: game.title,
-        uciMoves: game.uciMoves,
-        createdAt: DateTime.now(),
-        result: game.result,
-        startFen: game.startFen,
-        white: game.white == '?' ? null : game.white,
-        black: game.black == '?' ? null : game.black,
-        tags: game.headers,
-        note: game.subtitle.isEmpty ? null : game.subtitle,
-      );
+  static SavedGame _toSavedGame(PgnGame game) {
+    final white = game.white == '?' ? null : game.white;
+    final black = game.black == '?' ? null : game.black;
+    var name = game.title.trim();
+    if (name.isEmpty || name == '?' || name == '-') {
+      name = 'PGN';
+    }
+    return SavedGame(
+      name: name,
+      uciMoves: game.uciMoves,
+      createdAt: DateTime.now(),
+      result: game.result,
+      startFen: game.startFen,
+      white: white,
+      black: black,
+      tags: game.headers,
+      note: game.subtitle.isEmpty ? null : game.subtitle,
+    );
+  }
 }
 
 /// Bir listedeki tüm oyunları tek bir PGN metnine dönüştürür.

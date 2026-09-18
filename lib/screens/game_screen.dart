@@ -655,19 +655,57 @@ class _GameScreenState extends State<GameScreen> {
 
     if (saved != true || !mounted) return;
 
+    final saveName = nameController.text.trim().isEmpty
+        ? 'Oyun'
+        : nameController.text.trim();
+    // PGN'den gelen oyuncu adları; yoksa "Beyaz - Siyah" biçimindeki
+    // başlıktan ayırmayı dene (tek oyun yapıştırıp kaydetme yolu).
+    String? white = _meaningfulName(widget.whiteName);
+    String? black = _meaningfulName(widget.blackName);
+    if (white == null && black == null) {
+      final fromTitle = _splitPlayerTitle(widget.title ?? saveName);
+      if (fromTitle != null) {
+        white = fromTitle.$1;
+        black = fromTitle.$2;
+      }
+    }
     await storage.addGame(
       selectedId,
       SavedGame(
-        name: nameController.text.trim().isEmpty
-            ? 'Oyun'
-            : nameController.text.trim(),
+        name: saveName,
         uciMoves: _history.map((e) => e.uci).toList(),
         createdAt: DateTime.now(),
         result: _resultText,
         startFen: _startFen == engine.ChessGame().fen ? null : _startFen,
+        white: white,
+        black: black,
       ),
     );
     if (mounted) AppDialogs.snack(context, t('game.saved'));
+  }
+
+
+  static String? _meaningfulName(String? value) {
+    if (value == null) return null;
+    final trimmed = value.trim();
+    if (trimmed.isEmpty || trimmed == '?' || trimmed == '-') return null;
+    return trimmed;
+  }
+
+  /// "Magnus Carlsen - Hikaru" gibi başlıklardan oyuncu çiftini çıkarır.
+  static (String, String)? _splitPlayerTitle(String? title) {
+    if (title == null) return null;
+    final raw = title.trim();
+    const sep = ' - ';
+    final index = raw.indexOf(sep);
+    if (index <= 0) return null;
+    final left = raw.substring(0, index).trim();
+    final right = raw.substring(index + sep.length).trim();
+    if (left.isEmpty || right.isEmpty) return null;
+    if ((left == '?' || left == '-') && (right == '?' || right == '-')) {
+      return null;
+    }
+    return (left, right);
   }
 
   // -------------------------------------------------------------------------
