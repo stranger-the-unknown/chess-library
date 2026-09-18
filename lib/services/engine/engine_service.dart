@@ -6,6 +6,7 @@ import 'package:flutter/foundation.dart' show kIsWeb;
 
 import '../../l10n/app_strings.dart';
 import 'chess_ai.dart';
+import 'stockfish_android.dart';
 import 'stockfish_uci.dart';
 
 export 'chess_ai.dart' show SearchResult;
@@ -215,6 +216,25 @@ class EngineService {
     );
   }
 
+  /// Bulmaca / oyun ici cevap-ipucu: her zaman Dart (Stockfish `analyze` degil).
+  Future<SearchResult> analyzeDart(
+    String fen, {
+    int depth = 12,
+    int movetimeMs = 1500,
+    int skill = 20,
+    List<int> repetitionHashes = const [],
+    void Function(SearchResult partial)? onProgress,
+  }) {
+    return _analyzeDart(
+      fen,
+      depth: depth,
+      movetimeMs: movetimeMs,
+      skill: skill,
+      repetitionHashes: repetitionHashes,
+      onProgress: onProgress,
+    );
+  }
+
   Future<SearchResult> _analyzeDart(
     String fen, {
     int depth = 12,
@@ -250,10 +270,19 @@ class EngineService {
   }
 
   Future<StockfishUci?> _ensureStockfish() async {
-    if (!Platform.isWindows) return null;
+    if (kIsWeb) return null;
+    final envPath = Platform.environment['STOCKFISH_PATH'];
+    final forceViaEnv = envPath != null && envPath.isNotEmpty;
+    // Windows/Android üretim; STOCKFISH_PATH ile test/CI (Linux dahil).
+    if (!(Platform.isWindows || Platform.isAndroid || forceViaEnv)) {
+      return null;
+    }
     if (_stockfish != null && _stockfish!.isRunning) return _stockfish;
     if (_stockfishTried && _stockfish == null) return null;
     _stockfishTried = true;
+    if (Platform.isAndroid) {
+      await ensureAndroidStockfishBinary();
+    }
     final engine = StockfishUci();
     if (await engine.start()) {
       _stockfish = engine;
@@ -264,10 +293,17 @@ class EngineService {
     return null;
   }
 
-  /// Süren aramayı iptal eder. Dart isolate'i çalışan bir hesaplamanın
-  /// ortasında mesaj işleyemediği için isolate sonlandırılıp bir sonraki
-  /// istekte yeniden başlatılır.
+  /// Canli analiz / inceleme iptali: SF `stop` (UI askiya alinmasin).
+  /// Dart isolate istege bagli yeniden baslatilir.
+  Future<void> stopAnalysis() async {
+    await _stockfish?.stopSearch();
+  }
+
+  /// Süren aramayı iptal eder. SF `stop` ile hemen bırakılır; Dart
+  /// isolate çalışan hesaplamanın ortasında mesaj işleyemediği için
+  /// sonlandırılıp bir sonraki istekte yeniden başlatılır.
   Future<void> cancel() async {
+    await stopAnalysis();
     for (final completer in _pending.values) {
       if (!completer.isCompleted) {
         completer.complete(

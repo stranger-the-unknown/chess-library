@@ -14,6 +14,10 @@ class StockfishUci {
   final _lines = StreamController<String>.broadcast();
   bool _ready = false;
   String? _binaryPath;
+  Completer<SearchResult?>? _activeSearch;
+
+  /// Android ilk-çalıştırma çıkartması vb. için önceden çözülmüş yol.
+  static String? cachedBinaryPath;
 
   bool get isRunning => _process != null && _ready;
 
@@ -40,6 +44,10 @@ class StockfishUci {
         onDone: () {
           _ready = false;
           _process = null;
+          final pending = _activeSearch;
+          if (pending != null && !pending.isCompleted) {
+            pending.complete(null);
+          }
         },
       );
       process.stderr
@@ -69,6 +77,17 @@ class StockfishUci {
     }
   }
 
+  /// Devam eden aramayı `stop` ile keser; bekleyen [analyze] hemen döner.
+  Future<void> stopSearch() async {
+    try {
+      _write('stop');
+    } catch (_) {}
+    final pending = _activeSearch;
+    if (pending != null && !pending.isCompleted) {
+      pending.complete(null);
+    }
+  }
+
   Future<SearchResult?> analyze(
     String fen, {
     int depth = 20,
@@ -77,9 +96,11 @@ class StockfishUci {
   }) async {
     if (!await start()) return null;
 
+    // Önceki arama varsa kes.
+    await stopSearch();
+    await Future<void>.delayed(const Duration(milliseconds: 20));
+
     try {
-      _write('stop');
-      await Future<void>.delayed(const Duration(milliseconds: 20));
       _write('ucinewgame');
       _write('isready');
       if (!await _waitFor((l) => l == 'readyok', const Duration(seconds: 3))) {
@@ -88,6 +109,8 @@ class StockfishUci {
       }
 
       _write('position fen $fen');
+      // movetime duvar saati; yüksek depth tavanı SF'nin movetime içinde
+      // gidebildiği kadar derine inmesine izin verir.
       _write('go movetime $movetimeMs depth $depth');
 
       var best = '';
@@ -98,9 +121,12 @@ class StockfishUci {
       var pv = const <String>[];
 
       final done = Completer<SearchResult?>();
+      _activeSearch = done;
       final timer = Timer(Duration(milliseconds: movetimeMs + 4000), () {
         if (!done.isCompleted) {
-          _write('stop');
+          try {
+            _write('stop');
+          } catch (_) {}
           done.complete(null);
         }
       });
@@ -153,6 +179,7 @@ class StockfishUci {
       final result = await done.future;
       await sub.cancel();
       timer.cancel();
+      if (identical(_activeSearch, done)) _activeSearch = null;
       return result;
     } catch (_) {
       await _restart();
@@ -162,12 +189,19 @@ class StockfishUci {
 
   Future<void> dispose() async {
     _ready = false;
+    final pending = _activeSearch;
+    if (pending != null && !pending.isCompleted) {
+      pending.complete(null);
+    }
+    _activeSearch = null;
     try {
       _write('quit');
     } catch (_) {}
     await _outSub?.cancel();
     _outSub = null;
-    _process?.kill();
+    try {
+      _process?.kill();
+    } catch (_) {}
     _process = null;
   }
 
@@ -181,7 +215,9 @@ class StockfishUci {
   void _write(String cmd) {
     final p = _process;
     if (p == null) return;
-    p.stdin.writeln(cmd);
+    try {
+      p.stdin.writeln(cmd);
+    } catch (_) {}
   }
 
   Future<bool> _waitFor(bool Function(String) match, Duration timeout) async {
@@ -231,34 +267,73 @@ class StockfishUci {
   }
 
   static Future<String?> resolveBinaryPath() async {
+    if (cachedBinaryPath != null &&
+        await File(cachedBinaryPath!).exists()) {
+      return cachedBinaryPath;
+    }
+
     final env = Platform.environment['STOCKFISH_PATH'];
     if (env != null && env.isNotEmpty && await File(env).exists()) {
       return env;
     }
 
     final sep = Platform.pathSeparator;
-    final candidates = <String>[
-      <String>[Directory.current.path, 'windows', 'stockfish', 'stockfish.exe']
-          .join(sep),
-    ];
+    final candidates = <String>[];
 
-    try {
-      final exeDir = File(Platform.resolvedExecutable).parent.path;
-      candidates.add(<String>[exeDir, 'stockfish.exe'].join(sep));
-      candidates.add(<String>[exeDir, 'data', 'stockfish.exe'].join(sep));
-      final buildStockfish = <String>[
-        exeDir,
-        '..',
-        '..',
-        '..',
-        '..',
-        '..',
-        'windows',
-        'stockfish',
-        'stockfish.exe',
-      ].join(sep);
-      candidates.add(File(buildStockfish).absolute.path);
-    } catch (_) {}
+    if (Platform.isWindows) {
+      candidates.add(
+        <String>[Directory.current.path, 'windows', 'stockfish', 'stockfish.exe']
+            .join(sep),
+      );
+      try {
+        final exeDir = File(Platform.resolvedExecutable).parent.path;
+        candidates.add(<String>[exeDir, 'stockfish.exe'].join(sep));
+        candidates.add(<String>[exeDir, 'data', 'stockfish.exe'].join(sep));
+        final buildStockfish = <String>[
+          exeDir,
+          '..',
+          '..',
+          '..',
+          '..',
+          '..',
+          'windows',
+          'stockfish',
+          'stockfish.exe',
+        ].join(sep);
+        candidates.add(File(buildStockfish).absolute.path);
+      } catch (_) {}
+    } else if (Platform.isAndroid) {
+      // Geliştirme / manuel kopya yolları; APK içi çıkartma
+      // [ensureAndroidStockfishBinary] ile cachedBinaryPath'e yazılır.
+      candidates.add(
+        <String>[
+          Directory.current.path,
+          'android',
+          'stockfish',
+          'stockfish-arm64-v8a',
+        ].join(sep),
+      );
+      candidates.add(
+        <String>[
+          Directory.current.path,
+          'android',
+          'stockfish',
+          'stockfish-armeabi-v7a',
+        ].join(sep),
+      );
+      try {
+        final exeDir = File(Platform.resolvedExecutable).parent.path;
+        candidates.add(<String>[exeDir, 'stockfish'].join(sep));
+        candidates.add(<String>[exeDir, 'libstockfish.so'].join(sep));
+      } catch (_) {}
+    } else {
+      // Linux/macOS: smoke / CI
+      candidates.add(
+        <String>[Directory.current.path, 'stockfish'].join(sep),
+      );
+      candidates.add('/usr/games/stockfish');
+      candidates.add('/usr/bin/stockfish');
+    }
 
     for (final path in candidates) {
       if (await File(path).exists()) return path;
