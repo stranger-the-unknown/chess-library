@@ -15,6 +15,19 @@ your system language.
 
 ---
 
+## Engine (Hybrid 7.0)
+
+- **Review / live analysis / game review** → official Stockfish as a separate UCI OS process
+- **Play vs engine levels + puzzle opponent / hints** → Dart engine only
+- Do **not** use `flutter_stockfish`
+- Binaries are **gitignored**; download steps:
+  - Windows: [`windows/stockfish/README.md`](windows/stockfish/README.md)
+  - Android: [`android/stockfish/README.md`](android/stockfish/README.md)
+
+Game review wall-clock budgets (Stockfish): quick **400ms / depth≤22**, deep **1200ms / depth≤28** (movetime dominates).
+
+---
+
 ## Play
 
 **Play the engine** — Pick one of six levels, from beginner to master;
