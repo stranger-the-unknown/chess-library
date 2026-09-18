@@ -122,6 +122,9 @@ class _GameScreenState extends State<GameScreen> {
   bool _analysisOn = false;
   bool _thinking = false;
   SearchResult? _analysis;
+  /// Beyaz bakisi; hamle degisse bile yeni sonuc gelene kadar sabit.
+  int? _evalScoreCp;
+  int? _evalMate;
   Timer? _analysisDebounce;
   int _analysisToken = 0;
 
@@ -326,7 +329,11 @@ class _GameScreenState extends State<GameScreen> {
     _analysisDebounce?.cancel();
     _analysisToken++;
     EngineService.instance.stopAnalysis();
-    // Eski değerlendirme dursun; yeni sonuç gelene kadar sayı zıplamasın.
+    // Serit/bar kaybolmasin: eski skoru tut, sadece yeni sonuc gelince degistir.
+    // Isaret ters donmesin diye skor beyaz bakisinda (_evalScoreCp) saklanir.
+    if (_thinking) {
+      setState(() => _thinking = false);
+    }
     _analysisDebounce = Timer(const Duration(milliseconds: 700), _runAnalysis);
   }
 
@@ -337,16 +344,22 @@ class _GameScreenState extends State<GameScreen> {
   Future<void> _runAnalysis() async {
     if (!_analysisOn) return;
     final fen = _game.fen;
+    final side = _game.sideToMove;
     final token = ++_analysisToken;
-    // Ara skor / spinner yok; sadece nihai sonuç.
+    // Ara skor / spinner yok; sadece nihai sonuc.
     final result = await EngineService.instance.analyze(
       fen,
       depth: 22,
       movetimeMs: 800,
     );
     if (!mounted || token != _analysisToken) return;
+    final sign = side == engine.Color.white ? 1 : -1;
     setState(() {
       _analysis = result;
+      _evalScoreCp = result.scoreCp * sign;
+      _evalMate = result.mateIn == null
+          ? null
+          : (side == engine.Color.white ? result.mateIn! : -result.mateIn!);
       _thinking = false;
     });
   }
@@ -395,15 +408,21 @@ class _GameScreenState extends State<GameScreen> {
 
   Future<void> _showHint() async {
     setState(() => _thinking = true);
+    final side = _game.sideToMove;
     final result = await EngineService.instance.analyze(
       _game.fen,
       depth: 12,
       movetimeMs: 1200,
     );
     if (!mounted) return;
+    final sign = side == engine.Color.white ? 1 : -1;
     setState(() {
       _thinking = false;
       _analysis = result;
+      _evalScoreCp = result.scoreCp * sign;
+      _evalMate = result.mateIn == null
+          ? null
+          : (side == engine.Color.white ? result.mateIn! : -result.mateIn!);
       _analysisOn = true;
     });
   }
@@ -526,6 +545,8 @@ class _GameScreenState extends State<GameScreen> {
       _game = engine.ChessGame.fromFen(_startFen);
       _resultText = null;
       _analysis = null;
+      _evalScoreCp = null;
+      _evalMate = null;
       _resigned = false;
     });
     if (widget.mode == GameMode.versusEngine) _maybePlayEngineMove();
@@ -715,6 +736,8 @@ class _GameScreenState extends State<GameScreen> {
                 EngineService.instance.stopAnalysis();
                 setState(() {
                   _analysis = null;
+                  _evalScoreCp = null;
+                  _evalMate = null;
                   _thinking = false;
                 });
               }
@@ -834,8 +857,8 @@ class _GameScreenState extends State<GameScreen> {
                               SizedBox(
                                 height: side,
                                 child: EvalBar(
-                                  scoreCp: _whiteScore,
-                                  mateIn: _whiteMate,
+                                  scoreCp: _evalScoreCp,
+                                  mateIn: _evalMate,
                                   flipped: _flipped,
                                   thinking: widget.mode == GameMode.versusEngine && _thinking,
                                 ),
@@ -885,18 +908,7 @@ class _GameScreenState extends State<GameScreen> {
     );
   }
 
-  int? get _whiteScore {
-    final analysis = _analysis;
-    if (analysis == null) return null;
-    final sign = _game.sideToMove == engine.Color.white ? 1 : -1;
-    return analysis.scoreCp * sign;
-  }
 
-  int? get _whiteMate {
-    final mate = _analysis?.mateIn;
-    if (mate == null) return null;
-    return _game.sideToMove == engine.Color.white ? mate : -mate;
-  }
 
   Widget _warningBanner(ColorScheme scheme) {
     return Container(
@@ -1082,10 +1094,19 @@ class _GameScreenState extends State<GameScreen> {
     );
   }
 
+
+  /// Beyaz bakisi; pozitifte acik +.
+  String _formatScoreCp(int cp) {
+    final body = (cp.abs() / 100).toStringAsFixed(2);
+    if (cp > 0) return '+$body';
+    if (cp < 0) return '-$body';
+    return '0.00';
+  }
+
   String _describeAnalysis(SearchResult analysis) {
     final evaluation = analysis.mateIn != null
         ? t('game.mateIn', {'n': analysis.mateIn!.abs()})
-        : (_whiteScore! / 100).toStringAsFixed(2);
+        : _formatScoreCp(_evalScoreCp!);
 
     // Ana varyantı SAN'a çevir.
     final position = _game.copy();

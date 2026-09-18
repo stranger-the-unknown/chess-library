@@ -1,0 +1,1 @@
+Canlı motor: hamlede skor şeridi kaybolmuyor; eski eval (beyaz bakışı) yeni sonuç gelene kadar kalıyor, işaret ters dönmüyor.
