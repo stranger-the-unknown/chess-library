@@ -54,6 +54,7 @@ Name: "desktopicon"; Description: "{cm:CreateDesktopIcon}"; \
 ; Bunlardan biri eksik olursa uygulama açılmaz.
 Source: "{#BuildDir}\{#AppExeName}"; DestDir: "{app}"; Flags: ignoreversion
 Source: "{#BuildDir}\*.dll"; DestDir: "{app}"; Flags: ignoreversion skipifsourcedoesntexist
+Source: "{#BuildDir}\stockfish.exe"; DestDir: "{app}"; Flags: ignoreversion
 Source: "{#BuildDir}\data\*"; DestDir: "{app}\data"; \
     Flags: ignoreversion recursesubdirs createallsubdirs
 ; Lisans ve atıf belgeleri kurulumla birlikte gitsin.
@@ -99,3 +100,4 @@ begin
     RemoveDir(ExpandConstant('{#DataParent}'));
   end;
 end;
+
