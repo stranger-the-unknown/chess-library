@@ -2,12 +2,13 @@ import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
 
-import 'chess_ai.dart';
+import 'search_result.dart';
 
 /// Ayrı bir işletim sistemi sürecinde UCI konuşan Stockfish sarmalayıcı.
 ///
-/// Süreç çökerse `null` döner; çağıran Dart motoruna düşer. SF uygulamanın
-/// içinde değil, ayrı süreçte çalıştığı için ölmesi uygulamayı götürmez.
+/// Süreç çökerse `null` döner; Dart motoru yedek olarak kullanılmaz. SF
+/// uygulamanın içinde değil, ayrı süreçte çalıştığı için ölmesi uygulamayı
+/// götürmez. Uygun olduğunda süreç yeniden başlatılır.
 class StockfishUci {
   Process? _process;
   StreamSubscription<String>? _outSub;
@@ -15,6 +16,11 @@ class StockfishUci {
   bool _ready = false;
   String? _binaryPath;
   Completer<SearchResult?>? _activeSearch;
+
+  /// Son uygulanan güç ayarları (gereksiz setoption'ları azaltmak için).
+  int? _appliedSkill;
+  bool? _appliedLimitStrength;
+  int? _appliedElo;
 
   /// Android ilk-çalıştırma çıkartması vb. için önceden çözülmüş yol.
   static String? cachedBinaryPath;
@@ -44,6 +50,9 @@ class StockfishUci {
         onDone: () {
           _ready = false;
           _process = null;
+          _appliedSkill = null;
+          _appliedLimitStrength = null;
+          _appliedElo = null;
           final pending = _activeSearch;
           if (pending != null && !pending.isCompleted) {
             pending.complete(null);
@@ -70,6 +79,9 @@ class StockfishUci {
       _write('isready');
       await _waitFor((l) => l == 'readyok', const Duration(seconds: 5));
       _ready = true;
+      _appliedSkill = null;
+      _appliedLimitStrength = null;
+      _appliedElo = null;
       return true;
     } catch (_) {
       await dispose();
@@ -88,10 +100,68 @@ class StockfishUci {
     }
   }
 
+  /// UCI güç seçeneklerini `go` öncesi uygular.
+  ///
+  /// [skillLevel] Stockfish `Skill Level` (0–20). Tam güç için 20 +
+  /// [limitStrength] false. Zayıf seviyelerde ayrıca `UCI_LimitStrength` /
+  /// `UCI_Elo` kullanılır.
+  Future<bool> applyStrength({
+    required int skillLevel,
+    required bool limitStrength,
+    int? elo,
+  }) async {
+    if (!await start()) return false;
+    final skill = skillLevel.clamp(0, 20);
+    final useElo = limitStrength ? (elo ?? eloForSkill(skill)) : null;
+
+    final same = _appliedSkill == skill &&
+        _appliedLimitStrength == limitStrength &&
+        _appliedElo == useElo;
+    if (same) return true;
+
+    try {
+      _write('setoption name Skill Level value $skill');
+      _write(
+        'setoption name UCI_LimitStrength value ${limitStrength ? 'true' : 'false'}',
+      );
+      if (limitStrength && useElo != null) {
+        _write('setoption name UCI_Elo value $useElo');
+      }
+      _write('isready');
+      if (!await _waitFor((l) => l == 'readyok', const Duration(seconds: 3))) {
+        await _restart();
+        return isRunning;
+      }
+      _appliedSkill = skill;
+      _appliedLimitStrength = limitStrength;
+      _appliedElo = useElo;
+      return true;
+    } catch (_) {
+      await _restart();
+      return false;
+    }
+  }
+
+  /// EngineLevel.skill → yaklaşık UCI_Elo (UI'da gösterilmez).
+  static int eloForSkill(int skill) {
+    const map = <int, int>{
+      2: 1350,
+      5: 1550,
+      9: 1750,
+      13: 2000,
+      17: 2300,
+      20: 2850,
+    };
+    return map[skill] ?? (1320 + skill * 80).clamp(1320, 3190);
+  }
+
   Future<SearchResult?> analyze(
     String fen, {
     int depth = 20,
     int movetimeMs = 1000,
+    int skillLevel = 20,
+    bool limitStrength = false,
+    int? elo,
     void Function(SearchResult partial)? onProgress,
   }) async {
     if (!await start()) return null;
@@ -101,11 +171,26 @@ class StockfishUci {
     await Future<void>.delayed(const Duration(milliseconds: 20));
 
     try {
+      if (!await applyStrength(
+        skillLevel: skillLevel,
+        limitStrength: limitStrength,
+        elo: elo,
+      )) {
+        return null;
+      }
+
       _write('ucinewgame');
       _write('isready');
       if (!await _waitFor((l) => l == 'readyok', const Duration(seconds: 3))) {
         await _restart();
         if (!isRunning) return null;
+        if (!await applyStrength(
+          skillLevel: skillLevel,
+          limitStrength: limitStrength,
+          elo: elo,
+        )) {
+          return null;
+        }
       }
 
       _write('position fen $fen');
@@ -189,6 +274,9 @@ class StockfishUci {
 
   Future<void> dispose() async {
     _ready = false;
+    _appliedSkill = null;
+    _appliedLimitStrength = null;
+    _appliedElo = null;
     final pending = _activeSearch;
     if (pending != null && !pending.isCompleted) {
       pending.complete(null);
@@ -267,9 +355,10 @@ class StockfishUci {
   }
 
   static Future<String?> resolveBinaryPath() async {
-    if (cachedBinaryPath != null &&
-        await File(cachedBinaryPath!).exists()) {
-      return cachedBinaryPath;
+    // Explicit override (tests / Android extract): if set, do not fall through.
+    if (cachedBinaryPath != null) {
+      if (await File(cachedBinaryPath!).exists()) return cachedBinaryPath;
+      return null;
     }
 
     final env = Platform.environment['STOCKFISH_PATH'];
