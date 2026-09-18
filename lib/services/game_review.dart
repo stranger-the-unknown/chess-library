@@ -87,17 +87,17 @@ class GameReview {
 /// işaret değiştirilmiş değerlendirmesi ise gerçekte oynanan hamlenin
 /// sonucunu verir. Böylece N hamle için N+1 analiz yeterlidir.
 class GameReviewer {
-  /// Hızlı inceleme ayarları (Stockfish UCI).
+  /// Tek analiz profili (eski "derin" kalite: movetime/depth).
   ///
-  /// Duvar saati (movetime) önceki Dart bütçesine yakın tutulur; derinlik
-  /// tavanı yükseltildi ki SF movetime içinde daha derine inebilsin.
   /// Asıl sınırlayıcı movetime'dır (`go movetime … depth …`).
-  static const int quickMovetimeMs = 400;
-  static const int quickDepth = 22;
+  static const int analysisMovetimeMs = 1200;
+  static const int analysisDepth = 28;
 
-  /// Derin inceleme ayarları (Stockfish UCI).
-  static const int deepMovetimeMs = 1200;
-  static const int deepDepth = 28;
+  /// Eski adlar — geriye dönük sabitler.
+  static const int deepMovetimeMs = analysisMovetimeMs;
+  static const int deepDepth = analysisDepth;
+  static const int quickMovetimeMs = analysisMovetimeMs;
+  static const int quickDepth = analysisDepth;
 
   /// Mat skorlarını grafikte taşmasın diye sınırlar.
   static const int _cap = 1200;
@@ -105,12 +105,12 @@ class GameReviewer {
   Future<GameReview> review(
     List<MoveEntry> history, {
     String? startFen,
-    bool deep = false,
+    @Deprecated('Tek profil; yok sayılır') bool deep = true,
     void Function(int done, int total)? onProgress,
   }) async {
     final baseFen = startFen ?? engine.ChessGame().fen;
-    final movetime = deep ? deepMovetimeMs : quickMovetimeMs;
-    final depth = deep ? deepDepth : quickDepth;
+    const movetime = analysisMovetimeMs;
+    const depth = analysisDepth;
 
     // Pozisyonları ve sıradaki tarafı topla.
     final position = engine.ChessGame.fromFen(baseFen);

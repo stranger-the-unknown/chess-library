@@ -461,7 +461,7 @@ class _PlaylistDetailScreenState extends State<PlaylistDetailScreen> {
 
   /// Seçilen oyunları toplu analize gönderir.
   /// Seçilen oyunları kuyruğa verir; sıra [analysisOrder] ile kuruluyor.
-  Future<void> _analyseSelected({required bool deep}) async {
+  Future<void> _analyseSelected() async {
     final games = analysisOrder(
       (_playlist?.games ?? const <SavedGame>[])
           .where((g) => _selected.contains(g.id))
@@ -478,7 +478,6 @@ class _PlaylistDetailScreenState extends State<PlaylistDetailScreen> {
     await AnalysisQueue.instance.enqueue(
       playlistId: widget.playlistId,
       games: games,
-      deep: deep,
     );
     if (!mounted) return;
     AppDialogs.snack(context, t('analysis.finished'));
@@ -558,7 +557,7 @@ class _PlaylistDetailScreenState extends State<PlaylistDetailScreen> {
 
     return Scaffold(
       appBar: AppBar(
-        // Analiz listelerinin adı uzun ("Son Hızlı Analizler"); telefonda
+        // Analiz listesinin adı uzun ("Son Analizler"); telefonda
         // başlık çubuğuna sığmıyordu. Sığmadığında küçülüyor, kırpılmıyor.
         title: FittedBox(
           fit: BoxFit.scaleDown,
@@ -771,24 +770,12 @@ class _PlaylistDetailScreenState extends State<PlaylistDetailScreen> {
               ),
             ],
             const SizedBox(height: 8),
-            Row(
-              children: [
-                Expanded(
-                  child: OutlinedButton(
-                    onPressed:
-                        count == 0 ? null : () => _analyseSelected(deep: false),
-                    child: Text(t('analysis.quick')),
-                  ),
-                ),
-                const SizedBox(width: 10),
-                Expanded(
-                  child: FilledButton(
-                    onPressed:
-                        count == 0 ? null : () => _analyseSelected(deep: true),
-                    child: Text(t('analysis.deep')),
-                  ),
-                ),
-              ],
+            SizedBox(
+              width: double.infinity,
+              child: FilledButton(
+                onPressed: count == 0 ? null : _analyseSelected,
+                child: Text(t('analysis.run')),
+              ),
             ),
           ],
         ),

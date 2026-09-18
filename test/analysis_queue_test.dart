@@ -62,7 +62,6 @@ void main() {
       await AnalysisQueue.instance.enqueue(
         playlistId: playlist.id,
         games: games,
-        deep: false,
       );
 
       expect(lock.enabled, 1);
@@ -77,11 +76,10 @@ void main() {
       await AnalysisQueue.instance.enqueue(
         playlistId: playlist.id,
         games: games,
-        deep: false,
       );
 
-      final quick = (await StorageService.instance.loadAnalysisLists()).last;
-      expect(quick.games, hasLength(1));
+      final analysis = (await StorageService.instance.loadAnalysisLists()).first;
+      expect(analysis.games, hasLength(1));
       expect(lock.disabled, 1, reason: 'yine de bırakılmalı');
     }, timeout: const Timeout(Duration(minutes: 5)));
 
@@ -92,7 +90,6 @@ void main() {
       await AnalysisQueue.instance.enqueue(
         playlistId: playlist.id,
         games: games,
-        deep: false,
       );
 
       expect(lock.disabled, 1);
@@ -106,31 +103,29 @@ void main() {
     await AnalysisQueue.instance.enqueue(
       playlistId: playlist.id,
       games: games,
-      deep: false,
     );
 
-    final quick = (await StorageService.instance.loadAnalysisLists()).last;
-    expect(quick.games, hasLength(2));
+    final analysis = (await StorageService.instance.loadAnalysisLists()).first;
+    expect(analysis.games, hasLength(2));
     // En yeni başta: sonuncu analiz edilen ilk sırada.
-    expect(quick.games.first.name, 'İki');
-    expect(quick.games.last.name, 'Bir');
-    expect(quick.games.first.review, isNotNull);
-    expect(quick.games.first.review!.deep, isFalse);
+    expect(analysis.games.first.name, 'İki');
+    expect(analysis.games.last.name, 'Bir');
+    expect(analysis.games.first.review, isNotNull);
+    expect(analysis.games.first.review!.deep, isTrue);
   }, timeout: const Timeout(Duration(minutes: 5)));
 
-  test('derin analiz derin listeye gidiyor', () async {
+  test('analiz tek listeye gidiyor', () async {
     final games = [_game('Bir')];
     final playlist = await _seed(games);
 
     await AnalysisQueue.instance.enqueue(
       playlistId: playlist.id,
       games: games,
-      deep: true,
     );
 
     final lists = await StorageService.instance.loadAnalysisLists();
-    expect(lists.first.games, hasLength(1), reason: 'derin liste');
-    expect(lists.last.games, isEmpty, reason: 'hızlı liste boş kalmalı');
+    expect(lists, hasLength(1));
+    expect(lists.first.games, hasLength(1));
     expect(lists.first.games.first.review!.deep, isTrue);
   }, timeout: const Timeout(Duration(minutes: 5)));
 
@@ -149,7 +144,6 @@ void main() {
     await AnalysisQueue.instance.enqueue(
       playlistId: playlist.id,
       games: games,
-      deep: false,
     );
     AnalysisQueue.instance.removeListener(watcher);
 
@@ -170,11 +164,10 @@ void main() {
     await AnalysisQueue.instance.enqueue(
       playlistId: playlist.id,
       games: games,
-      deep: false,
     );
 
-    final quick = (await StorageService.instance.loadAnalysisLists()).last;
-    final names = quick.games.map((g) => g.name).toList();
+    final analysis = (await StorageService.instance.loadAnalysisLists()).first;
+    final names = analysis.games.map((g) => g.name).toList();
     expect(names, contains('Sağlam bir'));
     expect(names, contains('Sağlam iki'));
   }, timeout: const Timeout(Duration(minutes: 5)));
@@ -186,11 +179,10 @@ void main() {
     await AnalysisQueue.instance.enqueue(
       playlistId: playlist.id,
       games: games,
-      deep: false,
     );
 
     final record =
-        (await StorageService.instance.loadAnalysisLists()).last.games.first;
+        (await StorageService.instance.loadAnalysisLists()).first.games.first;
     expect(record.sourceGameId, games.first.id);
     expect(record.sourcePlaylistId, playlist.id);
   }, timeout: const Timeout(Duration(minutes: 5)));
@@ -202,7 +194,6 @@ void main() {
     await AnalysisQueue.instance.enqueue(
       playlistId: playlist.id,
       games: games,
-      deep: false,
     );
 
     expect(AnalysisQueue.instance.isRunning, isFalse);

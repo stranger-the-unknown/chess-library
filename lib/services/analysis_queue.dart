@@ -10,9 +10,9 @@ import 'storage_service.dart';
 
 /// Sırayla çalışan toplu analiz.
 ///
-/// Kullanıcı bir listeden istediği oyunları seçip "hızlı" ya da "derin"
-/// diyor; kuyruk onları teker teker inceleyip sonuçları analiz
-/// listelerine yazıyor. Amaç kullanıcının başında beklememesi.
+/// Kullanıcı bir listeden istediği oyunları seçip "Analiz" diyor; kuyruk
+/// onları teker teker inceleyip sonuçları "Son Analizler" listesine
+/// yazıyor. Amaç kullanıcının başında beklememesi.
 ///
 /// **Her oyun bitince kaydediliyor**, hepsi bitince değil. Uygulama
 /// yarıda kapanırsa o ana kadar bitenler duruyor; yalnızca kalanlar
@@ -108,10 +108,6 @@ class AnalysisQueue extends ChangeNotifier {
     }
   }
 
-  /// Kuyruktaki işler derin inceleme mi?
-  bool get deep => _jobs.isNotEmpty ? _jobs.first.deep : _lastDeep;
-  bool _lastDeep = false;
-
   /// Oyunları kuyruğa ekler ve gerekiyorsa çalışmayı başlatır.
   ///
   /// Kuyruk zaten çalışıyorsa yeni işler sonuna eklenir; iki toplu analiz
@@ -119,12 +115,10 @@ class AnalysisQueue extends ChangeNotifier {
   Future<void> enqueue({
     required String playlistId,
     required List<SavedGame> games,
-    required bool deep,
   }) async {
     if (games.isEmpty) return;
-    _lastDeep = deep;
     for (final game in games) {
-      _jobs.add(_Job(playlistId: playlistId, game: game, deep: deep));
+      _jobs.add(_Job(playlistId: playlistId, game: game));
     }
     _total += games.length;
     notifyListeners();
@@ -177,12 +171,11 @@ class AnalysisQueue extends ChangeNotifier {
         final review = await GameReviewer().review(
           _historyOf(job.game),
           startFen: job.game.startFen,
-          deep: job.deep,
         );
         await StorageService.instance.addAnalysis(
           source: job.game,
           sourcePlaylistId: job.playlistId,
-          review: toStoredReview(review, deep: job.deep),
+          review: toStoredReview(review),
         );
       } catch (error) {
         // Tek bir oyun çözümlenemezse kuyruk durmamalı; yüz oyunluk bir
@@ -235,9 +228,9 @@ List<SavedGame> analysisOrder(
 ///
 /// Hamlelerin kendisi oyunda duruyor; burada yalnızca motorun söyledikleri
 /// saklanıyor.
-StoredReview toStoredReview(GameReview review, {required bool deep}) {
+StoredReview toStoredReview(GameReview review, {bool deep = true}) {
   return StoredReview(
-    deep: deep,
+    deep: true, // tek profil; alan uyumluluk için true
     at: DateTime.now(),
     whiteAccuracy: review.whiteAccuracy,
     blackAccuracy: review.blackAccuracy,
@@ -314,11 +307,9 @@ GameReview? fromStoredReview(
 class _Job {
   final String playlistId;
   final SavedGame game;
-  final bool deep;
 
   const _Job({
     required this.playlistId,
     required this.game,
-    required this.deep,
   });
 }

@@ -452,7 +452,7 @@ void main() {
           moves: const [],
         ),
       );
-      final analysis = (await StorageService.instance.loadAnalysisLists()).last;
+      final analysis = (await StorageService.instance.loadAnalysisLists()).first;
 
       tester.view.devicePixelRatio = 1;
       tester.view.physicalSize = const Size(600, 1200);

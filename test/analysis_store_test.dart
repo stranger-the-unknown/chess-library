@@ -1,3 +1,5 @@
+import 'dart:convert';
+
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -7,9 +9,6 @@ import 'package:chess_pgn_reader/services/backup_service.dart';
 import 'package:chess_pgn_reader/services/storage_service.dart';
 
 /// Analiz listeleri: ayrı anahtar, yüz kayıt sınırı, tek yönlü bağ.
-///
-/// Bu üçü birbirine değdiği için ayrı ayrı sınanıyor; en çok hata
-/// çıkabilecek yer burası.
 
 StoredReview _review({bool deep = true}) => StoredReview(
       deep: deep,
@@ -45,13 +44,44 @@ Future<(Playlist, SavedGame)> _seed() async {
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
 
-  test('iki analiz listesi her zaman var ve sırası sabit', () async {
+  test('tek analiz listesi her zaman var', () async {
     SharedPreferences.setMockInitialValues({});
     StorageService.instance.resetCache();
     final lists = await StorageService.instance.loadAnalysisLists();
-    expect(lists, hasLength(2));
-    expect(lists.first.id, StorageService.deepListId);
-    expect(lists.last.id, StorageService.quickListId);
+    expect(lists, hasLength(1));
+    expect(lists.first.id, StorageService.analysisListId);
+  });
+
+  test('eski deep/quick listeleri birleştirilir', () async {
+    final deepGame = SavedGame(
+      name: 'Derin',
+      uciMoves: const ['e2e4'],
+      createdAt: DateTime(2024, 1, 2),
+    );
+    final quickGame = SavedGame(
+      name: 'Hızlı',
+      uciMoves: const ['d2d4'],
+      createdAt: DateTime(2024, 1, 3),
+    );
+    final deep = Playlist(
+      id: StorageService.deepListId,
+      name: StorageService.deepListId,
+      games: [deepGame],
+    );
+    final quick = Playlist(
+      id: StorageService.quickListId,
+      name: StorageService.quickListId,
+      games: [quickGame, deepGame],
+    );
+    SharedPreferences.setMockInitialValues({
+      StorageService.analysisKey: jsonEncode([deep.toJson(), quick.toJson()]),
+    });
+    StorageService.instance.resetCache();
+    final lists = await StorageService.instance.loadAnalysisLists();
+    expect(lists, hasLength(1));
+    expect(lists.first.id, StorageService.analysisListId);
+    expect(lists.first.games, hasLength(2));
+    expect(lists.first.games.map((g) => g.name).toSet(), {'Derin', 'Hızlı'});
   });
 
   test('analiz listeleri kullanıcı listelerine karışmıyor', () async {
@@ -69,12 +99,12 @@ void main() {
         review: _review(),
       );
     }
-    final deep = (await StorageService.instance.loadAnalysisLists()).first;
-    expect(deep.games, hasLength(3),
+    final analysis = (await StorageService.instance.loadAnalysisLists()).first;
+    expect(analysis.games, hasLength(3),
         reason: 'tekrar analiz eskisini silmemeli');
   });
 
-  test('hızlı ve derin ayrı listelere gidiyor', () async {
+  test('tüm analizler tek listeye gidiyor', () async {
     final (playlist, game) = await _seed();
     await StorageService.instance.addAnalysis(
       source: game,
@@ -87,8 +117,8 @@ void main() {
       review: _review(deep: false),
     );
     final lists = await StorageService.instance.loadAnalysisLists();
-    expect(lists.first.games, hasLength(1));
-    expect(lists.last.games, hasLength(1));
+    expect(lists, hasLength(1));
+    expect(lists.first.games, hasLength(2));
   });
 
   test('yüz kaydı aşınca en eski düşüyor', () async {
@@ -104,11 +134,11 @@ void main() {
         review: _review(),
       );
     }
-    final deep = (await StorageService.instance.loadAnalysisLists()).first;
-    expect(deep.games, hasLength(StorageService.analysisLimit));
-    expect(deep.games.first.name, 'Oyun ${StorageService.analysisLimit + 4}',
+    final analysis = (await StorageService.instance.loadAnalysisLists()).first;
+    expect(analysis.games, hasLength(StorageService.analysisLimit));
+    expect(analysis.games.first.name, 'Oyun ${StorageService.analysisLimit + 4}',
         reason: 'en yeni başta olmalı');
-    expect(deep.games.last.name, 'Oyun 5', reason: 'en eskiler düşmeliydi');
+    expect(analysis.games.last.name, 'Oyun 5', reason: 'en eskiler düşmeliydi');
   });
 
   group('Tek yönlü bağ', () {
@@ -119,8 +149,9 @@ void main() {
         sourcePlaylistId: playlist.id,
         review: _review(),
       );
-      final deep = (await StorageService.instance.loadAnalysisLists()).first;
-      await StorageService.instance.toggleGameRead(deep.id, deep.games.first.id);
+      final analysis = (await StorageService.instance.loadAnalysisLists()).first;
+      await StorageService.instance
+          .toggleGameRead(analysis.id, analysis.games.first.id);
 
       final source =
           (await StorageService.instance.loadPlaylists()).first.games.first;
@@ -136,8 +167,8 @@ void main() {
       );
       await StorageService.instance.toggleGameRead(playlist.id, game.id);
 
-      final deep = (await StorageService.instance.loadAnalysisLists()).first;
-      expect(deep.games.first.read, isFalse,
+      final analysis = (await StorageService.instance.loadAnalysisLists()).first;
+      expect(analysis.games.first.read, isFalse,
           reason: 'ters yön bilerek bağlı değil');
     });
 
@@ -150,9 +181,9 @@ void main() {
       );
       await StorageService.instance.deletePlaylist(playlist.id);
 
-      final deep = (await StorageService.instance.loadAnalysisLists()).first;
+      final analysis = (await StorageService.instance.loadAnalysisLists()).first;
       final read = await StorageService.instance
-          .toggleGameRead(deep.id, deep.games.first.id);
+          .toggleGameRead(analysis.id, analysis.games.first.id);
       expect(read, isTrue, reason: 'kaydın kendi işareti yine de konmalı');
     });
   });
@@ -183,8 +214,8 @@ void main() {
       final (_, data) = await BackupService.instance.read(text);
       await BackupService.instance.apply(data);
 
-      final deep = (await StorageService.instance.loadAnalysisLists()).first;
-      expect(deep.games, hasLength(1));
+      final analysis = (await StorageService.instance.loadAnalysisLists()).first;
+      expect(analysis.games, hasLength(1));
     });
 
     test('tüm verileri sıfırlama analizleri de siliyor', () async {
@@ -196,8 +227,8 @@ void main() {
       );
       await BackupService.instance.wipeAll();
 
-      final deep = (await StorageService.instance.loadAnalysisLists()).first;
-      expect(deep.games, isEmpty);
+      final analysis = (await StorageService.instance.loadAnalysisLists()).first;
+      expect(analysis.games, isEmpty);
     });
   });
 }

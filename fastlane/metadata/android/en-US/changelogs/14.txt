@@ -1,0 +1,4 @@
+• Unified analysis: one Analiz button and one Recent Analyses list
+• Android Stockfish: ship as jniLibs/libstockfish.so (W^X-safe nativeLibraryDir)
+• Assets extract+chmod kept as fallback; ensure before every engine start
+• Version 8.0.2

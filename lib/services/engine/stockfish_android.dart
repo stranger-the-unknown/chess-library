@@ -6,24 +6,32 @@ import 'package:path_provider/path_provider.dart';
 
 import 'stockfish_uci.dart';
 
-/// Android APK içindeki Stockfish varlığını uygulama destek dizinine çıkarır.
+/// Android'de Stockfish ikili yolunu hazırlar.
 ///
-/// İkili dosyalar git'e girmez; derlemeden önce
-/// `android/stockfish/README.md` adımlarıyla `assets/stockfish/` altına
-/// kopyalanır. Yoksa `null` döner.
+/// **Kök neden (8.0.1 ve öncesi):** Asset'ten `getApplicationSupportDirectory`
+/// altına çıkarılan ikili `chmod 755` ile +x alsa bile Android 10+ W^X /
+/// SELinux, yazılabilir uygulama veri dizininden `Process.start` ile
+/// yürütmeyi engeller. Windows'ta sorun yoktu.
 ///
-/// Not: `dart:io` [File] üzerinde `setExecutable` yok (Dart 3.13); yürütme
-/// biti `chmod` ile uygulanır. Mevcut dosyada da her açılışta yeniden +x.
+/// **Sağlam yol:** `jniLibs/<abi>/libstockfish.so` → paket yöneticisi
+/// `nativeLibraryDir`'e çıkarır (yürütülebilir). Asset extract yedek kalır.
+///
+/// Her motor başlatmadan önce [EngineService] bunu çağırır.
 Future<String?> ensureAndroidStockfishBinary() async {
   if (kIsWeb || !Platform.isAndroid) return null;
 
   try {
+    final native = await _nativeLibraryStockfish();
+    if (native != null) {
+      StockfishUci.cachedBinaryPath = native;
+      return native;
+    }
+
     final support = await getApplicationSupportDirectory();
     final dest = File('${support.path}/stockfish');
     if (await dest.exists()) {
       final len = await dest.length();
       if (len > 1024 * 1024) {
-        // Yeniden kullanırken bile +x uygula (SELinux / çıkarım sonrası kayıp).
         await _makeExecutable(dest);
         StockfishUci.cachedBinaryPath = dest.path;
         return dest.path;
@@ -49,10 +57,22 @@ Future<String?> ensureAndroidStockfishBinary() async {
   return StockfishUci.resolveBinaryPath();
 }
 
-/// Yürütme bitini uygular (çıkarım sonrası ve mevcut dosyada tekrar).
-///
-/// `File.setExecutable` dart:io'da yok; chmod birincil yol. Birden fazla
-/// yol denenir (toybox / system / sh).
+/// Flutter APK'da `Platform.resolvedExecutable` genelde
+/// `…/lib/<abi>/libapp.so` (veya benzeri); ebeveyn dizin = nativeLibraryDir.
+Future<String?> _nativeLibraryStockfish() async {
+  try {
+    final dir = File(Platform.resolvedExecutable).parent.path;
+    final candidate = File('$dir${Platform.pathSeparator}libstockfish.so');
+    if (!await candidate.exists()) return null;
+    final len = await candidate.length();
+    if (len <= 1024 * 1024) return null;
+    return candidate.path;
+  } catch (_) {
+    return null;
+  }
+}
+
+/// Yürütme bitini uygular (yalnızca asset-extract yedek yolu).
 Future<void> _makeExecutable(File dest) async {
   final path = dest.path;
   final attempts = <List<String>>[

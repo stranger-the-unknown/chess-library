@@ -446,8 +446,13 @@ class StockfishUci {
         candidates.add(File(buildStockfish).absolute.path);
       } catch (_) {}
     } else if (Platform.isAndroid) {
-      // Geliştirme / manuel kopya yolları; APK içi çıkartma
-      // [ensureAndroidStockfishBinary] ile cachedBinaryPath'e yazılır.
+      // Önce nativeLibraryDir/libstockfish.so (jniLibs); W^X uyumlu.
+      // Asset extract yolu [ensureAndroidStockfishBinary] ile cache'e yazılır.
+      try {
+        final exeDir = File(Platform.resolvedExecutable).parent.path;
+        candidates.add(<String>[exeDir, 'libstockfish.so'].join(sep));
+        candidates.add(<String>[exeDir, 'stockfish'].join(sep));
+      } catch (_) {}
       candidates.add(
         <String>[
           Directory.current.path,
@@ -464,11 +469,6 @@ class StockfishUci {
           'stockfish-armeabi-v7a',
         ].join(sep),
       );
-      try {
-        final exeDir = File(Platform.resolvedExecutable).parent.path;
-        candidates.add(<String>[exeDir, 'stockfish'].join(sep));
-        candidates.add(<String>[exeDir, 'libstockfish.so'].join(sep));
-      } catch (_) {}
     } else {
       // Linux/macOS: smoke / CI
       candidates.add(

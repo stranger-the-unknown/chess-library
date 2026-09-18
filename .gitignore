@@ -72,3 +72,6 @@ android/app/src/main/assets/stockfish/arm64-v8a
 android/app/src/main/assets/stockfish/armeabi-v7a
 assets/stockfish/arm64-v8a
 assets/stockfish/armeabi-v7a
+
+# Stockfish as Android native lib (built from android/stockfish/; see README)
+android/app/src/main/jniLibs/**/libstockfish.so

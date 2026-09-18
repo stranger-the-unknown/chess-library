@@ -31,11 +31,14 @@ class StorageService extends ChangeNotifier {
   /// gerekirdi.
   static const analysisKey = 'analysis_lists_v1';
 
-  /// Silinemeyen analiz listelerinin kimlikleri.
+  /// Tek sabit analiz listesi (eski `sys_deep` / `sys_quick` birleşimi).
+  static const analysisListId = 'sys_analysis';
+
+  /// Eski kimlikler — yalnızca yüklemede birleştirme için.
   static const deepListId = 'sys_deep';
   static const quickListId = 'sys_quick';
 
-  /// Her analiz listesinde tutulan en fazla kayıt sayısı.
+  /// Analiz listesinde tutulan en fazla kayıt sayısı.
   static const analysisLimit = 100;
 
   List<Playlist>? _cache;
@@ -51,14 +54,6 @@ class StorageService extends ChangeNotifier {
   }
 
   /// Çakışan oyun kimliklerini onarır; bir şey değiştiyse true döner.
-  ///
-  /// Kimlik eskiden yalnızca zaman damgasından üretiliyordu ve bir PGN
-  /// dosyasından alınan oyunlar aynı mikrosaniyeye denk gelip aynı
-  /// kimliği alıyordu. Sonucu görünürdü: bir oyunu okundu işaretleyince
-  /// listedeki başka bir oyun işaretleniyordu.
-  ///
-  /// Yeni kimlik vermek güvenli: okundu, favori ve not oyunun kendi
-  /// içinde duruyor, ayrı bir eşlemede değil.
   bool _repairDuplicateIds(List<Playlist> playlists) {
     bool changed = false;
     final seen = <String>{};
@@ -87,11 +82,6 @@ class StorageService extends ChangeNotifier {
   }
 
   /// Kullanıcının kendi listeleri.
-  ///
-  /// Analiz listeleri buraya **girmiyor**. Uygulamanın her yerinde
-  /// "listeler" kullanıcının listeleri demek; analiz listelerini de bu
-  /// listeye katmak, sayan/silen/yeniden adlandıran her yeri bir anda
-  /// yanlış hale getirirdi.
   Future<List<Playlist>> loadPlaylists() async {
     if (_cache != null) return _cache!;
     final prefs = await SharedPreferences.getInstance();
@@ -105,7 +95,6 @@ class StorageService extends ChangeNotifier {
       return _cache!;
     }
 
-    // Eski sürümden geçiş: aynı biçim, kimlikler otomatik üretilir.
     final legacy = prefs.getString(_legacyKey);
     if (legacy != null) {
       _cache = (jsonDecode(legacy) as List)
@@ -120,9 +109,10 @@ class StorageService extends ChangeNotifier {
     return _cache!;
   }
 
-  /// Silinemeyen analiz listeleri: önce derin, sonra hızlı.
+  /// Tek sabit analiz listesi: "Son Analizler".
   ///
-  /// Her zaman ikisi de vardır; eksikse boş olarak kurulur.
+  /// Eski `sys_deep` / `sys_quick` varsa oyunları birleştirir (kimliğe göre
+  /// tekilleştirir), eski listeleri bırakır.
   Future<List<Playlist>> loadAnalysisLists() async {
     if (_analysisCache != null) return _analysisCache!;
     final prefs = await SharedPreferences.getInstance();
@@ -132,19 +122,46 @@ class StorageService extends ChangeNotifier {
       lists.addAll((jsonDecode(raw) as List)
           .map((e) => Playlist.fromJson(Map<String, dynamic>.from(e as Map))));
     }
-    for (final id in const [deepListId, quickListId]) {
-      if (!lists.any((p) => p.id == id)) lists.add(Playlist(id: id, name: id));
+
+    Playlist? analysis;
+    final legacyGames = <SavedGame>[];
+    var migrated = false;
+
+    for (final p in lists) {
+      if (p.id == analysisListId) {
+        analysis = p;
+      } else if (p.id == deepListId || p.id == quickListId) {
+        legacyGames.addAll(p.games);
+        migrated = true;
+      }
     }
-    lists.sort((a, b) => a.id == deepListId ? -1 : 1);
-    _analysisCache = lists;
+
+    analysis ??= Playlist(id: analysisListId, name: analysisListId);
+
+    if (legacyGames.isNotEmpty || migrated) {
+      final seen = <String>{for (final g in analysis.games) g.id};
+      for (final g in legacyGames) {
+        if (seen.add(g.id)) analysis.games.add(g);
+      }
+      analysis.games.sort((a, b) => b.createdAt.compareTo(a.createdAt));
+      if (analysis.games.length > analysisLimit) {
+        analysis.games.removeRange(analysisLimit, analysis.games.length);
+      }
+    }
+
+    _analysisCache = [analysis];
+    if (migrated || !lists.any((p) => p.id == analysisListId)) {
+      await _saveAnalysis(notify: false);
+    }
     return _analysisCache!;
   }
 
   /// Kimliğine göre liste; analiz listeleri de bulunur.
   Future<Playlist?> playlistById(String id) async {
-    if (isSystemList(id)) {
+    if (isSystemList(id) || id == deepListId || id == quickListId) {
       final lists = await loadAnalysisLists();
-      return lists.firstWhere((p) => p.id == id);
+      // Eski kimlikler tek listeye yönlendirilir.
+      return lists.first;
     }
     final lists = await loadPlaylists();
     for (final playlist in lists) {
@@ -172,20 +189,18 @@ class StorageService extends ChangeNotifier {
   }
 
   /// Ekranda gösterilecek liste adı.
-  ///
-  /// Analiz listelerinin kayıtlı adı kimliğinin kendisidir (`sys_deep`);
-  /// görünen ad çeviriden gelir, böylece dil değişince ad da değişir.
-  /// Bu çözüm tek yerde: iki ekranda ayrı ayrı yapılınca biri unutuldu
-  /// ve detay ekranının başlığında "sys_quick" yazıyordu.
   static String displayName(Playlist playlist) {
-    if (playlist.id == deepListId) return t('analysis.deepList');
-    if (playlist.id == quickListId) return t('analysis.quickList');
+    if (playlist.id == analysisListId ||
+        playlist.id == deepListId ||
+        playlist.id == quickListId) {
+      return t('analysis.recentList');
+    }
     return playlist.name;
   }
 
   /// Bu liste kullanıcının silemeyeceği bir analiz listesi mi?
   static bool isSystemList(String id) =>
-      id == deepListId || id == quickListId;
+      id == analysisListId || id == deepListId || id == quickListId;
 
   Future<Playlist> createPlaylist(String name) async {
     final playlists = await loadPlaylists();
@@ -196,8 +211,6 @@ class StorageService extends ChangeNotifier {
   }
 
   Future<void> renamePlaylist(String id, String name) async {
-    // Analiz listeleri sistemin; adları çeviriden geliyor. Arayüz zaten
-    // komutu sunmuyor ama başka bir yol çağırırsa burada durdurulur.
     if (isSystemList(id)) return;
     final playlists = await loadPlaylists();
     final index = playlists.indexWhere((p) => p.id == id);
@@ -216,11 +229,6 @@ class StorageService extends ChangeNotifier {
   Future<void> addGame(String playlistId, SavedGame game) =>
       addGames(playlistId, [game]);
 
-  /// Birden çok oyunu **tek yazma** ile ekler.
-  ///
-  /// Oyunları teker teker eklemek, her seferinde tüm listelerin yeniden
-  /// kodlanıp diske yazılması demekti; yüzlerce oyunluk bir PGN dosyasında
-  /// bu, bekleme süresini kare oranında büyütüyordu. Eklenen sayıyı döner.
   Future<int> addGames(String playlistId, List<SavedGame> games) async {
     if (games.isEmpty) return 0;
     final playlists = await loadPlaylists();
@@ -231,7 +239,6 @@ class StorageService extends ChangeNotifier {
     return games.length;
   }
 
-  /// Yeni bir liste oluşturup oyunları tek yazmada içine koyar.
   Future<Playlist> createPlaylistWithGames(
     String name,
     List<SavedGame> games,
@@ -255,28 +262,14 @@ class StorageService extends ChangeNotifier {
     await _save();
   }
 
-  /// Bir oyunun "okundu" işaretini değiştirir ve yeni değeri döner.
-  /// Bir analiz sonucunu ilgili listenin başına ekler.
-  ///
-  /// En yeni kayıt her zaman başta; liste [analysisLimit] kaydı aşınca
-  /// en eski düşer. Aynı oyun tekrar analiz edilirse eskisi silinmez,
-  /// yeni bir kayıt olarak eklenir — liste bir analiz geçmişi, bir
-  /// oyun kümesi değil. Eskisini silmek "neden kayboldu" sorusunu ve
-  /// hangi kaydın güncelleneceği belirsizliğini doğururdu.
-  /// [sourcePlaylistId] null olabilir: tahta ekranında oynanan ya da
-  /// PGN'den açılan bir oyunun kayıtlı bir listesi yoktur. O zaman kayıt
-  /// kendi başına durur — hamleleri, adı ve sonucu zaten içinde. Yalnızca
-  /// "okundu işaretlemek asıl oyunu da işaretler" bağı kurulmaz, çünkü
-  /// işaretlenecek bir asıl oyun yoktur.
+  /// Bir analizin sonucunu tek listenin başına ekler.
   Future<void> addAnalysis({
     required SavedGame source,
     String? sourcePlaylistId,
     required StoredReview review,
   }) async {
     final lists = await loadAnalysisLists();
-    final target = lists.firstWhere(
-      (p) => p.id == (review.deep ? deepListId : quickListId),
-    );
+    final target = lists.firstWhere((p) => p.id == analysisListId);
 
     target.games.insert(
       0,
@@ -300,7 +293,6 @@ class StorageService extends ChangeNotifier {
     await _saveAnalysis();
   }
 
-  /// Listedeki oyunu bulur; analiz listeleri de aranır.
   Future<SavedGame?> _findGame(String playlistId, String gameId) async {
     final playlist = await playlistById(playlistId);
     if (playlist == null) return null;
@@ -310,16 +302,9 @@ class StorageService extends ChangeNotifier {
     return null;
   }
 
-  /// Değişikliği doğru anahtara yazar.
   Future<void> _persist(String playlistId) =>
       isSystemList(playlistId) ? _saveAnalysis() : _save();
 
-  /// Analiz kaydındaki işareti asıl oyuna da yansıtır (tek yönlü).
-  ///
-  /// Kaynak oyun silinmiş, taşınmış ya da hiç yoksa sessizce geçilir —
-  /// analiz kaydının kendi işareti yine de duruyor. Ters yön bilerek
-  /// yapılmıyor: bir oyunun birden çok analizi olabilir, hangisinin
-  /// güncelleneceği belirsiz olurdu.
   Future<void> _mirrorToSource(
     SavedGame game, {
     bool? read,
@@ -346,7 +331,6 @@ class StorageService extends ChangeNotifier {
     return game.read;
   }
 
-  /// Listedeki tüm oyunları okundu / okunmadı yapar.
   Future<void> setAllRead(String playlistId, bool read) async {
     final playlists = await loadPlaylists();
     final index = playlists.indexWhere((p) => p.id == playlistId);
@@ -357,7 +341,6 @@ class StorageService extends ChangeNotifier {
     await _save();
   }
 
-  /// Bir oyunun favori durumunu değiştirir; yeni durumu döner.
   Future<bool> toggleGameFavorite(String playlistId, String gameId) async {
     final game = await _findGame(playlistId, gameId);
     if (game == null) return false;
@@ -367,10 +350,6 @@ class StorageService extends ChangeNotifier {
     return game.favorite;
   }
 
-  /// Verilen oyunları toplu olarak okundu/okunmadı işaretler.
-  ///
-  /// Aralık işaretlemede tek tek çağırmak her seferinde tüm listeleri
-  /// yeniden kodlayıp diske yazardı; burada tek yazma yapılır.
   Future<int> markManyRead(
     String playlistId,
     Iterable<String> gameIds, {
