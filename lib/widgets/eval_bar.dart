@@ -33,8 +33,11 @@ class EvalBar extends StatelessWidget {
   String get label {
     if (mateIn != null) return 'M${mateIn!.abs()}';
     final score = scoreCp;
-    if (score == null) return '0.0';
-    return (score / 100).toStringAsFixed(1);
+    if (score == null) return '·';
+    final body = (score.abs() / 100).toStringAsFixed(1);
+    if (score > 0) return '+$body';
+    if (score < 0) return '-$body';
+    return '0.0';
   }
 
   @override

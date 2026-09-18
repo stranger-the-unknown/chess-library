@@ -1,0 +1,1 @@
+Live engine: eval strip no longer blanks on move; previous white-POV score stays until the next result (no sign flip).
