@@ -29,7 +29,6 @@ flutter:
     - assets/sounds/
     - assets/boards/
     - assets/icon/
-    - assets/stockfish/
     - assets/pieces/chessnut/
     - assets/pieces/rhosgfx/
     - assets/pieces/fantasy/
