@@ -1,0 +1,1 @@
+Stockfish motor el sýkýþma düzeltmesi — analiz, bulmaca ve motora karþý oyun yeniden çalýþýyor.
