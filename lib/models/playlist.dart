@@ -104,11 +104,46 @@ class SavedGame {
     return '$day.${month.toString().padLeft(2, '0')}.$year';
   }
 
+  /// Kartta kullanılacak beyaz adı (alan, etiket veya `Ad - Ad` biçimindeki isim).
+  String? get resolvedWhite =>
+      _meaningfulPlayer(white) ??
+      _meaningfulPlayer(tags['White']) ??
+      _playersFromName?.$1;
+
+  /// Kartta kullanılacak siyah adı.
+  String? get resolvedBlack =>
+      _meaningfulPlayer(black) ??
+      _meaningfulPlayer(tags['Black']) ??
+      _playersFromName?.$2;
+
   /// Kartta beyazın soyadı (ya da kullanıcı adı).
-  String get cardWhite => playerLastName(white);
+  String get cardWhite => playerLastName(resolvedWhite);
 
   /// Kartta siyahın soyadı (ya da kullanıcı adı).
-  String get cardBlack => playerLastName(black);
+  String get cardBlack => playerLastName(resolvedBlack);
+
+  static String? _meaningfulPlayer(String? value) {
+    if (value == null) return null;
+    final trimmed = value.trim();
+    if (trimmed.isEmpty || trimmed == '?' || trimmed == '-') return null;
+    return trimmed;
+  }
+
+  /// Eski kayıtlarda `white`/`black` boşken isim `"Beyaz - Siyah"` olarak
+  /// yazılmış olabiliyor; kartı iki satıra bölmek için onu çözer.
+  (String, String)? get _playersFromName {
+    final raw = name.trim();
+    const sep = ' - ';
+    final index = raw.indexOf(sep);
+    if (index <= 0) return null;
+    final left = raw.substring(0, index).trim();
+    final right = raw.substring(index + sep.length).trim();
+    if (left.isEmpty || right.isEmpty) return null;
+    if ((left == '?' || left == '-') && (right == '?' || right == '-')) {
+      return null;
+    }
+    return (left, right);
+  }
 
   Map<String, dynamic> toJson() => {
         'id': id,

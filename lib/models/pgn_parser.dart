@@ -461,9 +461,13 @@ class PgnGame {
   int get moveCount => countWhiteMoves(uciMoves.length, startFen);
 
   /// Listede gösterilecek ad: "Karpov - Kasparov".
+  ///
+  /// Çevrimiçi siteler Event alanına sıkça `?` yazar; onu oyun adı yapmıyoruz.
   String get title {
     if (white == '?' && black == '?') {
-      return event.isNotEmpty ? event : 'PGN';
+      final e = event.trim();
+      if (e.isNotEmpty && e != '?' && e != '-') return e;
+      return 'PGN';
     }
     return '$white - $black';
   }
