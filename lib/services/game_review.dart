@@ -87,13 +87,17 @@ class GameReview {
 /// işaret değiştirilmiş değerlendirmesi ise gerçekte oynanan hamlenin
 /// sonucunu verir. Böylece N hamle için N+1 analiz yeterlidir.
 class GameReviewer {
-  /// Hızlı inceleme ayarları.
+  /// Hızlı inceleme ayarları (Stockfish UCI).
+  ///
+  /// Duvar saati (movetime) önceki Dart bütçesine yakın tutulur; derinlik
+  /// tavanı yükseltildi ki SF movetime içinde daha derine inebilsin.
+  /// Asıl sınırlayıcı movetime'dır (`go movetime … depth …`).
   static const int quickMovetimeMs = 400;
-  static const int quickDepth = 12;
+  static const int quickDepth = 22;
 
-  /// Derin inceleme ayarları.
+  /// Derin inceleme ayarları (Stockfish UCI).
   static const int deepMovetimeMs = 1200;
-  static const int deepDepth = 16;
+  static const int deepDepth = 28;
 
   /// Mat skorlarını grafikte taşmasın diye sınırlar.
   static const int _cap = 1200;
