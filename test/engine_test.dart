@@ -3,7 +3,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:chess_pgn_reader/models/chess_engine.dart' as game;
 import 'package:chess_pgn_reader/models/pgn_parser.dart';
 import 'package:chess_pgn_reader/models/puzzle.dart';
-import 'package:chess_pgn_reader/services/engine/chess_ai.dart' as ai;
+import 'package:chess_pgn_reader/services/engine/engine_service.dart';
 
 /// `models/chess_engine.dart` (arayüz motoru) için perft.
 int gamePerft(game.ChessGame position, int depth) {
@@ -26,23 +26,6 @@ const position5 = 'rnbq1k1r/pp1Pbppp/2p5/8/2B5/8/PPP1NnPP/RNBQK2R w KQ - 1 8';
 const startpos = 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1';
 
 void main() {
-  group('Arama motoru perft', () {
-    void check(String name, String fen, List<int> expected) {
-      test(name, () {
-        for (int depth = 1; depth <= expected.length; depth++) {
-          final position = ai.AiPosition.fromFen(fen);
-          expect(ai.perft(position, depth), expected[depth - 1],
-              reason: '$name derinlik $depth');
-        }
-      });
-    }
-
-    check('başlangıç', startpos, [20, 400, 8902, 197281, 4865609]);
-    check('kiwipete', kiwipete, [48, 2039, 97862, 4085603]);
-    check('pozisyon 3', position3, [14, 191, 2812, 43238, 674624]);
-    check('pozisyon 4', position4, [6, 264, 9467, 422333]);
-    check('pozisyon 5', position5, [44, 1486, 62379, 2103487]);
-  });
 
   group('Arayüz motoru perft', () {
     test('başlangıç', () {
@@ -154,36 +137,6 @@ void main() {
     });
   });
 
-  group('Yapay zekâ', () {
-    test('mat hamlesini bulur', () {
-      final result = ai.ChessAi().search(
-        '6k1/5ppp/8/8/8/8/8/R3K2R w KQ - 0 1',
-        maxDepth: 4,
-        movetimeMs: 3000,
-      );
-      expect(result.bestMoveUci, 'a1a8');
-      expect(result.mateIn, 1);
-    });
-
-    test('bedava veziri alır', () {
-      final result = ai.ChessAi().search(
-        '4k3/8/8/3q4/4P3/8/8/4K3 w - - 0 1',
-        maxDepth: 5,
-        movetimeMs: 3000,
-      );
-      expect(result.bestMoveUci, 'e4d5');
-    });
-
-    test('mat edilmiş pozisyonda oyun bittiğini bildirir', () {
-      final result = ai.ChessAi().search(
-        'rnb1kbnr/pppp1ppp/8/4p3/6Pq/5P2/PPPPP2P/RNBQKBNR w KQkq - 1 3',
-        maxDepth: 3,
-        movetimeMs: 1000,
-      );
-      expect(result.isGameOver, isTrue);
-      expect(result.mateIn, 0);
-    });
-  });
 
   group('Çok oyunlu PGN', () {
     const twoGames = '[Event "Test A"]\n'
@@ -267,4 +220,13 @@ void main() {
       expect(position.isCheckmate, isTrue);
     });
   });
+  group('EngineLevel → Stockfish eşlemesi', () {
+    test('skill değerleri ve Usta tam güç', () {
+      final skills = EngineLevel.all.map((e) => e.skill).toList();
+      expect(skills, [2, 5, 9, 13, 17, 20]);
+      expect(EngineLevel.all.last.isFullStrength, isTrue);
+      expect(EngineLevel.all.first.isFullStrength, isFalse);
+    });
+  });
+
 }
