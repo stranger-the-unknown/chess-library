@@ -15,6 +15,19 @@ dilidir.
 
 ---
 
+## Motor (Hibrit 7.0)
+
+- **İnceleme / canlı analiz / oyun incelemesi** → resmi Stockfish, ayrı UCI OS süreci
+- **Motora karşı seviyeler + bulmaca cevap / ipucu** → yalnızca Dart motoru
+- `flutter_stockfish` **kullanılmaz**
+- İkili dosyalar **gitignore**'dadır; indirme:
+  - Windows: [`windows/stockfish/README.md`](windows/stockfish/README.md)
+  - Android: [`android/stockfish/README.md`](android/stockfish/README.md)
+
+Oyun incelemesi bütçeleri (Stockfish): hızlı **400ms / derinlik≤22**, derin **1200ms / derinlik≤28** (movetime baskın).
+
+---
+
 ## Oyna
 
 **Motora karşı oyna** — Zorluğu altı kademeden seçersin: acemiden ustaya,

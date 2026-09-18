@@ -1,10 +1,13 @@
 import 'dart:async';
+import 'dart:io';
 import 'dart:isolate';
 
 import 'package:flutter/foundation.dart' show kIsWeb;
 
 import '../../l10n/app_strings.dart';
 import 'chess_ai.dart';
+import 'stockfish_android.dart';
+import 'stockfish_uci.dart';
 
 export 'chess_ai.dart' show SearchResult;
 
@@ -106,6 +109,9 @@ class EngineService {
   bool _inlineFallback = false;
   ChessAi? _inlineAi;
 
+  StockfishUci? _stockfish;
+  bool _stockfishTried = false;
+
   int _nextId = 1;
   final Map<int, Completer<SearchResult>> _pending = {};
   final Map<int, void Function(SearchResult)> _listeners = {};
@@ -177,10 +183,69 @@ class EngineService {
     List<int> repetitionHashes = const [],
     void Function(SearchResult partial)? onProgress,
   }) async {
+    // Inceleme: Stockfish (ayri surec). Oyun seviyeleri bestMoveForLevel ile Dart'ta.
+    final sf = await _ensureStockfish();
+    if (sf != null) {
+      final result = await sf.analyze(
+        fen,
+        depth: depth,
+        movetimeMs: movetimeMs,
+        onProgress: onProgress,
+      );
+      if (result != null && result.bestMoveUci.isNotEmpty) {
+        return result;
+      }
+    }
+    return _analyzeDart(
+      fen,
+      depth: depth,
+      movetimeMs: movetimeMs,
+      skill: skill,
+      repetitionHashes: repetitionHashes,
+      onProgress: onProgress,
+    );
+  }
+
+  /// Motora karsi oyunda Dart motoru (Stockfish degil).
+  Future<SearchResult> bestMoveForLevel(String fen, EngineLevel level) {
+    return _analyzeDart(
+      fen,
+      depth: level.depth,
+      movetimeMs: level.movetimeMs,
+      skill: level.skill,
+    );
+  }
+
+  /// Bulmaca / oyun ici cevap-ipucu: her zaman Dart (Stockfish `analyze` degil).
+  Future<SearchResult> analyzeDart(
+    String fen, {
+    int depth = 12,
+    int movetimeMs = 1500,
+    int skill = 20,
+    List<int> repetitionHashes = const [],
+    void Function(SearchResult partial)? onProgress,
+  }) {
+    return _analyzeDart(
+      fen,
+      depth: depth,
+      movetimeMs: movetimeMs,
+      skill: skill,
+      repetitionHashes: repetitionHashes,
+      onProgress: onProgress,
+    );
+  }
+
+  Future<SearchResult> _analyzeDart(
+    String fen, {
+    int depth = 12,
+    int movetimeMs = 1500,
+    int skill = 20,
+    List<int> repetitionHashes = const [],
+    void Function(SearchResult partial)? onProgress,
+  }) async {
     await _ensureStarted();
 
     if (_inlineFallback) {
-      // Arayüzün en az bir kare çizmesine izin ver, sonra hesapla.
       await Future<void>.delayed(Duration.zero);
       final ai = _inlineAi ??= ChessAi();
       return ai.search(
@@ -204,20 +269,41 @@ class EngineService {
     return completer.future;
   }
 
-  /// Belirli bir seviyeye göre hamle üretir.
-  Future<SearchResult> bestMoveForLevel(String fen, EngineLevel level) {
-    return analyze(
-      fen,
-      depth: level.depth,
-      movetimeMs: level.movetimeMs,
-      skill: level.skill,
-    );
+  Future<StockfishUci?> _ensureStockfish() async {
+    if (kIsWeb) return null;
+    final envPath = Platform.environment['STOCKFISH_PATH'];
+    final forceViaEnv = envPath != null && envPath.isNotEmpty;
+    // Windows/Android üretim; STOCKFISH_PATH ile test/CI (Linux dahil).
+    if (!(Platform.isWindows || Platform.isAndroid || forceViaEnv)) {
+      return null;
+    }
+    if (_stockfish != null && _stockfish!.isRunning) return _stockfish;
+    if (_stockfishTried && _stockfish == null) return null;
+    _stockfishTried = true;
+    if (Platform.isAndroid) {
+      await ensureAndroidStockfishBinary();
+    }
+    final engine = StockfishUci();
+    if (await engine.start()) {
+      _stockfish = engine;
+      return engine;
+    }
+    await engine.dispose();
+    _stockfish = null;
+    return null;
   }
 
-  /// Süren aramayı iptal eder. Dart isolate'i çalışan bir hesaplamanın
-  /// ortasında mesaj işleyemediği için isolate sonlandırılıp bir sonraki
-  /// istekte yeniden başlatılır.
+  /// Canli analiz / inceleme iptali: SF `stop` (UI askiya alinmasin).
+  /// Dart isolate istege bagli yeniden baslatilir.
+  Future<void> stopAnalysis() async {
+    await _stockfish?.stopSearch();
+  }
+
+  /// Süren aramayı iptal eder. SF `stop` ile hemen bırakılır; Dart
+  /// isolate çalışan hesaplamanın ortasında mesaj işleyemediği için
+  /// sonlandırılıp bir sonraki istekte yeniden başlatılır.
   Future<void> cancel() async {
+    await stopAnalysis();
     for (final completer in _pending.values) {
       if (!completer.isCompleted) {
         completer.complete(
@@ -238,6 +324,9 @@ class EngineService {
   }
 
   Future<void> dispose() async {
+    await _stockfish?.dispose();
+    _stockfish = null;
+    _stockfishTried = false;
     _isolate?.kill(priority: Isolate.immediate);
     _fromIsolate?.close();
     _isolate = null;

@@ -125,7 +125,7 @@ class _PuzzleSolveScreenState extends State<PuzzleSolveScreen> {
 
     if (_puzzle.hasSolution) return;
 
-    final baseline = await EngineService.instance.analyze(
+    final baseline = await EngineService.instance.analyzeDart(
       _puzzle.fen,
       depth: 14,
       movetimeMs: 1800,
@@ -240,7 +240,7 @@ class _PuzzleSolveScreenState extends State<PuzzleSolveScreen> {
       // Kayıtlı çözümden ayrıldı: aynı hızda mat eden bir alternatif mi?
       final remaining = _puzzle.solution.length - _moves.length;
       final allowedMoves = (remaining + 1) ~/ 2;
-      final reply = await EngineService.instance.analyze(
+      final reply = await EngineService.instance.analyzeDart(
         after.fen,
         depth: 12,
         movetimeMs: 1200,
@@ -257,7 +257,7 @@ class _PuzzleSolveScreenState extends State<PuzzleSolveScreen> {
     if (baseline == null) return false;
     if (move.uci == baseline.bestMoveUci) return true;
 
-    final reply = await EngineService.instance.analyze(
+    final reply = await EngineService.instance.analyzeDart(
       after.fen,
       depth: 13,
       movetimeMs: 1400,
@@ -282,7 +282,7 @@ class _PuzzleSolveScreenState extends State<PuzzleSolveScreen> {
     final scripted = _expectedMove;
     String? uci = scripted;
     if (uci == null) {
-      final result = await EngineService.instance.analyze(
+      final result = await EngineService.instance.analyzeDart(
         fen,
         depth: 10,
         movetimeMs: 900,

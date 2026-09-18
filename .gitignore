@@ -57,3 +57,18 @@ app.*.map.json
 
 # Kotlin derleyicisinin bıraktığı oturum ve hata günlükleri.
 android/.kotlin/
+
+# Stockfish binary (GPL; see windows/stockfish/README.md)
+windows/stockfish/stockfish.exe
+windows/stockfish/*.zip
+windows/stockfish/_extract/
+
+# Stockfish Android binaries (GPL; see android/stockfish/README.md)
+android/stockfish/stockfish-*
+android/stockfish/*.tar.gz
+android/stockfish/*.zip
+android/stockfish/_extract/
+android/app/src/main/assets/stockfish/arm64-v8a
+android/app/src/main/assets/stockfish/armeabi-v7a
+assets/stockfish/arm64-v8a
+assets/stockfish/armeabi-v7a

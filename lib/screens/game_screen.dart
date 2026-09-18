@@ -143,6 +143,9 @@ class _GameScreenState extends State<GameScreen> {
   @override
   void dispose() {
     _analysisDebounce?.cancel();
+    _analysisToken++;
+    // SF stop askiya almasin; fire-and-forget.
+    EngineService.instance.stopAnalysis();
     super.dispose();
   }
 
@@ -368,6 +371,8 @@ class _GameScreenState extends State<GameScreen> {
   void _afterPositionChanged() {
     if (!_analysisOn) return;
     _analysisDebounce?.cancel();
+    _analysisToken++;
+    EngineService.instance.stopAnalysis();
     _analysisDebounce = Timer(const Duration(milliseconds: 220), _runAnalysis);
   }
 
@@ -381,10 +386,11 @@ class _GameScreenState extends State<GameScreen> {
     final token = ++_analysisToken;
     setState(() => _thinking = true);
 
+    // Canli tahta: kisa movetime, yuksek depth tavani (SF movetime hakim).
     final result = await EngineService.instance.analyze(
       fen,
-      depth: 16,
-      movetimeMs: 1200,
+      depth: 22,
+      movetimeMs: 500,
       onProgress: (partial) {
         if (token != _analysisToken || !mounted) return;
         setState(() => _analysis = partial);
@@ -759,6 +765,7 @@ class _GameScreenState extends State<GameScreen> {
                 _runAnalysis();
               } else {
                 _analysisToken++;
+                EngineService.instance.stopAnalysis();
                 setState(() {
                   _analysis = null;
                   _thinking = false;
