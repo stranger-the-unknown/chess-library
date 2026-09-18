@@ -38,7 +38,6 @@ class SettingsService extends ChangeNotifier {
   bool _soundEnabled = true;
   bool _vibrationEnabled = true;
   int _engineLevel = 2;
-  bool _showEvaluationBar = true;
 
   /// Bulmaca listelerinde "bugün çözülen" sayısı gösterilsin mi?
   bool _showDailyCount = true;
@@ -72,7 +71,6 @@ class SettingsService extends ChangeNotifier {
   /// kendine geri gelmiyor; kullanıcı isterse açar.
   bool get vibrationEnabled => _vibrationEnabled;
   int get engineLevel => _engineLevel;
-  bool get showEvaluationBar => _showEvaluationBar;
   bool get showDailyCount => _showDailyCount;
 
   /// Ses ve titreşim varsayılanlarını bir kez geri getirir.
@@ -131,7 +129,6 @@ class SettingsService extends ChangeNotifier {
     _soundEnabled = prefs.getBool('soundEnabled') ?? true;
     _vibrationEnabled = prefs.getBool('vibrationEnabled') ?? true;
     _engineLevel = prefs.getInt('engineLevel') ?? 2;
-    _showEvaluationBar = prefs.getBool('showEvaluationBar') ?? true;
     _showDailyCount = prefs.getBool('showDailyCount') ?? true;
     notifyListeners();
   }
@@ -219,11 +216,6 @@ class SettingsService extends ChangeNotifier {
     notifyListeners();
   }
 
-  set showEvaluationBar(bool value) {
-    _showEvaluationBar = value;
-    _set('showEvaluationBar', value);
-    notifyListeners();
-  }
 
   set showDailyCount(bool value) {
     _showDailyCount = value;
