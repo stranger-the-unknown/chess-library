@@ -15,14 +15,16 @@ dilidir.
 
 ---
 
-## Motor (Hibrit 7.0)
+## Motor (Stockfish 8.0)
 
-- **İnceleme / canlı analiz / oyun incelemesi** → resmi Stockfish, ayrı UCI OS süreci
-- **Motora karşı seviyeler + bulmaca cevap / ipucu** → yalnızca Dart motoru
+- **Tüm motor hamleleri** → resmi Stockfish, ayrı UCI OS süreci (Dart motoru yok)
+- **Motora karşı** → altı UI seviyesi için güç sınırı (`Skill Level` / `UCI_LimitStrength`+`UCI_Elo`). Usta = tam güç.
+- **Bulmaca, canlı analiz, oyun incelemesi** → tam güç Stockfish
 - `flutter_stockfish` **kullanılmaz**
 - İkili dosyalar **gitignore**'dadır; indirme:
   - Windows: [`windows/stockfish/README.md`](windows/stockfish/README.md)
   - Android: [`android/stockfish/README.md`](android/stockfish/README.md)
+- Stockfish yoksa veya çökerse: boş sonuç, takılma yok; UCI süreci yeniden başlatılabilir. Dart yedek yok.
 
 Oyun incelemesi bütçeleri (Stockfish): hızlı **400ms / derinlik≤22**, derin **1200ms / derinlik≤28** (movetime baskın).
 

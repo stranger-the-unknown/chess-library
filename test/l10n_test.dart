@@ -105,22 +105,21 @@ void main() {
     expect(missing, isEmpty, reason: 'tabloda karşılığı olmayan anahtarlar');
   });
 
-  test('sürüm numarası tek yerde tutuluyor', () {
-    // `pubspec.yaml`, kurulum betiği ve hakkında metni ayrı ayrı elle
-    // güncellendiğinde biri geride kalıyordu; hakkında metni artık
-    // koddaki sabitten besleniyor, sabit de burada pubspec ile
-    // karşılaştırılıyor.
+  test('sürüm numarası tutarlı (teknik 8.0.0, About gösterimi 8)', () {
+    // Teknik sürüm: pubspec + Windows installer AppVersion = 8.0.0(+N)
+    // Kullanıcıya görünen About/Ayarlar metni: appVersionName = '8'
     final pubspec = File('pubspec.yaml').readAsStringSync();
     final match = RegExp(r'^version:\s*([0-9.]+)\+', multiLine: true)
         .firstMatch(pubspec);
     expect(match, isNotNull, reason: 'pubspec sürümü okunamadı');
-    expect(appVersionName, match!.group(1));
+    expect(match!.group(1), '8.0.0');
+    expect(appVersionName, '8');
 
     final installer =
         File('windows/installer/chess_library.iss').readAsStringSync();
     expect(
       installer,
-      contains('#define AppVersion "$appVersionName"'),
+      contains('#define AppVersion "8.0.0"'),
       reason: 'kurulum betiği eski sürümde kalmış',
     );
 
@@ -128,6 +127,10 @@ void main() {
     expect(
       Strings.get('settings.aboutText', {'version': appVersionName}),
       contains(appVersionName),
+    );
+    expect(
+      Strings.get('settings.aboutText', {'version': appVersionName}),
+      isNot(contains('8.0.0')),
     );
   });
 
