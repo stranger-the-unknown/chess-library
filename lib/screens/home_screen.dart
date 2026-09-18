@@ -392,17 +392,30 @@ class HomeScreen extends StatelessWidget {
                     segments: [
                       ButtonSegment(
                         value: 0,
-                        label: Text(t('common.white')),
+                        label: FittedBox(
+                          fit: BoxFit.scaleDown,
+                          child: Text(t('common.white')),
+                        ),
                         icon: const Icon(Icons.circle_outlined),
                       ),
                       ButtonSegment(
                         value: 1,
-                        label: Text(t('common.black')),
+                        label: FittedBox(
+                          fit: BoxFit.scaleDown,
+                          child: Text(t('common.black')),
+                        ),
                         icon: const Icon(Icons.circle),
                       ),
                       ButtonSegment(
                         value: 2,
-                        label: Text(t('common.random')),
+                        // Rastgele/Random: Android büyük yazıda son harf kesilmesin.
+                        label: FittedBox(
+                          fit: BoxFit.scaleDown,
+                          child: Padding(
+                            padding: const EdgeInsets.symmetric(horizontal: 2),
+                            child: Text(t('common.random')),
+                          ),
+                        ),
                         icon: const Icon(Icons.casino_outlined),
                       ),
                     ],

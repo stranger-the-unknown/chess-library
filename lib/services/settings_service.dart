@@ -240,7 +240,7 @@ class SettingsService extends ChangeNotifier {
 ///
 /// Tek kaynak burasıdır; `pubspec.yaml` ile aynı olduğu testle denetlenir.
 /// Hakkında bölümünde ve yedek dosyasının başlığında görünür.
-const String appVersionName = '7.0.0';
+const String appVersionName = '8';
 
 class BoardAssets {
   BoardAssets._();

@@ -15,14 +15,16 @@ your system language.
 
 ---
 
-## Engine (Hybrid 7.0)
+## Engine (Stockfish 8.0)
 
-- **Review / live analysis / game review** → official Stockfish as a separate UCI OS process
-- **Play vs engine levels + puzzle opponent / hints** → Dart engine only
+- **All engine moves** → official Stockfish as a separate UCI OS process (no Dart engine)
+- **Play vs engine** → Stockfish with strength limit (`Skill Level` / `UCI_LimitStrength`+`UCI_Elo`) for the six UI levels (Beginner→Master). Master = full strength.
+- **Puzzles, live analysis, game review** → full-strength Stockfish
 - Do **not** use `flutter_stockfish`
 - Binaries are **gitignored**; download steps:
   - Windows: [`windows/stockfish/README.md`](windows/stockfish/README.md)
   - Android: [`android/stockfish/README.md`](android/stockfish/README.md)
+- If Stockfish is missing or crashes: empty result, no hang; UCI process may restart. No Dart fallback.
 
 Game review wall-clock budgets (Stockfish): quick **400ms / depth≤22**, deep **1200ms / depth≤28** (movetime dominates).
 
