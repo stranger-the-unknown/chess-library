@@ -35,7 +35,7 @@ class HomeScreen extends StatelessWidget {
             children: [
               Row(
                 children: [
-                  _logo(scheme),
+                  _logo(),
                   const SizedBox(width: 14),
                   Expanded(
                     child: Column(
@@ -108,23 +108,12 @@ class HomeScreen extends StatelessWidget {
     );
   }
 
-  Widget _logo(ColorScheme scheme) {
-    return Container(
+  Widget _logo() {
+    return Image.asset(
+      'assets/icon/menu_logo_512.png',
       width: 54,
       height: 54,
-      decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(16),
-        gradient: const LinearGradient(
-          colors: [Color(0xFF8FBB57), Color(0xFF4E7327)],
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-        ),
-      ),
-      alignment: Alignment.center,
-      child: const Text(
-        '♞',
-        style: TextStyle(fontSize: 30, color: Colors.white, height: 1.1),
-      ),
+      filterQuality: FilterQuality.high,
     );
   }
 
