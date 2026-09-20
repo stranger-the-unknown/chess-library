@@ -83,7 +83,7 @@ class SettingsService extends ChangeNotifier {
   /// Bazı cihazlarda saklanmış bir `soundEnabled=false` duruyordu ve
   /// Android'in otomatik yedeklemesi uygulama silinip yeniden kurulsa
   /// bile onu geri getiriyordu: sesler her açılışta kapalı geliyordu ve
-  /// kullanıcı bunun sebebini göremiyordu.
+  /// kullanıcının bunun sebebini göremiyordu.
   ///
   /// Bu sürümde iki ayar **bir kereliğine** varsayılana döndürülüyor ve
   /// bir işaret bırakılıyor; işaret varsa bir daha dokunulmuyor, yani
@@ -268,7 +268,7 @@ class SettingsService extends ChangeNotifier {
 ///
 /// Tek kaynak burasıdır; `pubspec.yaml` ile aynı olduğu testle denetlenir.
 /// Hakkında bölümünde ve yedek dosyasının başlığında görünür.
-const String appVersionName = '8';
+const String appVersionName = '9';
 
 class BoardAssets {
   BoardAssets._();
@@ -466,50 +466,12 @@ class BoardAssets {
     0xFFC45C6A, // gül
   ];
 
-  /// Seçim ve motor oku rengi — her tahta için uyumlu vurgu.
+  /// Seçim ve motor oku rengi — her tahta için kullanıcı seçimi veya paletin
+  /// en solundaki varsayılan.
   static int markColor(String board) =>
       SettingsService.instance.accentColorFor(board);
 
-  static int defaultMarkColor(String board) {
-    const accents = <String, int>{
-      'brown': 0xFFE8A317,
-      'green': 0xFFE2571E,
-      'tournament': 0xFFE8A317,
-      'blue': 0xFFE8A317,
-      'gray': 0xFF1E8FD9,
-      'slate': 0xFFE8A317,
-      'sand': 0xFF2A8F7A,
-      'purple': 0xFFE8A317,
-      'ivory': 0xFFC45C6A,
-      'rose': 0xFF2A8F7A,
-      'teal': 0xFFE2571E,
-      'midnight': 0xFFE8A317,
-      'dark_wood': 0xFFE8A317,
-      'walnut': 0xFF2E9E8F,
-      'oak': 0xFF1E6FD9,
-      'wood': 0xFF2E9E8F,
-      'wood2': 0xFFE8A317,
-      'wood3': 0xFF2E9E8F,
-      'wood4': 0xFFE2571E,
-      'maple': 0xFF1E6FD9,
-      'maple2': 0xFFE2571E,
-      'marble': 0xFFE2571E,
-      'blue_marble': 0xFFE8A317,
-      'stone': 0xFFE8A317,
-      'metal': 0xFFE2571E,
-      'leather': 0xFF1E6FD9,
-      'canvas': 0xFFE2571E,
-      'olive': 0xFFE2571E,
-      'green_plastic': 0xFFE2571E,
-      'pink_pyramid': 0xFF2A8F7A,
-      'purple_diag': 0xFFE8A317,
-      'horsey': 0xFFE8A317,
-      'copper': 0xFF1E6FD9,
-      'navy': 0xFFE8A317,
-      'graphite': 0xFFE8A317,
-    };
-    return accents[board] ?? 0xFFE8A317;
-  }
+  static int defaultMarkColor(String board) => accentPalette.first;
 
 
   static const Map<String, String> _labels = {
