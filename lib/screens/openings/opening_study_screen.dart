@@ -11,6 +11,7 @@ import '../../services/opening_service.dart';
 import '../../services/sound_service.dart';
 import '../../theme/app_theme.dart';
 import '../../services/board_image_service.dart';
+import '../../services/settings_service.dart';
 import '../../widgets/app_dialogs.dart';
 import '../../widgets/chess_board_widget.dart';
 import '../../widgets/move_scroll.dart';
@@ -256,7 +257,12 @@ class _OpeningStudyScreenState extends State<OpeningStudyScreen> {
       final next = _nextMove;
       if (next != null) {
         arrows.add(
-          BoardArrow(next.from, next.to, scheme.primary.withValues(alpha: 0.8)),
+          BoardArrow(
+            next.from,
+            next.to,
+            Color(BoardAssets.markColor(SettingsService.instance.boardTheme))
+                .withValues(alpha: 0.85),
+          ),
         );
       }
     }
