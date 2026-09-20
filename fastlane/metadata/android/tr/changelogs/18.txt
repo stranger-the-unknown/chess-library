@@ -1,0 +1,4 @@
+• Ana ekran logosu 8.0.5’teki beyaz at silüeti; aynı görsel uygulama ikonu
+• Arayüz renkleri 8.0.5 paletine döndü
+• Tahta seçiminde kare önizleme; çizgi rengi varsayılanı paletin en solu
+• Sürüm 9

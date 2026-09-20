@@ -1,7 +1,7 @@
 name: chess_pgn_reader
 description: PGN okuyucu, bulmaca kütüphanesi ve cihazda çalışan satranç motoru.
 publish_to: 'none'
-version: 8.0.7
+version: 9.0.0+18
 
 environment:
   sdk: '>=3.4.0 <4.0.0'
@@ -50,7 +50,7 @@ flutter_launcher_icons:
   android: true
   ios: true
   image_path: 'assets/icon/icon.png'
-  adaptive_icon_background: '#3F5E22'
+  adaptive_icon_background: '#6C953C'
   adaptive_icon_foreground: 'assets/icon/icon_foreground.png'
   remove_alpha_ios: true
   min_sdk_android: 23

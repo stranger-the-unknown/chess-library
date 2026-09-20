@@ -1,0 +1,4 @@
+• Home logo is the 8.0.5 white knight silhouette; the same art is the app icon
+• UI colors restored to the 8.0.5 palette
+• Board picker previews are square again; line-color default is the leftmost swatch
+• Version 9
