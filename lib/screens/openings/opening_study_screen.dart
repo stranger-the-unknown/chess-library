@@ -10,6 +10,7 @@ import '../../models/opening.dart';
 import '../../services/opening_service.dart';
 import '../../services/sound_service.dart';
 import '../../theme/app_theme.dart';
+import '../../services/board_image_service.dart';
 import '../../widgets/app_dialogs.dart';
 import '../../widgets/chess_board_widget.dart';
 import '../../widgets/move_scroll.dart';
@@ -39,6 +40,7 @@ class _OpeningStudyScreenState extends State<OpeningStudyScreen> {
   /// Hamle şeridini seçili hamlede tutar; kural tahtanın altındaki
   /// şeritle aynı yerde duruyor.
   final MoveScroller _scroller = MoveScroller();
+  final GlobalKey _boardImageKey = GlobalKey();
 
   late engine.ChessGame _game;
   int _cursor = -1;
@@ -58,6 +60,15 @@ class _OpeningStudyScreenState extends State<OpeningStudyScreen> {
     super.initState();
     _game = engine.ChessGame();
     _loadProgress();
+  }
+
+  Future<void> _saveBoardImage() async {
+    final result = await BoardImageService.saveBoardPng(
+      _boardImageKey,
+      fileName: 'chess-library-opening.png',
+    );
+    if (!mounted) return;
+    AppDialogs.snack(context, t('board.saveResult.$result'));
   }
 
   @override
@@ -278,6 +289,9 @@ class _OpeningStudyScreenState extends State<OpeningStudyScreen> {
           PopupMenuButton<String>(
             onSelected: (value) async {
               switch (value) {
+                case 'png':
+                  _saveBoardImage();
+                  break;
                 case 'note':
                   final note = await AppDialogs.prompt(
                     context,
@@ -324,6 +338,7 @@ class _OpeningStudyScreenState extends State<OpeningStudyScreen> {
               }
             },
             itemBuilder: (context) => [
+              PopupMenuItem(value: 'png', child: Text(t('board.savePng'))),
               PopupMenuItem(value: 'note', child: Text(t('common.addNote'))),
               if (opening.note != null && opening.note!.isNotEmpty)
                 PopupMenuItem(
@@ -372,14 +387,17 @@ class _OpeningStudyScreenState extends State<OpeningStudyScreen> {
                         return SizedBox(
                           width: side,
                           height: side,
-                          child: ChessBoardWidget(
-                            game: _game,
-                            flipped: _flipped,
-                            interactive: _mode == StudyMode.practice,
-                            movableSide: practiceSide,
-                            lastMove: _currentMove,
-                            onMove: _onUserMove,
-                            arrows: arrows,
+                          child: RepaintBoundary(
+                            key: _boardImageKey,
+                            child: ChessBoardWidget(
+                              game: _game,
+                              flipped: _flipped,
+                              interactive: _mode == StudyMode.practice,
+                              movableSide: practiceSide,
+                              lastMove: _currentMove,
+                              onMove: _onUserMove,
+                              arrows: arrows,
+                            ),
                           ),
                         );
                       },

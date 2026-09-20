@@ -7,11 +7,14 @@ import '../models/chess_engine.dart' as engine;
 import '../models/move_entry.dart';
 import '../models/playlist.dart';
 import '../models/stored_review.dart';
+import '../services/board_image_service.dart';
+import '../services/settings_service.dart';
 import '../services/analysis_queue.dart';
 import '../services/game_review.dart';
 import '../services/storage_service.dart';
 import '../services/sound_service.dart';
 import '../theme/app_theme.dart';
+import '../widgets/app_dialogs.dart';
 import '../widgets/chess_board_widget.dart';
 import '../widgets/cursors.dart';
 
@@ -59,12 +62,22 @@ class _GameReviewScreenState extends State<GameReviewScreen> {
   int _done = 0;
   int _total = 0;
   bool _flipped = false;
+  final GlobalKey _boardImageKey = GlobalKey();
   int _cursor = 0;
 
   @override
   void initState() {
     super.initState();
     _run();
+  }
+
+  Future<void> _saveBoardImage() async {
+    final result = await BoardImageService.saveBoardPng(
+      _boardImageKey,
+      fileName: 'chess-library-review.png',
+    );
+    if (!mounted) return;
+    AppDialogs.snack(context, t('board.saveResult.$result'));
   }
 
   Future<void> _run() async {
@@ -180,6 +193,11 @@ class _GameReviewScreenState extends State<GameReviewScreen> {
       appBar: AppBar(
         title: Text(widget.title.isEmpty ? t('review.title') : widget.title),
         actions: [
+          IconButton(
+            tooltip: t('board.savePng'),
+            icon: const Icon(Icons.image_outlined),
+            onPressed: _saveBoardImage,
+          ),
           IconButton(
             tooltip: t('common.flipBoard'),
             icon: const Icon(Icons.swap_vert_rounded),
@@ -422,19 +440,22 @@ class _GameReviewScreenState extends State<GameReviewScreen> {
           Center(
             child: SizedBox(
               width: Layout.maxBoardSide,
-              child: ChessBoardWidget(
-                game: position,
-                flipped: _flipped,
-                interactive: false,
-                lastMove: move.entry.move,
-                arrows: [
-                  if (bestMove != null && !move.playedBest)
-                    BoardArrow(
-                      bestMove.from,
-                      bestMove.to,
-                      scheme.success.withValues(alpha: 0.8),
-                    ),
-                ],
+              child: RepaintBoundary(
+                key: _boardImageKey,
+                child: ChessBoardWidget(
+                  game: position,
+                  flipped: _flipped,
+                  interactive: false,
+                  lastMove: move.entry.move,
+                  arrows: [
+                    if (bestMove != null && !move.playedBest)
+                      BoardArrow(
+                        bestMove.from,
+                        bestMove.to,
+                        Color(BoardAssets.markColor(SettingsService.instance.boardTheme)).withValues(alpha: 0.85),
+                      ),
+                  ],
+                ),
               ),
             ),
           ),

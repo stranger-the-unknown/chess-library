@@ -11,9 +11,9 @@ class AppTheme {
   AppTheme._();
 
   // Marka renkleri
-  static const Color green = Color(0xFF7FA650);
-  static const Color greenDark = Color(0xFF5C8032);
-  static const Color gold = Color(0xFFD8A657);
+  static const Color green = Color(0xFF5A8232);
+  static const Color greenDark = Color(0xFF3F5E22);
+  static const Color gold = Color(0xFFDDBB72);
   static const Color danger = Color(0xFFD1584C);
   static const Color info = Color(0xFF5B8DD9);
 
@@ -22,7 +22,7 @@ class AppTheme {
     primary: green,
     onPrimary: Color(0xFF0E1207),
     primaryContainer: greenDark,
-    onPrimaryContainer: Color(0xFFF1F7E8),
+    onPrimaryContainer: Color(0xFFF0F6E6),
     secondary: gold,
     onSecondary: Color(0xFF1A1408),
     secondaryContainer: Color(0xFF4A3A18),
@@ -51,8 +51,8 @@ class AppTheme {
     brightness: Brightness.light,
     primary: greenDark,
     onPrimary: Colors.white,
-    primaryContainer: Color(0xFFDCEBC6),
-    onPrimaryContainer: Color(0xFF1B2A0A),
+    primaryContainer: Color(0xFFD7E8C0),
+    onPrimaryContainer: Color(0xFF1A280C),
     secondary: Color(0xFFA37527),
     onSecondary: Colors.white,
     secondaryContainer: Color(0xFFF7E7C7),

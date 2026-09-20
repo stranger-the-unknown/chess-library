@@ -134,6 +134,13 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   onChanged: (value) => _settings.showCoordinates = value,
                 ),
                 SwitchListTile(
+                  secondary: const Icon(Icons.north_east_rounded),
+                  title: Text(t('settings.engineArrows')),
+                  subtitle: Text(t('settings.engineArrowsSub')),
+                  value: _settings.showEngineArrows,
+                  onChanged: (value) => _settings.showEngineArrows = value,
+                ),
+                SwitchListTile(
                   secondary: const Icon(Icons.radio_button_checked_rounded),
                   title: Text(t('settings.legalMoves')),
                   value: _settings.showLegalMoves,
@@ -539,7 +546,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
             maxCrossAxisExtent: 170,
             mainAxisSpacing: 12,
             crossAxisSpacing: 12,
-            childAspectRatio: 0.82,
+            childAspectRatio: 0.62,
           ),
           itemCount: BoardAssets.boards.length,
           itemBuilder: (context, index) {
@@ -583,6 +590,40 @@ class _SettingsScreenState extends State<SettingsScreen> {
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                       style: const TextStyle(fontSize: 11.5),
+                    ),
+                    const SizedBox(height: 4),
+                    SizedBox(
+                      height: 18,
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          for (final color in _settings.accentPalette) ...[
+                            GestureDetector(
+                              onTap: () {
+                                _settings.setBoardAccent(name, color);
+                                setSheetState(() {});
+                              },
+                              child: Container(
+                                width: 14,
+                                height: 14,
+                                margin: const EdgeInsets.symmetric(horizontal: 1.5),
+                                decoration: BoxDecoration(
+                                  color: Color(color),
+                                  shape: BoxShape.circle,
+                                  border: Border.all(
+                                    color: _settings.accentColorFor(name) == color
+                                        ? Theme.of(context).colorScheme.onSurface
+                                        : Colors.black26,
+                                    width: _settings.accentColorFor(name) == color
+                                        ? 2
+                                        : 1,
+                                  ),
+                                ),
+                              ),
+                            ),
+                          ],
+                        ],
+                      ),
                     ),
                   ],
                 ),

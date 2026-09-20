@@ -12,6 +12,7 @@ import '../models/move_entry.dart';
 import '../models/stored_review.dart';
 import '../models/pgn_parser.dart';
 import '../models/playlist.dart';
+import '../services/board_image_service.dart';
 import '../services/engine/engine_service.dart';
 import '../services/settings_service.dart';
 import '../services/sound_service.dart';
@@ -119,6 +120,7 @@ class _GameScreenState extends State<GameScreen> {
 
   // Motor
   bool _analysisOn = false;
+  final GlobalKey _boardImageKey = GlobalKey();
   bool _thinking = false;
   SearchResult? _analysis;
   /// Beyaz bakisi; hamle degisse bile yeni sonuc gelene kadar sabit.
@@ -684,14 +686,17 @@ class _GameScreenState extends State<GameScreen> {
 
     final arrows = <BoardArrow>[];
     final best = _analysis?.bestMoveUci;
-    if (_analysisOn && best != null && best.length >= 4) {
+    if (_analysisOn &&
+        SettingsService.instance.showEngineArrows &&
+        best != null &&
+        best.length >= 4) {
       final move = _game.moveFromUci(best);
       if (move != null) {
         arrows.add(
           BoardArrow(
             move.from,
             move.to,
-            scheme.primary.withValues(alpha: 0.75),
+            Color(BoardAssets.markColor(SettingsService.instance.boardTheme)).withValues(alpha: 0.85),
           ),
         );
       }
@@ -744,6 +749,9 @@ class _GameScreenState extends State<GameScreen> {
                 case 'fen':
                   _copyFen();
                   break;
+                case 'png':
+                  _saveBoardImage();
+                  break;
                 case 'paste':
                   _pasteFen();
                   break;
@@ -778,6 +786,13 @@ class _GameScreenState extends State<GameScreen> {
                 child: ListTile(
                   leading: const Icon(Icons.copy_rounded),
                   title: Text(t('common.copyFen')),
+                ),
+              ),
+              PopupMenuItem(
+                value: 'png',
+                child: ListTile(
+                  leading: const Icon(Icons.image_outlined),
+                  title: Text(t('board.savePng')),
                 ),
               ),
               PopupMenuItem(
@@ -836,7 +851,9 @@ class _GameScreenState extends State<GameScreen> {
                           constraints.maxWidth,
                           constraints.maxHeight,
                         );
-                        return SizedBox(
+                        return RepaintBoundary(
+                          key: _boardImageKey,
+                          child: SizedBox(
                           width: side,
                           height: side,
                           child: ChessBoardWidget(
@@ -857,6 +874,7 @@ class _GameScreenState extends State<GameScreen> {
                                 onMove: _onBoardMove,
                                 arrows: arrows,
                           ),
+                        ),
                         );
                       },
                     ),
@@ -865,7 +883,11 @@ class _GameScreenState extends State<GameScreen> {
               ),
               _playerRow(scheme, top: false),
               if (_explore.isNotEmpty) _exploreCard(scheme),
-              if (_analysisOn) _engineLine(scheme),
+              // Motor şeridi için sabit yükseklik: aç/kapa tahtayı kaydırmaz.
+              SizedBox(
+                height: 44,
+                child: _analysisOn ? _engineLine(scheme) : null,
+              ),
               // Deneme sırasında tahtadaki konum oyunun sonucunu yansıtmaz.
               if (_resultText != null && _explore.isEmpty)
                 _resultBanner(scheme),
@@ -1032,10 +1054,19 @@ class _GameScreenState extends State<GameScreen> {
     );
   }
 
+  Future<void> _saveBoardImage() async {
+    final result = await BoardImageService.saveBoardPng(
+      _boardImageKey,
+      fileName: 'chess-library-board.png',
+    );
+    if (!mounted) return;
+    AppDialogs.snack(context, t('board.saveResult.$result'));
+  }
+
   Widget _engineLine(ColorScheme scheme) {
     final analysis = _analysis;
-    // Sonuç yokken boş kutu / hazırlanıyor yazısı gösterme.
-    if (analysis == null) return const SizedBox.shrink();
+    // Sonuç yokken yazı gösterme; dışardaki sabit yükseklik tahtayı tutar.
+    if (analysis == null) return const SizedBox.expand();
     final text = _describeAnalysis(analysis);
 
     return Container(
@@ -1087,8 +1118,7 @@ class _GameScreenState extends State<GameScreen> {
       position.makeMove(move);
     }
 
-    return '$evaluation  ·  ${t('game.depth')} ${analysis.depth}  ·  '
-        '${sanMoves.isEmpty ? "—" : sanMoves.join(" ")}';
+    return '$evaluation  ·  ${sanMoves.isEmpty ? "—" : sanMoves.join(" ")}';
   }
 
   Widget _resultBanner(ColorScheme scheme) {

@@ -1,3 +1,4 @@
+import 'dart:convert';
 import 'dart:io' show Platform;
 import 'dart:math' as math;
 
@@ -30,6 +31,9 @@ class SettingsService extends ChangeNotifier {
   String _pieceSet = _defaultPieceSet;
   String _boardTheme = _defaultBoardTheme;
   bool _showCoordinates = true;
+  bool _showEngineArrows = true;
+  /// Tahta teması -> seçim/ok rengi (0xAARRGGBB).
+  final Map<String, int> _boardAccentColors = {};
   bool _showLegalMoves = true;
   bool _highlightLastMove = true;
   bool _animateMoves = true;
@@ -59,6 +63,7 @@ class SettingsService extends ChangeNotifier {
   String get pieceSet => _pieceSet;
   String get boardTheme => _boardTheme;
   bool get showCoordinates => _showCoordinates;
+  bool get showEngineArrows => _showEngineArrows;
   bool get showLegalMoves => _showLegalMoves;
   bool get highlightLastMove => _highlightLastMove;
   bool get animateMoves => _animateMoves;
@@ -123,6 +128,18 @@ class SettingsService extends ChangeNotifier {
         ? storedBoard
         : _defaultBoardTheme;
     _showCoordinates = prefs.getBool('showCoordinates') ?? true;
+    _showEngineArrows = prefs.getBool('showEngineArrows') ?? true;
+    final accentJson = prefs.getString('boardAccentColors');
+    if (accentJson != null) {
+      try {
+        final map = jsonDecode(accentJson) as Map<String, dynamic>;
+        _boardAccentColors
+          ..clear()
+          ..addAll({
+            for (final e in map.entries) e.key: (e.value as num).toInt(),
+          });
+      } catch (_) {}
+    }
     _showLegalMoves = prefs.getBool('showLegalMoves') ?? true;
     _highlightLastMove = prefs.getBool('highlightLastMove') ?? true;
     _animateMoves = prefs.getBool('animateMoves') ?? true;
@@ -171,6 +188,25 @@ class SettingsService extends ChangeNotifier {
     _set('showCoordinates', value);
     notifyListeners();
   }
+
+  set showEngineArrows(bool value) {
+    _showEngineArrows = value;
+    _set('showEngineArrows', value);
+    notifyListeners();
+  }
+
+  /// Bu tahta için seçim/ok rengi (kullanıcı seçimi veya varsayılan).
+  int accentColorFor(String board) =>
+      _boardAccentColors[board] ?? BoardAssets.defaultMarkColor(board);
+
+  void setBoardAccent(String board, int color) {
+    _boardAccentColors[board] = color;
+    _set('boardAccentColors', jsonEncode(_boardAccentColors));
+    notifyListeners();
+  }
+
+  List<int> get accentPalette => BoardAssets.accentPalette;
+
 
   set showLegalMoves(bool value) {
     _showLegalMoves = value;
@@ -420,36 +456,61 @@ class BoardAssets {
         : white;
   }
 
-  /// İşaretleme rengi (0xAARRGGBB).
-  ///
-  /// Sağ tıkla konan işaretler ve çizilen oklar her tahtada seçilebilsin
-  /// diye renk tahtadan türetilir: koyu karenin renk tonundan en uzak
-  /// ton seçilir. Böylece yeşil tahtada yeşil, mavi tahtada mavi
-  /// işaret konmaz ve tek bir sabit renk aramak gerekmez.
-  static int markColor(String board) {
-    const palette = <int>[
-      0xFFE2571E, // turuncu
-      0xFF2E9E3F, // yeşil
-      0xFF1E6FD9, // mavi
-      0xFF9B27B0, // mor
-    ];
-    final (_, dark) = squareColors(board);
-    final boardHue = HSVColor.fromColor(Color(dark)).hue;
+  static const List<int> accentPalette = <int>[
+    0xFFE8A317, // altın
+    0xFFE2571E, // turuncu
+    0xFF2E9E3F, // yeşil
+    0xFF1E6FD9, // mavi
+    0xFF9B27B0, // mor
+    0xFF2A8F7A, // teal
+    0xFFC45C6A, // gül
+  ];
 
-    int best = palette.first;
-    double bestDistance = -1;
-    for (final candidate in palette) {
-      final hue = HSVColor.fromColor(Color(candidate)).hue;
-      // Renk çemberi üzerinde kısa yoldan uzaklık.
-      final raw = (hue - boardHue).abs();
-      final distance = raw > 180 ? 360 - raw : raw;
-      if (distance > bestDistance) {
-        bestDistance = distance;
-        best = candidate;
-      }
-    }
-    return best;
+  /// Seçim ve motor oku rengi — her tahta için uyumlu vurgu.
+  static int markColor(String board) =>
+      SettingsService.instance.accentColorFor(board);
+
+  static int defaultMarkColor(String board) {
+    const accents = <String, int>{
+      'brown': 0xFFE8A317,
+      'green': 0xFFE2571E,
+      'tournament': 0xFFE8A317,
+      'blue': 0xFFE8A317,
+      'gray': 0xFF1E8FD9,
+      'slate': 0xFFE8A317,
+      'sand': 0xFF2A8F7A,
+      'purple': 0xFFE8A317,
+      'ivory': 0xFFC45C6A,
+      'rose': 0xFF2A8F7A,
+      'teal': 0xFFE2571E,
+      'midnight': 0xFFE8A317,
+      'dark_wood': 0xFFE8A317,
+      'walnut': 0xFF2E9E8F,
+      'oak': 0xFF1E6FD9,
+      'wood': 0xFF2E9E8F,
+      'wood2': 0xFFE8A317,
+      'wood3': 0xFF2E9E8F,
+      'wood4': 0xFFE2571E,
+      'maple': 0xFF1E6FD9,
+      'maple2': 0xFFE2571E,
+      'marble': 0xFFE2571E,
+      'blue_marble': 0xFFE8A317,
+      'stone': 0xFFE8A317,
+      'metal': 0xFFE2571E,
+      'leather': 0xFF1E6FD9,
+      'canvas': 0xFFE2571E,
+      'olive': 0xFFE2571E,
+      'green_plastic': 0xFFE2571E,
+      'pink_pyramid': 0xFF2A8F7A,
+      'purple_diag': 0xFFE8A317,
+      'horsey': 0xFFE8A317,
+      'copper': 0xFF1E6FD9,
+      'navy': 0xFFE8A317,
+      'graphite': 0xFFE8A317,
+    };
+    return accents[board] ?? 0xFFE8A317;
   }
+
 
   static const Map<String, String> _labels = {
     'purple': 'Mor',

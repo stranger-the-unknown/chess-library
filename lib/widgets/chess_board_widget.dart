@@ -515,7 +515,13 @@ class _ChessBoardWidgetState extends State<ChessBoardWidget>
     });
 
     final selected = _selected;
-    if (selected != null) add(selected, scheme.selectedSquare);
+    if (selected != null) {
+      add(
+        selected,
+        Color(BoardAssets.markColor(SettingsService.instance.boardTheme))
+            .withValues(alpha: 0.55),
+      );
+    }
 
     return widgets;
   }
@@ -726,13 +732,21 @@ class _ArrowPainter extends CustomPainter {
 
       final headLength = square * 0.42;
       final shaftEnd = to - unit * headLength * 0.85;
+      final shaftStart = from + unit * square * 0.28;
 
-      final paint = Paint()
+      // Kuyruk yuvarlak, üçgen tarafı düz — uçlar üst üste binmesin.
+      final shaftPaint = Paint()
+        ..color = arrow.color
+        ..strokeWidth = square * 0.17
+        ..strokeCap = StrokeCap.butt
+        ..style = PaintingStyle.stroke;
+      final tailPaint = Paint()
         ..color = arrow.color
         ..strokeWidth = square * 0.17
         ..strokeCap = StrokeCap.round
         ..style = PaintingStyle.stroke;
-      canvas.drawLine(from + unit * square * 0.28, shaftEnd, paint);
+      canvas.drawLine(shaftStart, shaftStart + unit * 0.01, tailPaint);
+      canvas.drawLine(shaftStart, shaftEnd, shaftPaint);
 
       final normal = Offset(-unit.dy, unit.dx);
       final head = Path()

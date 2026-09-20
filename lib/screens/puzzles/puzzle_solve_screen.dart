@@ -1,3 +1,4 @@
+import '../../services/settings_service.dart';
 import 'package:flutter/material.dart';
 
 import '../../widgets/responsive.dart';
@@ -341,7 +342,7 @@ class _PuzzleSolveScreenState extends State<PuzzleSolveScreen> {
       if (move == null) break;
       final entry = MoveEntry.play(_game, move);
       setState(() => _moves.add(entry));
-      await Future<void>.delayed(const Duration(milliseconds: 420));
+      await Future<void>.delayed(const Duration(milliseconds: 840));
     }
     if (!mounted) return;
     setState(() {
@@ -453,14 +454,16 @@ class _PuzzleSolveScreenState extends State<PuzzleSolveScreen> {
     if (_showHint) {
       final best =
           _expectedMove ?? (_moves.isEmpty ? _baseline?.bestMoveUci : null);
-      if (best != null && best.length >= 4) {
+      if (SettingsService.instance.showEngineArrows &&
+          best != null &&
+          best.length >= 4) {
         final move = _game.moveFromUci(best);
         if (move != null) {
           arrows.add(
             BoardArrow(
               move.from,
               move.to,
-              scheme.primary.withValues(alpha: 0.8),
+              Color(BoardAssets.markColor(SettingsService.instance.boardTheme)).withValues(alpha: 0.85),
             ),
           );
         }
