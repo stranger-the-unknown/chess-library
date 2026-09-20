@@ -1,3 +1,5 @@
+import 'dart:math' as math;
+
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 
@@ -533,104 +535,136 @@ class _SettingsScreenState extends State<SettingsScreen> {
     await showPickerPanel(
       context,
       title: t('settings.boardTheme'),
-      builder: (context, controller, padding) => StatefulBuilder(
-        builder: (context, setSheetState) => GridView.builder(
-          controller: controller,
-          // Telefonun gezinme çubuğu listenin son satırının üstüne
-          // biniyordu; alt pay panelden geliyor ki son tahta da
-          // tıklanabilsin.
-          padding: padding,
-          // Sütun sayısı genişlikten çıkıyor: telefonda üç, geniş
-          // panelde beş altı tahta yan yana geliyor.
-          gridDelegate: const SliverGridDelegateWithMaxCrossAxisExtent(
-            maxCrossAxisExtent: 170,
-            mainAxisSpacing: 12,
-            crossAxisSpacing: 12,
-            childAspectRatio: 0.62,
-          ),
-          itemCount: BoardAssets.boards.length,
-          itemBuilder: (context, index) {
-            final name = BoardAssets.boards[index];
-            final selected = name == _settings.boardTheme;
-            // Kendi Material'ı olmadan InkWell, mürekkebi kaydırma
-            // alanının dışındaki üst Material'a çiziyor; panelin
-            // kenarında yarısı görünen bir tahtaya dokununca vurgu
-            // listenin dışına taşıyordu.
-            return Material(
-              type: MaterialType.transparency,
-              borderRadius: BorderRadius.circular(12),
-              clipBehavior: Clip.antiAlias,
-              child: InkWell(
-                mouseCursor: kClickable,
-                borderRadius: BorderRadius.circular(12),
-                onTap: () {
-                  _settings.boardTheme = name;
-                  setSheetState(() {});
-                },
-                child: Column(
-                  children: [
-                    Expanded(
-                      child: Container(
-                        decoration: BoxDecoration(
-                          borderRadius: BorderRadius.circular(10),
-                          border: Border.all(
-                            color: selected
-                                ? Theme.of(context).colorScheme.primary
-                                : Colors.transparent,
-                            width: 3,
-                          ),
-                        ),
-                        clipBehavior: Clip.antiAlias,
-                        child: BoardBackground(board: name, fit: BoxFit.cover),
-                      ),
-                    ),
-                    const SizedBox(height: 4),
-                    Text(
-                      BoardAssets.label(name),
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: const TextStyle(fontSize: 11.5),
-                    ),
-                    const SizedBox(height: 4),
-                    SizedBox(
-                      height: 18,
-                      child: Row(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          for (final color in _settings.accentPalette) ...[
-                            GestureDetector(
-                              onTap: () {
-                                _settings.setBoardAccent(name, color);
-                                setSheetState(() {});
-                              },
-                              child: Container(
-                                width: 14,
-                                height: 14,
-                                margin: const EdgeInsets.symmetric(horizontal: 1.5),
-                                decoration: BoxDecoration(
-                                  color: Color(color),
-                                  shape: BoxShape.circle,
-                                  border: Border.all(
-                                    color: _settings.accentColorFor(name) == color
-                                        ? Theme.of(context).colorScheme.onSurface
-                                        : Colors.black26,
-                                    width: _settings.accentColorFor(name) == color
-                                        ? 2
-                                        : 1,
-                                  ),
-                                ),
+      builder: (context, controller, padding) => LayoutBuilder(
+        builder: (context, constraints) {
+          const maxExtent = 170.0;
+          const spacing = 12.0;
+          // Kare tahta + etiket + palet. Expanded yok: palet eklendiğinde
+          // tahta dikdörtgene uzamasın.
+          const extraHeight = 48.0;
+          final inner = math.max(
+            1.0,
+            constraints.maxWidth - padding.horizontal,
+          );
+          final count = math.max(1, (inner / maxExtent).ceil());
+          final cellW = (inner - spacing * (count - 1)) / count;
+          final ratio = cellW / (cellW + extraHeight);
+          return StatefulBuilder(
+            builder: (context, setSheetState) => GridView.builder(
+              controller: controller,
+              // Telefonun gezinme çubuğu listenin son satırının üstüne
+              // biniyordu; alt pay panelden geliyor ki son tahta da
+              // tıklanabilsin.
+              padding: padding,
+              // Sütun sayısı genişlikten çıkıyor: telefonda üç, geniş
+              // panelde beş altı tahta yan yana geliyor.
+              gridDelegate: SliverGridDelegateWithMaxCrossAxisExtent(
+                maxCrossAxisExtent: maxExtent,
+                mainAxisSpacing: spacing,
+                crossAxisSpacing: spacing,
+                childAspectRatio: ratio,
+              ),
+              itemCount: BoardAssets.boards.length,
+              itemBuilder: (context, index) {
+                final name = BoardAssets.boards[index];
+                final selected = name == _settings.boardTheme;
+                // Kendi Material'ı olmadan InkWell, mürekkebi kaydırma
+                // alanının dışındaki üst Material'a çiziyor; panelin
+                // kenarında yarısı görünen bir tahtaya dokununca vurgu
+                // listenin dışına taşıyordu.
+                return Material(
+                  type: MaterialType.transparency,
+                  borderRadius: BorderRadius.circular(12),
+                  clipBehavior: Clip.antiAlias,
+                  child: InkWell(
+                    mouseCursor: kClickable,
+                    borderRadius: BorderRadius.circular(12),
+                    onTap: () {
+                      _settings.boardTheme = name;
+                      setSheetState(() {});
+                    },
+                    child: Column(
+                      children: [
+                        AspectRatio(
+                          aspectRatio: 1,
+                          child: Container(
+                            decoration: BoxDecoration(
+                              borderRadius: BorderRadius.circular(10),
+                              border: Border.all(
+                                color: selected
+                                    ? Theme.of(context).colorScheme.primary
+                                    : Colors.transparent,
+                                width: 3,
                               ),
                             ),
-                          ],
-                        ],
-                      ),
+                            clipBehavior: Clip.antiAlias,
+                            child: BoardBackground(
+                              board: name,
+                              fit: BoxFit.cover,
+                            ),
+                          ),
+                        ),
+                        const SizedBox(height: 4),
+                        Text(
+                          BoardAssets.label(name),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: const TextStyle(fontSize: 11.5),
+                        ),
+                        const SizedBox(height: 4),
+                        SizedBox(
+                          height: 18,
+                          child: FittedBox(
+                            fit: BoxFit.scaleDown,
+                            child: Row(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                for (final color
+                                    in _settings.accentPalette) ...[
+                                  GestureDetector(
+                                    onTap: () {
+                                      _settings.setBoardAccent(name, color);
+                                      setSheetState(() {});
+                                    },
+                                    child: Container(
+                                      width: 14,
+                                      height: 14,
+                                      margin: const EdgeInsets.symmetric(
+                                        horizontal: 1.5,
+                                      ),
+                                      decoration: BoxDecoration(
+                                        color: Color(color),
+                                        shape: BoxShape.circle,
+                                        border: Border.all(
+                                          color:
+                                              _settings.accentColorFor(name) ==
+                                                  color
+                                              ? Theme.of(
+                                                  context,
+                                                ).colorScheme.onSurface
+                                              : Colors.black26,
+                                          width:
+                                              _settings.accentColorFor(name) ==
+                                                  color
+                                              ? 2
+                                              : 1,
+                                        ),
+                                      ),
+                                    ),
+                                  ),
+                                ],
+                              ],
+                            ),
+                          ),
+                        ),
+                      ],
                     ),
-                  ],
-                ),
-              ),
-            );
-          },
-        ),
+                  ),
+                );
+              },
+            ),
+          );
+        },
       ),
     );
     if (mounted) setState(() {});
