@@ -720,7 +720,13 @@ class _GameScreenState extends State<GameScreen> {
 
     final arrows = <BoardArrow>[];
     final best = _analysis?.bestMoveUci;
+    // Motora karşı oyunda ok yalnızca senin sıranda çiziliyor: gösterilen
+    // konumda sıra motordaysa o ok motorun hamlesini önerir, yani rakibe
+    // akıl verir. Analiz/PGN okuma kipinde iki taraf için de anlamlı.
+    final arrowAllowed = widget.mode != GameMode.versusEngine ||
+        _game.sideToMove == widget.playerColor;
     if (_analysisOn &&
+        arrowAllowed &&
         SettingsService.instance.showEngineArrows &&
         best != null &&
         best.length >= 4) {
