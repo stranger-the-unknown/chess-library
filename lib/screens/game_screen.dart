@@ -325,32 +325,34 @@ class _GameScreenState extends State<GameScreen> {
 
   void _afterPositionChanged() {
     if (!_analysisOn) return;
-    // Motora karşı oyunda sıra motordaysa canlı analiz başlatılmıyor.
-    // İkisi de tek bir Stockfish sürecini kullanıyor: analiz araya
-    // girince motorun aramasını kesiyordu, motor da hamlesini hiç
-    // oynamıyordu — analizi kapatıp açmak gerekiyordu. Motor hamlesini
-    // oynayınca bu yordam yeniden çağrılıyor ve analiz orada başlıyor.
-    if (widget.mode == GameMode.versusEngine &&
-        _game.sideToMove != widget.playerColor) {
-      _analysisDebounce?.cancel();
-      return;
-    }
     _analysisDebounce?.cancel();
     _analysisToken++;
     EngineService.instance.stopAnalysis();
+
     // Konuma bağlı olan her şey hemen gidiyor: en iyi hamle oku, ana
     // varyant ve derinlik. Eskiden bunlar yeni sonuç gelene kadar
     // duruyordu, yani bir buçuk saniye boyunca **önceki konumun**
-    // hamlesi tahtada ok olarak çiziliyor ve altta yazıyordu.
+    // hamlesi tahtada ok olarak çiziliyordu.
     //
     // Skor (`_evalScoreCp`) bilerek duruyor: sayının her hamlede
     // kaybolup gelmesi şeridi titretiyordu ve eski skor yeni konum için
-    // de kaba bir tahmin. Isaret ters donmesin diye beyaz bakisinda
-    // saklanir.
+    // de kaba bir tahmin. İşaret ters dönmesin diye beyaz bakışında
+    // saklanıyor.
     setState(() {
       _analysis = null;
       _thinking = false;
     });
+
+    // Motora karşı oyunda sıra motordaysa canlı analiz başlatılmıyor.
+    // İkisi de tek bir Stockfish sürecini kullanıyor: analiz araya
+    // girince motorun aramasını kesiyordu, motor da hamlesini hiç
+    // oynamıyordu. Motor hamlesini oynayınca bu yordam yeniden çağrılıyor
+    // ve analiz orada başlıyor.
+    if (widget.mode == GameMode.versusEngine &&
+        _game.sideToMove != widget.playerColor) {
+      return;
+    }
+
     _analysisDebounce = Timer(const Duration(milliseconds: 700), _runAnalysis);
   }
 
