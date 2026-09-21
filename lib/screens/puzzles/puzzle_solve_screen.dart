@@ -802,7 +802,10 @@ class _PuzzleSolveScreenState extends State<PuzzleSolveScreen> {
               _action(
                 Icons.lightbulb_outline_rounded,
                 t('common.hint'),
-                _hasAnswer ? () => setState(() => _showHint = true) : null,
+                // Yanlışlıkla basıldıysa aynı tuş ipucunu kapatıyor.
+                _hasAnswer
+                    ? () => setState(() => _showHint = !_showHint)
+                    : null,
               ),
               _action(
                 Icons.visibility_outlined,
