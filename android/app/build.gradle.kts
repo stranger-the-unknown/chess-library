@@ -57,9 +57,33 @@ android {
             signingConfig = if (hasReleaseKey) {
                 signingConfigs.getByName("release")
             } else {
-                // Anahtar yokken derleme yine de tamamlansın diye; bu
-                // çıktı Play'e yüklenemez ve sonradan güncellenemez.
+                // Buraya yalnızca release olmayan görevler düşer; release
+                // çıktısı aşağıdaki denetimle zaten durduruluyor.
                 signingConfigs.getByName("debug")
+            }
+        }
+    }
+
+    // Anahtar yoksa release çıktısı üretilmesin.
+    //
+    // Eskiden derleme sessizce hata ayıklama anahtarına düşüyordu:
+    // "release" adı taşıyan ama yanlış imzalı bir APK üretmek mümkündü.
+    // Hata derleme sırasında değil, yalnızca release çıktısı istendiğinde
+    // veriliyor; hata ayıklama derlemeleri anahtarsız çalışmayı sürdürür.
+    if (!hasReleaseKey) {
+        tasks.whenTaskAdded {
+            val taskName = name
+            val buildsRelease = taskName.contains("Release") &&
+                (taskName.startsWith("assemble") ||
+                    taskName.startsWith("bundle") ||
+                    taskName.startsWith("package"))
+            if (buildsRelease) {
+                doFirst {
+                    throw GradleException(
+                        "android/key.properties yok: release cikti imzasiz " +
+                            "kalirdi. BUILD.md'deki imza adimlarini uygulayin."
+                    )
+                }
             }
         }
     }

@@ -3,6 +3,7 @@ import 'package:flutter/services.dart';
 
 import 'l10n/app_strings.dart';
 import 'screens/home_shell.dart';
+import 'services/corrupt_data.dart';
 import 'services/prefs_write.dart';
 import 'services/settings_service.dart';
 import 'services/sound_service.dart';
@@ -39,11 +40,13 @@ class _ChessAppState extends State<ChessApp> {
   void initState() {
     super.initState();
     diskWriteFailures.addListener(_onWriteFailure);
+    corruptRecords.addListener(_onCorruptRecord);
   }
 
   @override
   void dispose() {
     diskWriteFailures.removeListener(_onWriteFailure);
+    corruptRecords.removeListener(_onCorruptRecord);
     super.dispose();
   }
 
@@ -57,6 +60,13 @@ class _ChessAppState extends State<ChessApp> {
     _messengerKey.currentState
       ?..hideCurrentSnackBar()
       ..showSnackBar(SnackBar(content: Text(t('lists.saveFailed'))));
+  }
+
+  /// Bozuk bir kayıt bulundu ve bir kenara alındı.
+  void _onCorruptRecord() {
+    _messengerKey.currentState
+      ?..hideCurrentSnackBar()
+      ..showSnackBar(SnackBar(content: Text(t('data.corruptFound'))));
   }
 
   @override

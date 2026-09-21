@@ -705,6 +705,8 @@ class _PuzzleSolveScreenState extends State<PuzzleSolveScreen> {
                         moves: _moves,
                         currentIndex: _moves.length - 1,
                         onMoveTap: (_) {},
+                        // Bulmacanın ilk hamlesi çözen tarafındır.
+                        blackFirst: _solverColor == engine.Color.black,
                       ),
               ),
               _actions(scheme),

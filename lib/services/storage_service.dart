@@ -88,6 +88,7 @@ class StorageService extends ChangeNotifier {
             .toList();
       } catch (_) {
         await prefs.setString('${_key}_bozuk', raw);
+        corruptRecords.value++;
         _cache = <Playlist>[];
         return _cache!;
       }

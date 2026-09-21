@@ -6,6 +6,8 @@ import 'package:flutter/foundation.dart' show kIsWeb, visibleForTesting;
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
+import 'prefs_write.dart';
+
 import '../l10n/app_strings.dart';
 
 /// Uygulama tercihlerini tutar ve değiştiğinde dinleyicilere haber verir.
@@ -129,6 +131,9 @@ class SettingsService extends ChangeNotifier {
         : _defaultBoardTheme;
     _showCoordinates = prefs.getBool('showCoordinates') ?? true;
     _showEngineArrows = prefs.getBool('showEngineArrows') ?? true;
+    // Harita her yüklemede sıfırlanıyor: anahtar yoksa (sıfırlama ya da
+    // yedekten dönme sonrası) bellekteki eski renkler kalıyordu.
+    _boardAccentColors.clear();
     final accentJson = prefs.getString('boardAccentColors');
     if (accentJson != null) {
       try {
@@ -150,12 +155,35 @@ class SettingsService extends ChangeNotifier {
     notifyListeners();
   }
 
+  /// Ayarı diske yazar; başarısız olursa bir kez daha dener ve
+  /// kullanıcıya haber verilmesini sağlar.
+  ///
+  /// Eskiden dönüş değerine hiç bakılmıyordu: cihazda yer kalmadığında
+  /// tema, ses ya da seviye seçimi sessizce kayboluyordu.
   void _set(String key, Object value) {
     final prefs = _prefs;
     if (prefs == null) return;
-    if (value is bool) prefs.setBool(key, value);
-    if (value is int) prefs.setInt(key, value);
-    if (value is String) prefs.setString(key, value);
+    unawaited(_write(prefs, key, value));
+  }
+
+  static Future<void> _write(
+    SharedPreferences prefs,
+    String key,
+    Object value,
+  ) async {
+    Future<bool> attempt() {
+      if (value is bool) return prefs.setBool(key, value);
+      if (value is int) return prefs.setInt(key, value);
+      return prefs.setString(key, value as String);
+    }
+
+    var ok = await attempt();
+    if (!ok) ok = await attempt();
+    if (!ok) diskWriteFailures.value++;
+  }
+
+  static void unawaited(Future<void> future) {
+    future.catchError((_) {});
   }
 
   set themeMode(ThemeMode value) {

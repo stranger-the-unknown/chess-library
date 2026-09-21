@@ -276,7 +276,10 @@ class ChessGame {
   }
 
   bool isLegalUci(String uci) {
-    if (uci.length < 4) {
+    // UCI dört ya da beş karakterdir ("e2e4", "e7e8q"). Eskiden yalnızca
+    // alt sınır bakılıyordu: "e2e4abc" gibi kuyruklu bir metin geçerli
+    // sayılıyor ve tanınmayan kuyruk sessizce yok sayılıyordu.
+    if (uci.length != 4 && uci.length != 5) {
       return false;
     }
 
@@ -1482,7 +1485,7 @@ class ChessGame {
   /// "e2e4" / "e7e8q" gösterimini bu pozisyondaki yasal hamleye çevirir;
   /// hamle yasal değilse `null` döner.
   ChessMove? moveFromUci(String uci) {
-    if (uci.length < 4) return null;
+    if (uci.length != 4 && uci.length != 5) return null;
 
     Position from;
     Position to;

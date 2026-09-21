@@ -34,7 +34,7 @@ against the rules. Watch a line step by step, or practise it and get told
 when you go wrong.
 
 <b>Made to look right</b>
-Six piece sets and twelve board styles. Square coordinates take their colour
+Sixteen piece sets and thirty-two board styles. Square coordinates take their colour
 from the board you choose, so they stay readable everywhere. Boards can be
 saved as PNG images.
 

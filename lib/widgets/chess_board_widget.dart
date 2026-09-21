@@ -108,6 +108,13 @@ class _ChessBoardWidgetState extends State<ChessBoardWidget>
   );
   engine.ChessMove? _animatingMove;
 
+  /// Parmağın/farenin bıraktığı son yer.
+  ///
+  /// Sürükleme başlamasa da tutuluyor: seçili bir taş varken hedef
+  /// kareye azıcık kayarak dokunmak `onPan` tanıyıcısını kazandırıyor,
+  /// `onTapUp` hiç gelmiyordu ve hamle sessizce kayboluyordu.
+  Offset? _lastPointer;
+
   /// Hangi animasyonun sürdüğünü ayırt eden sayaç.
   ///
   /// `forward` yeniden çağrılınca önceki `TickerFuture` **iptal** oluyor
@@ -308,7 +315,11 @@ class _ChessBoardWidgetState extends State<ChessBoardWidget>
       _markFrom = null;
       _markTo = null;
       if (from == null) return;
-      if (to == null || to == from) {
+      // Tahtanın dışında bırakmak iptaldir. Eskiden `to` boş olduğu için
+      // başlangıç karesi işaretleniyordu: yarım kalan bir ok istenmeyen
+      // bir kare işareti bırakıyordu.
+      if (to == null) return;
+      if (to == from) {
         final index = from.index;
         if (!_marked.remove(index)) _marked.add(index);
         return;
@@ -334,6 +345,7 @@ class _ChessBoardWidgetState extends State<ChessBoardWidget>
   }
 
   void _onPanStart(DragStartDetails details, double square) {
+    _lastPointer = details.localPosition;
     if (!_canPlay) return;
     final position = _positionAt(details.localPosition, square);
     if (position == null || !_isOwnPiece(position)) return;
@@ -349,6 +361,7 @@ class _ChessBoardWidgetState extends State<ChessBoardWidget>
   /// parmak). Eskiden yalnızca `onPanEnd` temizliyordu: taş karesinden
   /// eksik, büyütülmüş kopyası parmağın son yerinde asılı kalıyordu.
   void _onPanCancel() {
+    _lastPointer = null;
     if (_dragFrom == null && _dragPosition == null) return;
     setState(() {
       _dragFrom = null;
@@ -357,18 +370,32 @@ class _ChessBoardWidgetState extends State<ChessBoardWidget>
   }
 
   void _onPanUpdate(DragUpdateDetails details) {
+    _lastPointer = details.localPosition;
     if (_dragFrom == null) return;
     setState(() => _dragPosition = details.localPosition);
   }
 
   void _onPanEnd(double square) {
     final from = _dragFrom;
-    final at = _dragPosition;
+    final at = _dragPosition ?? _lastPointer;
+    final pointer = _lastPointer;
+    _lastPointer = null;
     setState(() {
       _dragFrom = null;
       _dragPosition = null;
     });
-    if (from == null || at == null) return;
+
+    if (from == null) {
+      // Sürükleme hiç başlamadı (hedef karede kendi taşın yok). Seçili
+      // bir taş varsa bu bir hamle dokunuşudur: parmak birkaç piksel
+      // kaydığı için tanıyıcı `onTapUp` yerine burayı çağırıyor.
+      if (!_canPlay || _selected == null || pointer == null) return;
+      final target = _positionAt(pointer, square);
+      if (target == null || target == _selected) return;
+      _tryMoveTo(target);
+      return;
+    }
+    if (at == null) return;
     final target = _positionAt(at, square);
     if (target == null || target == from) {
       // Kısa sürükleme: seçim açık kalsın, kullanıcı hedefe dokunabilsin.

@@ -4,7 +4,7 @@ Flutter 3.47 veya üzeri gerekir.
 
 ```bash
 flutter pub get
-flutter test          # 73 test
+flutter test          # 347 test
 ```
 
 ## Android
@@ -19,19 +19,23 @@ keytool -genkey -v -keystore chess-library.jks -keyalg RSA \
         -keysize 2048 -validity 10000 -alias chesslibrary
 ```
 
-`key.properties` yoksa derleme hata ayıklama anahtarına düşer; o çıktı
-Play'e yüklenemez ve sonradan güncellenemez.
+`key.properties` yoksa **release derlemesi durur**: imzasız ya da hata
+ayıklama anahtarıyla imzalanmış bir "yayın" dosyası üretilmesin diye.
+Hata ayıklama derlemeleri anahtarsız çalışmayı sürdürür.
 
 ```bash
 flutter build apk --release
 ```
 
-Çıktı: `build/app/outputs/flutter-apk/app-release.apk` (~56 MB). Bu dosya
-üç mimariyi de (arm64, arm32, x86_64) taşır; hangi telefona verilirse
-verilsin kurulur. Yayınlanan dosya budur: karşı tarafın kendi işlemcisini
-bilmesi gerekmez.
+Çıktı: `build/app/outputs/flutter-apk/app-release.apk` (~257 MB). Bu
+dosya üç mimariyi de (arm64, arm32, x86_64) taşır; hangi telefona
+verilirse verilsin kurulur. Yayınlanan dosya budur: karşı tarafın kendi
+işlemcisini bilmesi gerekmez.
 
-Yalnızca 64 bit ARM için yaklaşık 21 MB'lık ayrı bir dosya isterseniz:
+Boyutun tamamı Stockfish'ten geliyor: her mimarinin ikilisi kendi NNUE
+ağını gömüyor (~95 MB) ve üçü birden pakete giriyor.
+
+Yalnızca tek bir mimari için daha küçük bir dosya isterseniz:
 
 ```bash
 flutter build apk --release --split-per-abi

@@ -78,4 +78,24 @@ ve `chmod 755` denenir.
 
 Alternatif: `STOCKFISH_PATH` ortam değişkeni (test / özel derleme).
 
+## Sağlama toplamları
+
+İndirilen ya da derlenen ikilinin doğruluğu elle denetlenmeli: resmi
+sürüm sayfasındaki dosya için yayımlanan SHA-256 ile karşılaştırın.
+
+```bash
+sha256sum sf-arm64.tar.gz
+```
+
+9.0.7 ile yayımlanan APK'daki ikililer:
+
+| Dosya | SHA-256 |
+|---|---|
+| `jniLibs/arm64-v8a/libstockfish.so` | `ffd8fc2004d3d19f9fdab95d84c92709aea92e8d3af405eda0b281b23cf1daf8` |
+| `jniLibs/armeabi-v7a/libstockfish.so` | `993a3e8bce85a503abc900056019691057a83e13ae92c1a2cbb089b9680593f3` |
+| `jniLibs/x86_64/libstockfish.so` | `26f2a8204575ea9b4f889a87014d4d912b265ec6fb5f8a1624425c6fae31ca24` |
+
+Kendi derlemenizin aynı çıkması beklenmez (derleyici sürümü ve bayraklar
+değişir); bu tablo yayımlanan dosyanın ne olduğunu belgeler.
+
 Stockfish GPLv3 — https://stockfishchess.org/

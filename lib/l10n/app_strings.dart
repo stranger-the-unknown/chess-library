@@ -369,6 +369,8 @@ class Strings {
     'lists.noMatch': 'Bu filtreyle eşleşen oyun yok.',
     'lists.saveFailed':
         'Kaydedilemedi: cihazda yer kalmamış olabilir.',
+    'data.corruptFound':
+        'Bozuk bir kayıt bulundu ve bir kenara alındı; o bölüm boş açıldı.',
     'lists.filterGames': 'Oyun filtrele',
     'lists.filterHint': 'Boş bıraktığın alan aranmaz.',
     'lists.filterWhite': 'Beyaz oyuncu',
@@ -875,6 +877,8 @@ class Strings {
     'lists.noMatch': 'No game matches this filter.',
     'lists.saveFailed':
         'Could not save: the device may be out of space.',
+    'data.corruptFound':
+        'A damaged record was found and set aside; that section opened empty.',
     'lists.filterGames': 'Filter games',
     'lists.filterHint': 'A field you leave empty is not used.',
     'lists.filterWhite': 'White player',

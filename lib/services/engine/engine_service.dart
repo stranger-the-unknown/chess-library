@@ -158,7 +158,23 @@ class EngineService {
     return result;
   }
 
-  Future<StockfishUci?> _ensureStockfish() async {
+  /// Süren başlatma işi; ikinci çağıran aynı sonucu bekler.
+  ///
+  /// Kilit yokken iki arama aynı anda gelirse ikisi de süreç başlatıyor
+  /// ve biri sahipsiz kalıyordu (Android'de ~95 MB'lık ikili).
+  Future<StockfishUci?>? _starting;
+
+  Future<StockfishUci?> _ensureStockfish() {
+    final pending = _starting;
+    if (pending != null) return pending;
+    final job = _startStockfish();
+    _starting = job;
+    return job.whenComplete(() {
+      if (identical(_starting, job)) _starting = null;
+    });
+  }
+
+  Future<StockfishUci?> _startStockfish() async {
     if (kIsWeb) return null;
     final envPath = Platform.environment['STOCKFISH_PATH'];
     final forceViaEnv = envPath != null && envPath.isNotEmpty;

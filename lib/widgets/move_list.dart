@@ -12,7 +12,13 @@ class MoveList extends StatefulWidget {
   final int currentIndex;
   final ValueChanged<int> onMoveTap;
   final bool vertical;
-  final String startsWithBlack;
+
+  /// Listedeki ilk hamle siyaha mı ait?
+  ///
+  /// Siyahın oynayacağı bir konumdan başlayan oyun ve bulmacalarda şerit
+  /// ilk hamleyi beyazın hamlesi gibi diziyordu: "1. Nf6" yazıyor, "1...
+  /// Nf6" yazması gerekiyordu.
+  final bool blackFirst;
 
   const MoveList({
     super.key,
@@ -20,7 +26,7 @@ class MoveList extends StatefulWidget {
     required this.currentIndex,
     required this.onMoveTap,
     this.vertical = false,
-    this.startsWithBlack = '',
+    this.blackFirst = false,
   });
 
   @override
@@ -49,10 +55,15 @@ class _MoveListState extends State<MoveList> {
     _follow();
   }
 
+  /// Siyah başlıyorsa ilk satırın beyaz yarısı boş kalıyor.
+  int get _offset => widget.blackFirst ? 1 : 0;
+
+  int get _rowCount => ((widget.moves.length + _offset) / 2).ceil();
+
   /// Seçili hamleyi görünür kılar; kural [MoveScroller] içinde.
   void _follow() => _scroller.follow(
         index: widget.currentIndex,
-        rowCount: (widget.moves.length / 2).ceil(),
+        rowCount: _rowCount,
       );
 
   @override
@@ -74,14 +85,14 @@ class _MoveListState extends State<MoveList> {
   }
 
   Widget _buildHorizontal(BuildContext context) {
-    final pairs = (widget.moves.length / 2).ceil();
+    final pairs = _rowCount;
     return ListView.builder(
       controller: _scroller.controller,
       scrollDirection: Axis.horizontal,
       padding: const EdgeInsets.symmetric(horizontal: 8),
       itemCount: pairs,
       itemBuilder: (context, index) {
-        final first = index * 2;
+        final first = index * 2 - _offset;
         return Row(
           children: [
             Padding(
@@ -95,7 +106,7 @@ class _MoveListState extends State<MoveList> {
                 ),
               ),
             ),
-            _chip(context, first),
+            if (first < 0) _skipped(context) else _chip(context, first),
             if (first + 1 < widget.moves.length) _chip(context, first + 1),
             const SizedBox(width: 6),
           ],
@@ -106,13 +117,13 @@ class _MoveListState extends State<MoveList> {
 
   Widget _buildVertical(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
-    final pairs = (widget.moves.length / 2).ceil();
+    final pairs = _rowCount;
     return ListView.builder(
       controller: _scroller.controller,
       padding: const EdgeInsets.symmetric(vertical: 4),
       itemCount: pairs,
       itemBuilder: (context, index) {
-        final first = index * 2;
+        final first = index * 2 - _offset;
         return Container(
           color: index.isEven ? Colors.transparent : scheme.surfaceContainerLow,
           padding: const EdgeInsets.symmetric(vertical: 2, horizontal: 8),
@@ -132,7 +143,7 @@ class _MoveListState extends State<MoveList> {
               Expanded(
                 child: Align(
                   alignment: Alignment.centerLeft,
-                  child: _chip(context, first),
+                  child: first < 0 ? _skipped(context) : _chip(context, first),
                 ),
               ),
               Expanded(
@@ -149,6 +160,18 @@ class _MoveListState extends State<MoveList> {
       },
     );
   }
+
+  /// Siyahın başladığı listede beyazın boş yarısı.
+  Widget _skipped(BuildContext context) => Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 6),
+        child: Text(
+          '...',
+          style: TextStyle(
+            color: Theme.of(context).colorScheme.onSurfaceVariant,
+            fontSize: 13,
+          ),
+        ),
+      );
 
   Widget _chip(BuildContext context, int index) {
     final scheme = Theme.of(context).colorScheme;

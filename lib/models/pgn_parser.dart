@@ -60,7 +60,7 @@ class PgnParser {
         game = engine.ChessGame();
       }
 
-      final body = _stripDecorations(pgn);
+      final body = _normalizeUnicode(_stripDecorations(pgn));
 
       final resultMatch = RegExp(r'(1-0|0-1|1/2-1/2)').firstMatch(body);
       gameResult = resultMatch?.group(1) ?? headers['Result'];
@@ -114,6 +114,20 @@ class PgnParser {
       'opening': 'Opening',
     };
     return known[key.toLowerCase()] ?? key;
+  }
+
+  /// Gövdedeki Unicode süsleri düz karşılıklarına çevirir.
+  ///
+  /// `1… e5` biçimindeki üç nokta hamle numarası süzgecine takılmıyor,
+  /// `½-½` de sonuç olarak tanınmıyordu: ikisi de "okunamayan hamle"
+  /// sayılıp uyarı üretiyordu. Yalnızca gövdeye uygulanıyor; başlıklar
+  /// (oyuncu adlarındaki uzun tire gibi) olduğu gibi kalıyor.
+  static String _normalizeUnicode(String body) {
+    return body
+        .replaceAll('\u2026', '...')
+        .replaceAll('\u00bd', '1/2')
+        .replaceAll('\u2013', '-')
+        .replaceAll('\u2014', '-');
   }
 
   /// Başlıkları, yorumları, varyasyonları ve NAG işaretlerini temizler.
@@ -227,6 +241,10 @@ class PgnParser {
     var text = token.replaceAll(RegExp(r'[+#!?]'), '');
     final promotion = text.indexOf('=');
     if (promotion >= 0) text = text.substring(0, promotion);
+    // "e8Q" gibi eşitliksiz terfide son harf taşı gösterir, kareyi değil.
+    if (text.length >= 3 && RegExp(r'[QRBNqrbn]$').hasMatch(text)) {
+      text = text.substring(0, text.length - 1);
+    }
     if (text.length < 2) return null;
     final square = text.substring(text.length - 2);
     return RegExp(r'^[a-h][1-8]$').hasMatch(square) ? square : null;
@@ -266,6 +284,17 @@ class PgnParser {
     // Rokta kasa anlam taşımıyor ve bazı dosyalar "o-o" yazıyor.
     final upper = text.toUpperCase();
     if (upper == 'OO' || upper == 'OOO') return upper;
+
+    // Eşitliksiz terfi: "e8Q" / "exd8N". PGN standardı "=" ister ama
+    // eski dosyalarda ve bazı üreticilerde bu biçim yaygın. Eskiden
+    // eşleşmiyordu: hamle atlanıyor, konum sapıyor ve oyunun geri kalanı
+    // da okunamıyordu.
+    if (!text.contains('=')) {
+      final bare = RegExp(r'^(.*[a-h][1-8])([QRBNqrbn])$').firstMatch(text);
+      if (bare != null) {
+        return '${bare.group(1)}=${bare.group(2)!.toUpperCase()}';
+      }
+    }
 
     // Terfi taşı da ayırt edici değil: "e8=q" ile "e8=Q" aynı hamle.
     final equals = text.indexOf('=');

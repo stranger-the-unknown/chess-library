@@ -99,6 +99,9 @@ class _GameScreenState extends State<GameScreen> {
   /// da açılıyor, oyuna elle devam edebiliyorsun.
   bool _engineStalled = false;
 
+  /// Başlangıç konumunda sıra siyahta mı? (Hamle listesi numarası.)
+  bool _blackFirst = false;
+
   /// Son hamle canlandırılsın mı? Geri giderken ve uzağa atlarken
   /// kapatılıyor: taşın ileri doğru kayması geriye gidişte yanıltıyor.
   bool _animateBoard = true;
@@ -224,6 +227,7 @@ class _GameScreenState extends State<GameScreen> {
 
     _cursor = -1;
     _game = engine.ChessGame.fromFen(_startFen);
+    _blackFirst = _game.sideToMove == engine.Color.black;
 
     if (widget.mode == GameMode.versusEngine) {
       SoundService.instance.playGameStart();
@@ -552,6 +556,12 @@ class _GameScreenState extends State<GameScreen> {
   }
 
   Future<void> _showHint() async {
+    // İpucu da canlı analizle aynı jetonu kullanıyor: ikisi tek bir
+    // Stockfish'i paylaşıyor ve eskiden geç gelen bir ipucu sonucu daha
+    // yeni bir analizin üstüne yazabiliyordu.
+    final token = ++_analysisToken;
+    _analysisDebounce?.cancel();
+    EngineService.instance.stopAnalysis();
     setState(() => _thinking = true);
     final side = _game.sideToMove;
     final result = await EngineService.instance.analyze(
@@ -559,7 +569,7 @@ class _GameScreenState extends State<GameScreen> {
       depth: 12,
       movetimeMs: 1200,
     );
-    if (!mounted) return;
+    if (!mounted || token != _analysisToken) return;
     final sign = side == engine.Color.white ? 1 : -1;
     setState(() {
       _thinking = false;
@@ -1387,6 +1397,7 @@ class _GameScreenState extends State<GameScreen> {
               moves: _history,
               currentIndex: _cursor,
               onMoveTap: _goTo,
+              blackFirst: _blackFirst,
             ),
           ),
           Divider(height: 1, color: scheme.outlineVariant),

@@ -17,6 +17,7 @@ import 'search_result.dart';
 class StockfishUci {
   Process? _process;
   StreamSubscription<String>? _outSub;
+  StreamSubscription<String>? _errSub;
   bool _ready = false;
   String? _binaryPath;
   Completer<SearchResult?>? _activeSearch;
@@ -75,7 +76,9 @@ class StockfishUci {
           }
         },
       );
-      process.stderr
+      // Boru dolup süreci kilitlemesin diye okunuyor; abonelik
+      // `dispose` içinde iptal edilebilsin diye saklanıyor.
+      _errSub = process.stderr
           .transform(utf8.decoder)
           .transform(const LineSplitter())
           .listen((_) {});
@@ -97,7 +100,12 @@ class StockfishUci {
       _write('setoption name Threads value 1');
       final ready2 = _armWait((l) => l == 'readyok', const Duration(seconds: 5));
       _write('isready');
-      await ready2;
+      // Seçenekler uygulanmadan "hazır" demek yanlıştı: yavaş açılışta
+      // Hash/Threads yazılmamış bir süreç çalışıyor sayılıyordu.
+      if (!await ready2) {
+        await dispose();
+        return false;
+      }
       _ready = true;
       _appliedSkill = null;
       _appliedThreads = null;
@@ -400,10 +408,19 @@ class StockfishUci {
     } catch (_) {}
     await _outSub?.cancel();
     _outSub = null;
-    try {
-      _process?.kill();
-    } catch (_) {}
+    await _errSub?.cancel();
+    _errSub = null;
+    final process = _process;
     _process = null;
+    if (process != null) {
+      try {
+        process.kill();
+      } catch (_) {}
+      // Çıkışı bekle: beklenmeyen süreç bazı sistemlerde zombi kalıyor.
+      try {
+        await process.exitCode.timeout(const Duration(seconds: 2));
+      } catch (_) {}
+    }
   }
 
   Future<void> _restart() async {

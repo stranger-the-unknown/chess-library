@@ -34,7 +34,7 @@ kurallara göre denetlenir. Varyantı adım adım izleyin ya da alıştırma
 yapın, yanlışta uyarı alın.
 
 <b>Görünüm</b>
-Altı taş takımı, on iki tahta görünümü. Kare adlarının rengi seçtiğiniz
+On altı taş takımı, otuz iki tahta görünümü. Kare adlarının rengi seçtiğiniz
 tahtadan gelir, böylece her yerde okunur kalır. Tahtalar PNG olarak
 kaydedilebilir.
 

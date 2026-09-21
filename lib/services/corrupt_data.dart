@@ -1,6 +1,14 @@
 import 'dart:convert';
 
+import 'package:flutter/foundation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+
+/// Bozuk bir kayıt bulunduğunda artan sayaç.
+///
+/// Uygulama kökü bunu dinleyip kullanıcıya söylüyor. Eskiden karantina
+/// sessizdi: o sekme boş açılıyor, kullanıcı verisinin tamamen gittiğini
+/// sanıyordu. Veri duruyor, yalnızca `<anahtar>_bozuk` altında.
+final ValueNotifier<int> corruptRecords = ValueNotifier<int>(0);
 
 /// Bozuk bir kaydın uygulamanın o bölümünü tamamen açılmaz hâle
 /// getirmesini engeller.
@@ -24,6 +32,7 @@ Future<T> readOrQuarantine<T>(
     return parse(jsonDecode(raw));
   } catch (_) {
     await prefs.setString('${key}_bozuk', raw);
+    corruptRecords.value++;
     return fallback();
   }
 }
