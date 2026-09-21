@@ -57,6 +57,14 @@ class ChessBoardWidget extends StatefulWidget {
   /// Ek kare renklendirmeleri (bulmaca geri bildirimi vb.).
   final Map<int, Color> squareTints;
 
+  /// Son hamle canlandırılsın mı?
+  ///
+  /// Hamle listesinde **geri** giderken taşın ileri doğru kaymasını
+  /// izlemek kafa karıştırıcı: konum geriye gidiyor ama animasyon
+  /// hamleyi oynuyormuş gibi duruyor. Geri gidişte ve uzağa atlarken
+  /// kapatılıyor.
+  final bool animateLastMove;
+
   const ChessBoardWidget({
     super.key,
     required this.game,
@@ -67,6 +75,7 @@ class ChessBoardWidget extends StatefulWidget {
     this.onMove,
     this.arrows = const [],
     this.squareTints = const {},
+    this.animateLastMove = true,
   });
 
   @override
@@ -111,7 +120,8 @@ class _ChessBoardWidgetState extends State<ChessBoardWidget>
 
     final previous = oldWidget.lastMove;
     final current = widget.lastMove;
-    if (SettingsService.instance.animateMoves &&
+    if (widget.animateLastMove &&
+        SettingsService.instance.animateMoves &&
         current != null &&
         current.uci != previous?.uci) {
       final piece = widget.game.pieceAt(current.to);

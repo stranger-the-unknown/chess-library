@@ -96,7 +96,17 @@ class _PgnImportScreenState extends State<PgnImportScreen> {
     if (name == null || !mounted) return;
 
     setState(() => _saving = true);
-    await PgnImportService.saveAsNewList(name, games);
+    try {
+      await PgnImportService.saveAsNewList(name, games);
+    } catch (_) {
+      // Disk dolduğunda yazma başarısız oluyor. Eskiden hata hiç
+      // yakalanmıyordu: çark sonsuza kadar dönüyor, kullanıcı ne
+      // "kaydedildi" ne de bir hata görüyordu.
+      if (!mounted) return;
+      setState(() => _saving = false);
+      AppDialogs.snack(context, t('lists.saveFailed'));
+      return;
+    }
     if (!mounted) return;
     setState(() => _saving = false);
     AppDialogs.snack(context, t('pgn.saved', {'count': games.length}));
@@ -133,7 +143,15 @@ class _PgnImportScreenState extends State<PgnImportScreen> {
     if (target == null || !mounted) return;
 
     setState(() => _saving = true);
-    final added = await PgnImportService.addToList(target.id, games);
+    final int added;
+    try {
+      added = await PgnImportService.addToList(target.id, games);
+    } catch (_) {
+      if (!mounted) return;
+      setState(() => _saving = false);
+      AppDialogs.snack(context, t('lists.saveFailed'));
+      return;
+    }
     if (!mounted) return;
     setState(() => _saving = false);
     AppDialogs.snack(context, t('pgn.saved', {'count': added}));

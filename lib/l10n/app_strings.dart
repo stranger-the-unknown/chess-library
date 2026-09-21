@@ -350,6 +350,8 @@ class Strings {
     'lists.name': 'Ad',
     'lists.search': 'Ara: numara, oyun adı, oyuncu ya da sonuç',
     'lists.noMatch': 'Bu filtreyle eşleşen oyun yok.',
+    'lists.saveFailed':
+        'Kaydedilemedi: cihazda yer kalmamış olabilir.',
     'lists.filterGames': 'Oyun filtrele',
     'lists.filterHint': 'Boş bıraktığın alan aranmaz.',
     'lists.filterWhite': 'Beyaz oyuncu',
@@ -837,6 +839,8 @@ class Strings {
     'lists.name': 'Name',
     'lists.search': 'Search: number, game name, player or result',
     'lists.noMatch': 'No game matches this filter.',
+    'lists.saveFailed':
+        'Could not save: the device may be out of space.',
     'lists.filterGames': 'Filter games',
     'lists.filterHint': 'A field you leave empty is not used.',
     'lists.filterWhite': 'White player',

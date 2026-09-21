@@ -454,14 +454,30 @@ class OpeningService {
     return null;
   }
 
+  /// Karşılaştırma için SAN'ı sadeleştirir; **harf büyüklüğü korunur**.
+  ///
+  /// Eskiden her harf büyütülüyordu: `bxc3` (b piyonu) ile `Bxc3` (fil)
+  /// aynı görünüyor ve ikisi de oynanabilirken yanlış taş seçilebiliyordu.
+  /// PGN okuyucuda aynı hata 72 hamle kaybettirmişti; burada da sessizce
+  /// yanlış varyant kaydedilebiliyordu. Hoşgörü yalnızca harfin anlam
+  /// taşımadığı iki yerde sürüyor: rok (`o-o`, `0-0`) ve terfi taşı
+  /// (`e8=q`).
   static String _normalize(String san) {
     final buffer = StringBuffer();
     for (final rune in san.runes) {
       final char = String.fromCharCode(rune);
       if ('+#!?-xX'.contains(char)) continue;
-      buffer.write(char == '0' ? 'O' : char.toUpperCase());
+      buffer.write(char == '0' ? 'O' : char);
     }
-    return buffer.toString();
+    final text = buffer.toString();
+    final upper = text.toUpperCase();
+    if (upper == 'OO' || upper == 'OOO') return upper;
+    final equals = text.indexOf('=');
+    if (equals >= 0 && equals < text.length - 1) {
+      return text.substring(0, equals + 1) +
+          text.substring(equals + 1).toUpperCase();
+    }
+    return text;
   }
 
   // ---------------------------------------------------------------------

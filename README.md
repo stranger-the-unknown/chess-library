@@ -24,7 +24,7 @@ your system language.
   the PC alike, so a level means the same thing everywhere. *Analysis*
   uses half of the cores (at most four) and a larger hash on the desktop,
   where the engine is a tool rather than an opponent.
-- **Pace**: an engine reply is never shown sooner than 0.8 s after your
+- **Pace**: an engine reply is never shown sooner than 0.5 s after your
   move. At the lower levels the search finishes almost instantly and the
   move used to flash onto the board before you could see what it took.
 - Do **not** use `flutter_stockfish`

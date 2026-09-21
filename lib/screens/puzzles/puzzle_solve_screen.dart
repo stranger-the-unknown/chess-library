@@ -184,6 +184,10 @@ class _PuzzleSolveScreenState extends State<PuzzleSolveScreen> {
   Future<void> _onMove(engine.ChessMove move) async {
     if (_busy) return;
     _awake.keep();
+    // Değerlendirme sürerken kullanıcı sonraki bulmacaya geçebiliyor;
+    // jeton değişmişse bu hamlenin sonucu artık başka bir tahtaya
+    // yazılmamalı (yanlış "çözüldü" ve bozuk tahta oluyordu).
+    final token = _loadToken;
     if (!_puzzle.hasSolution && _baseline == null) return;
 
     setState(() {
@@ -201,12 +205,13 @@ class _PuzzleSolveScreenState extends State<PuzzleSolveScreen> {
     probe.makeMove(move);
 
     final correct = await _isCorrect(move, probe);
-    if (!mounted) return;
+    if (!mounted || token != _loadToken) return;
 
     await _service.registerAttempt(_puzzle.id);
-    // Disk yazımı sürerken kullanıcı ekrandan çıkmış olabilir; silinmiş
-    // ekranda setState çağırmak hata veriyordu.
-    if (!mounted) return;
+    // Disk yazımı sürerken kullanıcı ekrandan çıkmış ya da bulmaca
+    // değiştirmiş olabilir; silinmiş ekranda setState çağırmak hata
+    // veriyordu.
+    if (!mounted || token != _loadToken) return;
 
     if (!correct) {
       SoundService.instance.playWrong();
@@ -238,7 +243,8 @@ class _PuzzleSolveScreenState extends State<PuzzleSolveScreen> {
         (_onSolutionLine && _moves.length >= _puzzle.solution.length);
     if (lineComplete && !_solved) {
       await _service.markSolved(_puzzle.id);
-      if (mounted) setState(() => _solved = true);
+      if (!mounted || token != _loadToken) return;
+      setState(() => _solved = true);
     }
 
     if (_game.isCheckmate || _game.isStalemate) {
@@ -306,6 +312,7 @@ class _PuzzleSolveScreenState extends State<PuzzleSolveScreen> {
 
   Future<void> _playOpponentReply() async {
     final fen = _game.fen;
+    final token = _loadToken;
     final started = DateTime.now();
 
     // Kayıtlı çözüm dizisi varsa rakip o diziyi oynar.
@@ -324,7 +331,7 @@ class _PuzzleSolveScreenState extends State<PuzzleSolveScreen> {
     if (thought < _movePace) {
       await Future<void>.delayed(_movePace - thought);
     }
-    if (!mounted || _game.fen != fen) return;
+    if (!mounted || token != _loadToken || _game.fen != fen) return;
 
     final move = _game.moveFromUci(uci);
     if (move == null) {
@@ -363,6 +370,7 @@ class _PuzzleSolveScreenState extends State<PuzzleSolveScreen> {
   }
 
   Future<void> _revealSolution() async {
+    final token = _loadToken;
     final line = _puzzle.hasSolution
         ? _puzzle.solution
         : (_baseline?.pvUci ?? const <String>[]);
@@ -378,6 +386,8 @@ class _PuzzleSolveScreenState extends State<PuzzleSolveScreen> {
       setState(() => _moves.add(entry));
       // Çözüm gösterimi bilerek daha yavaş: izlenerek takip ediliyor.
       await Future<void>.delayed(const Duration(milliseconds: 700));
+      // Gösterim sürerken başka bulmacaya geçilmiş olabilir.
+      if (!mounted || token != _loadToken) return;
     }
     if (!mounted) return;
     setState(() {
@@ -837,7 +847,11 @@ class _PuzzleSolveScreenState extends State<PuzzleSolveScreen> {
             children: [
               Expanded(
                 child: TextButton.icon(
-                  onPressed: _index > 0 ? () => _goToPuzzle(_index - 1) : null,
+                  // Değerlendirme ya da çözüm gösterimi sürerken
+                  // bulmaca değiştirmek yarışa yol açıyordu.
+                  onPressed: _index > 0 && !_busy
+                      ? () => _goToPuzzle(_index - 1)
+                      : null,
                   icon: const Icon(Icons.chevron_left_rounded),
                   label: Text(t('common.previous')),
                 ),
@@ -845,7 +859,7 @@ class _PuzzleSolveScreenState extends State<PuzzleSolveScreen> {
               Container(width: 1, height: 24, color: scheme.outlineVariant),
               Expanded(
                 child: TextButton.icon(
-                  onPressed: _index < widget.puzzles.length - 1
+                  onPressed: _index < widget.puzzles.length - 1 && !_busy
                       ? () => _goToPuzzle(_index + 1)
                       : null,
                   icon: const Icon(Icons.chevron_right_rounded),

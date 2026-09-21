@@ -86,6 +86,10 @@ class _GameScreenState extends State<GameScreen> {
   /// Pes edildi mi? (Oyun bitmiş sayılır, tahta kilitlenir.)
   bool _resigned = false;
 
+  /// Son hamle canlandırılsın mı? Geri giderken ve uzağa atlarken
+  /// kapatılıyor: taşın ileri doğru kayması geriye gidişte yanıltıyor.
+  bool _animateBoard = true;
+
   /// Kayıtlı bir oyunu incelerken denenen hamleler.
   ///
   /// Bu hamleler oyunun kendisine yazılmaz: hamle listesinde görünmezler,
@@ -214,6 +218,7 @@ class _GameScreenState extends State<GameScreen> {
 
     final entry = MoveEntry.play(_game, move);
     setState(() {
+      _animateBoard = true;
       _history.add(entry);
       _cursor = _history.length - 1;
       _resultText = null;
@@ -269,6 +274,9 @@ class _GameScreenState extends State<GameScreen> {
   void _goTo(int index) {
     final clamped = index.clamp(-1, _history.length - 1);
     final forward = clamped > _cursor;
+    // Yalnızca tek adım ileri giderken canlandırılıyor; geri dönüşte ve
+    // başa/sona atlarken taşın kayması olan biteni anlatmıyor.
+    _animateBoard = clamped == _cursor + 1;
     final position = _positionAt(clamped);
 
     setState(() {
@@ -415,7 +423,10 @@ class _GameScreenState extends State<GameScreen> {
     if (widget.mode != GameMode.versusEngine) return;
     if (!mounted || _resigned) return;
     if (_game.sideToMove == widget.playerColor) return;
-    if (_game.isCheckmate || _game.isStalemate) return;
+    // Oyun bittiyse motor oynamıyor. Eskiden yalnızca mat ve pat
+    // bakılıyordu: üç tekrar ya da elli hamleyle beraberlik yazısı
+    // çıktıktan sonra motor oynamaya devam ediyordu.
+    if (_autoResult() != null) return;
     if (_cursor != _history.length - 1) return;
 
     setState(() => _thinking = true);
@@ -443,6 +454,7 @@ class _GameScreenState extends State<GameScreen> {
 
     final entry = MoveEntry.play(_game, move);
     setState(() {
+      _animateBoard = true;
       _history.add(entry);
       _cursor = _history.length - 1;
     });
@@ -457,6 +469,7 @@ class _GameScreenState extends State<GameScreen> {
     final steps = widget.mode == GameMode.versusEngine ? 2 : 1;
     final target = (_history.length - steps).clamp(0, _history.length);
     setState(() {
+      _animateBoard = false;
       _history.removeRange(target, _history.length);
       _cursor = _history.length - 1;
       _game = _positionAt(_cursor);
@@ -749,6 +762,11 @@ class _GameScreenState extends State<GameScreen> {
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
     final atLive = _cursor == _history.length - 1 && !_resigned;
+    // Motora karşı oyun bittiyse tahta da kapanıyor; yoksa hamle yapıp
+    // beraberlik yazısını silmek mümkündü. Analiz/PGN kipinde tahta açık
+    // kalıyor: orada oyunun devamını denemek isteyebilirsin.
+    final finished =
+        widget.mode == GameMode.versusEngine && _resultText != null;
 
     final arrows = <BoardArrow>[];
     final best = _analysis?.bestMoveUci;
@@ -941,7 +959,9 @@ class _GameScreenState extends State<GameScreen> {
                                 flipped: _flipped,
                                 // Kayıtlı oyunda hamle oynamak oyunu
                                 // değiştirmez; deneme olarak çalışır.
-                                interactive: _replayMode || atLive,
+                                interactive:
+                                    (_replayMode || atLive) && !finished,
+                                animateLastMove: _animateBoard,
                                 movableSide:
                                     widget.mode == GameMode.versusEngine
                                         ? widget.playerColor
@@ -1188,8 +1208,14 @@ class _GameScreenState extends State<GameScreen> {
   }
 
   String _describeAnalysis(SearchResult analysis) {
-    final evaluation = analysis.mateIn != null
-        ? t('game.mateIn', {'n': analysis.mateIn!.abs()})
+    // Mat sayısı beyaz bakışında: "Mat 3" beyaz mat ediyor, "Mat -3"
+    // siyah. Eskiden mutlak değer yazılıyordu, yani mat olurken de mat
+    // ederken de aynı satır görünüyordu.
+    final mate = analysis.mateIn;
+    final evaluation = mate != null
+        ? t('game.mateIn', {
+            'n': _game.sideToMove == engine.Color.white ? mate : -mate,
+          })
         : _formatScoreCp(_evalScoreCp!);
 
     // Ana varyantı SAN'a çevir.
