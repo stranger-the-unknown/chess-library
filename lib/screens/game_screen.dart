@@ -959,6 +959,20 @@ class _GameScreenState extends State<GameScreen> {
       }
     }
 
+    // Geniş pencerede hamle listesi tahtanın yanına geçiyor. Ayar
+    // yalnızca yerleşimin gerçekten sığdığı genişlikte gösteriliyor;
+    // pencere küçülürse kendiliğinden alt şeride dönülüyor.
+    final settings = SettingsService.instance;
+    final twoColumn = Layout.isTwoColumn(context) && settings.verticalLayout;
+    final board = _boardArea(
+      arrows: arrows,
+      atLive: atLive,
+      finished: finished,
+      cap: twoColumn
+          ? Layout.boardSizes[settings.boardSize]
+          : Layout.maxBoardSide,
+    );
+
     final screen = Scaffold(
       appBar: AppBar(
         title: Text(
@@ -1096,74 +1110,9 @@ class _GameScreenState extends State<GameScreen> {
       ),
       body: SafeArea(
         top: false,
-        child: ContentWidth(
-          child: Column(
-            children: [
-              if (_warning != null) _warningBanner(scheme),
-              _playerRow(scheme, top: true),
-              // Tahta, kalan alana sığacak en büyük kare olarak çizilir;
-              // böylece kısa ekranlarda taşma olmaz.
-              Expanded(
-                child: Center(
-                  child: Padding(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 8,
-                      vertical: 4,
-                    ),
-                    child: LayoutBuilder(
-                      builder: (context, constraints) {
-                        // Genis pencerede tahta sinirsiz buyumesin.
-                        final side = Layout.boardSide(
-                          constraints.maxWidth,
-                          constraints.maxHeight,
-                        );
-                        return RepaintBoundary(
-                          key: _boardImageKey,
-                          child: SizedBox(
-                          width: side,
-                          height: side,
-                          child: ChessBoardWidget(
-                                game: _game,
-                                flipped: _flipped,
-                                // Kayıtlı oyunda hamle oynamak oyunu
-                                // değiştirmez; deneme olarak çalışır.
-                                interactive:
-                                    (_replayMode || atLive) && !finished,
-                                animateLastMove: _animateBoard,
-                                movableSide: widget.mode ==
-                                            GameMode.versusEngine &&
-                                        !_engineStalled
-                                    ? widget.playerColor
-                                    : null,
-                                lastMove: _explore.isNotEmpty
-                                    ? _explore.last.move
-                                    : (_cursor >= 0
-                                        ? _history[_cursor].move
-                                        : null),
-                                onMove: _onBoardMove,
-                                arrows: arrows,
-                          ),
-                        ),
-                        );
-                      },
-                    ),
-                  ),
-                ),
-              ),
-              _playerRow(scheme, top: false),
-              if (_explore.isNotEmpty) _exploreCard(scheme),
-              // Motor şeridi için sabit yükseklik: aç/kapa tahtayı kaydırmaz.
-              SizedBox(
-                height: 44,
-                child: _analysisOn ? _engineLine(scheme) : null,
-              ),
-              // Deneme sırasında tahtadaki konum oyunun sonucunu yansıtmaz.
-              if (_resultText != null && _explore.isEmpty)
-                _resultBanner(scheme),
-              _controls(scheme),
-            ],
-          ),
-        ),
+        child: twoColumn
+            ? _wideBody(scheme, board)
+            : _narrowBody(scheme, board),
       ),
     );
 
@@ -1269,6 +1218,137 @@ class _GameScreenState extends State<GameScreen> {
       ),
     );
   }
+
+  /// Tahta ve çevresindeki boşluk; kalan alana sığan en büyük kare.
+  Widget _boardArea({
+    required List<BoardArrow> arrows,
+    required bool atLive,
+    required bool finished,
+    required double cap,
+  }) {
+    return Expanded(
+      child: Center(
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+          child: LayoutBuilder(
+            builder: (context, constraints) {
+              final side = Layout.boardSide(
+                constraints.maxWidth,
+                constraints.maxHeight,
+                cap,
+              );
+              return RepaintBoundary(
+                key: _boardImageKey,
+                child: SizedBox(
+                  width: side,
+                  height: side,
+                  child: ChessBoardWidget(
+                    game: _game,
+                    flipped: _flipped,
+                    // Kayıtlı oyunda hamle oynamak oyunu değiştirmez;
+                    // deneme olarak çalışır.
+                    interactive: (_replayMode || atLive) && !finished,
+                    animateLastMove: _animateBoard,
+                    movableSide:
+                        widget.mode == GameMode.versusEngine && !_engineStalled
+                            ? widget.playerColor
+                            : null,
+                    lastMove: _explore.isNotEmpty
+                        ? _explore.last.move
+                        : (_cursor >= 0 ? _history[_cursor].move : null),
+                    onMove: _onBoardMove,
+                    arrows: arrows,
+                  ),
+                ),
+              );
+            },
+          ),
+        ),
+      ),
+    );
+  }
+
+  /// Telefon ve dar pencere: her şey alt alta.
+  Widget _narrowBody(ColorScheme scheme, Widget board) {
+    return ContentWidth(
+      child: Column(
+        children: [
+          if (_warning != null) _warningBanner(scheme),
+          _playerRow(scheme, top: true),
+          board,
+          _playerRow(scheme, top: false),
+          if (_explore.isNotEmpty) _exploreCard(scheme),
+          // Motor şeridi için sabit yükseklik: aç/kapa tahtayı kaydırmaz.
+          SizedBox(
+            height: 44,
+            child: _analysisOn ? _engineLine(scheme) : null,
+          ),
+          // Deneme sırasında tahtadaki konum oyunun sonucunu yansıtmaz.
+          if (_resultText != null && _explore.isEmpty) _resultBanner(scheme),
+          _controls(scheme),
+        ],
+      ),
+    );
+  }
+
+  /// Geniş pencere: solda tahta, sağda hamleler ve motor.
+  ///
+  /// Eskiden masaüstünde de telefon düzeni kullanılıyordu: tahta 520
+  /// pikselde kalıyor, hamleler altta ince bir şeritte yan yana diziliyor
+  /// ve pencerenin iki yanı boş duruyordu.
+  Widget _wideBody(ColorScheme scheme, Widget board) {
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        Expanded(
+          child: Column(
+            children: [
+              if (_warning != null) _warningBanner(scheme),
+              _playerRow(scheme, top: true),
+              board,
+              _playerRow(scheme, top: false),
+              if (_explore.isNotEmpty) _exploreCard(scheme),
+              if (_resultText != null && _explore.isEmpty)
+                _resultBanner(scheme),
+            ],
+          ),
+        ),
+        SizedBox(width: Layout.sidePanelWidth, child: _sidePanel(scheme)),
+      ],
+    );
+  }
+
+  /// Sağ sütun: hamle listesi (dikey), motor satırı ve gezinme düğmeleri.
+  Widget _sidePanel(ColorScheme scheme) {
+    return Container(
+      margin: const EdgeInsets.fromLTRB(4, 8, 12, 12),
+      decoration: BoxDecoration(
+        color: scheme.surfaceContainer,
+        borderRadius: BorderRadius.circular(18),
+      ),
+      clipBehavior: Clip.antiAlias,
+      child: Column(
+        children: [
+          Expanded(child: _moveList(vertical: true)),
+          Divider(height: 1, color: scheme.outlineVariant),
+          SizedBox(
+            height: 44,
+            child: _analysisOn ? _engineLine(scheme) : null,
+          ),
+          Divider(height: 1, color: scheme.outlineVariant),
+          _navRow(scheme),
+        ],
+      ),
+    );
+  }
+
+  Widget _moveList({required bool vertical}) => MoveList(
+        moves: _history,
+        currentIndex: _cursor,
+        onMoveTap: _goTo,
+        blackFirst: _blackFirst,
+        vertical: vertical,
+      );
 
   /// Denenen hamleleri ve bunların kaydedilmediğini gösteren şerit.
   Widget _exploreCard(ColorScheme scheme) {
@@ -1455,17 +1535,17 @@ class _GameScreenState extends State<GameScreen> {
       ),
       child: Column(
         children: [
-          SizedBox(
-            height: 52,
-            child: MoveList(
-              moves: _history,
-              currentIndex: _cursor,
-              onMoveTap: _goTo,
-              blackFirst: _blackFirst,
-            ),
-          ),
+          SizedBox(height: 52, child: _moveList(vertical: false)),
           Divider(height: 1, color: scheme.outlineVariant),
-          Padding(
+          _navRow(scheme),
+        ],
+      ),
+    );
+  }
+
+  /// Gezinme düğmeleri; iki yerleşim de aynı satırı kullanıyor.
+  Widget _navRow(ColorScheme scheme) {
+    return Padding(
             padding: const EdgeInsets.symmetric(vertical: 4),
             child: Row(
               mainAxisAlignment: MainAxisAlignment.spaceEvenly,
@@ -1510,9 +1590,6 @@ class _GameScreenState extends State<GameScreen> {
                 ),
               ],
             ),
-          ),
-        ],
-      ),
     );
   }
 

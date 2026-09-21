@@ -33,6 +33,13 @@ class SettingsService extends ChangeNotifier {
   String _pieceSet = _defaultPieceSet;
   String _boardTheme = _defaultBoardTheme;
   bool _showCoordinates = true;
+
+  /// Tahta boyutu seçeneği (0 küçük, 1 orta, 2 büyük). Yalnızca iki
+  /// sütunlu masaüstü yerleşiminde etkili.
+  int _boardSize = 1;
+
+  /// Masaüstünde hamle listesi yanda mı (dikey), altta mı (yatay)?
+  bool _verticalLayout = true;
   bool _showEngineArrows = true;
   /// Tahta teması -> seçim/ok rengi (0xAARRGGBB).
   final Map<String, int> _boardAccentColors = {};
@@ -65,6 +72,10 @@ class SettingsService extends ChangeNotifier {
   String get pieceSet => _pieceSet;
   String get boardTheme => _boardTheme;
   bool get showCoordinates => _showCoordinates;
+
+  int get boardSize => _boardSize;
+
+  bool get verticalLayout => _verticalLayout;
   bool get showEngineArrows => _showEngineArrows;
   bool get showLegalMoves => _showLegalMoves;
   bool get highlightLastMove => _highlightLastMove;
@@ -130,6 +141,8 @@ class SettingsService extends ChangeNotifier {
         ? storedBoard
         : _defaultBoardTheme;
     _showCoordinates = prefs.getBool('showCoordinates') ?? true;
+    _boardSize = (prefs.getInt('boardSize') ?? 1).clamp(0, 2);
+    _verticalLayout = prefs.getBool('verticalLayout') ?? true;
     _showEngineArrows = prefs.getBool('showEngineArrows') ?? true;
     // Harita her yüklemede sıfırlanıyor: anahtar yoksa (sıfırlama ya da
     // yedekten dönme sonrası) bellekteki eski renkler kalıyordu.
@@ -213,6 +226,18 @@ class SettingsService extends ChangeNotifier {
     _language = value;
     Strings.language = value;
     _set('language', value.index);
+    notifyListeners();
+  }
+
+  set boardSize(int value) {
+    _boardSize = value.clamp(0, 2);
+    _set('boardSize', _boardSize);
+    notifyListeners();
+  }
+
+  set verticalLayout(bool value) {
+    _verticalLayout = value;
+    _set('verticalLayout', value);
     notifyListeners();
   }
 
@@ -313,7 +338,7 @@ class SettingsService extends ChangeNotifier {
 ///
 /// Tek kaynak burasıdır; `pubspec.yaml` ile aynı olduğu testle denetlenir.
 /// Hakkında bölümünde ve yedek dosyasının başlığında görünür.
-const String appVersionName = '9';
+const String appVersionName = '10';
 
 class BoardAssets {
   BoardAssets._();

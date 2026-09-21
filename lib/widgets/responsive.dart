@@ -14,8 +14,24 @@ class Layout {
   /// Bu genişlikten itibaren masaüstü yerleşimi (yan gezinme çubuğu).
   static const double wideBreakpoint = 900;
 
-  /// Tahtanın alabileceği en büyük kenar uzunluğu.
+  /// Tahtanın alabileceği en büyük kenar uzunluğu (dar yerleşim).
   static const double maxBoardSide = 520;
+
+  /// Tahta boyutu seçenekleri: Küçük / Orta / Büyük.
+  ///
+  /// Küçük, dar yerleşimdeki boyutun aynısı. Orta varsayılan: bugünküne
+  /// göre kare 65'ten 80 piksele çıkıyor ama ekranı doldurmuyor.
+  static const List<double> boardSizes = [520, 640, 760];
+
+  /// İki sütunlu oyun yerleşimi için gereken en küçük genişlik.
+  ///
+  /// Tahta (en çok 640) + hamle sütunu (340) + boşluklar. Bunun altında
+  /// yerleşim seçeneği gösterilmiyor: çalışmayan bir ayar, olmayan
+  /// ayardan kötüdür.
+  static const double twoColumnBreakpoint = 1100;
+
+  /// Yan sütunun genişliği (hamle listesi, motor satırı, düğmeler).
+  static const double sidePanelWidth = 340;
 
   /// Liste ve form içeriğinin en fazla genişliği.
   static const double maxContentWidth = 760;
@@ -23,11 +39,17 @@ class Layout {
   static bool isWide(BuildContext context) =>
       MediaQuery.sizeOf(context).width >= wideBreakpoint;
 
+  /// Pencere iki sütunlu oyun yerleşimini taşıyabiliyor mu?
+  static bool isTwoColumn(BuildContext context) =>
+      MediaQuery.sizeOf(context).width >= twoColumnBreakpoint;
+
   /// Verilen alana sığan, üst sınırı aşmayan tahta kenarı.
-  static double boardSide(double available, [double? secondAxis]) {
+  ///
+  /// [cap] verilmezse dar yerleşimin sınırı ([maxBoardSide]) kullanılır.
+  static double boardSide(double available, [double? secondAxis, double? cap]) {
     var side = available;
     if (secondAxis != null) side = math.min(side, secondAxis);
-    return math.max(0, math.min(side, maxBoardSide));
+    return math.max(0, math.min(side, cap ?? maxBoardSide));
   }
 }
 

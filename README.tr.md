@@ -8,7 +8,10 @@ bağlantısı gerekmez; hiçbir veri dışarı gönderilmez.
 
 **Android** ve **Windows** üzerinde çalışır. Arayüz pencere genişliğine uyum
 sağlar: telefonda alt gezinme çubuğu, masaüstünde soldaki gezinme şeridi
-kullanılır.
+kullanılır. Geniş pencerede oyun ekranı iki sütuna ayrılır — solda tahta,
+sağda hamle listesi ve motor satırı. Tahtanın boyutu (küçük / orta /
+büyük) ve hamle listesinin yeri (yanda / altta) ayarlardan seçilir; bu iki
+ayar yalnızca yerleşimin sığdığı genişlikte görünür.
 
 Diller: Türkçe ve İngilizce. Ayarlardan değiştirilir; varsayılan sistem
 dilidir.

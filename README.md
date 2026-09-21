@@ -8,7 +8,11 @@ internet connection is needed; no data ever leaves the device.
 
 Runs on **Android** and **Windows**. The interface adapts to the window
 width: a bottom navigation bar on a phone, a rail down the left side on
-the desktop.
+the desktop. In a wide window the game screen splits into two columns —
+the board on the left, the move list and engine line on the right. Board
+size (small / medium / large) and the move list position (beside / below)
+are chosen in Settings; both options appear only when the layout actually
+fits.
 
 Languages: Turkish and English. Change it in Settings; the default is
 your system language.
