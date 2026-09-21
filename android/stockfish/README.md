@@ -21,6 +21,35 @@ tar -xzf sf-armv7.tar.gz
 cp stockfish/stockfish-android-armv7-neon ./stockfish-armeabi-v7a
 ```
 
+## x86_64 (emülatör / Chromebook)
+
+Resmi sürümlerde Android **x86_64** yapısı yok; NDK ile kendimiz
+derliyoruz. Gereken her şey Android SDK ile zaten geliyor
+(`D:\Android\Sdk\ndk\<sürüm>`), ayrıca bir şey kurmak gerekmiyor.
+
+```bash
+curl -L -o sf19.tar.gz   https://github.com/official-stockfish/Stockfish/archive/refs/tags/sf_19.tar.gz
+tar -xzf sf19.tar.gz && cd Stockfish-sf_19/src
+
+NDK=/d/Android/Sdk/ndk/28.2.13676358
+export PATH="$NDK/toolchains/llvm/prebuilt/windows-x86_64/bin:$NDK/prebuilt/windows-x86_64/bin:$PATH"
+
+make net                                   # NNUE ağı (~98 MB), ikiliye gömülüyor
+make -j4 build ARCH=x86-64-sse41-popcnt COMP=ndk      CXX=x86_64-linux-android29-clang++
+llvm-strip stockfish
+
+cp stockfish ../../stockfish-x86_64
+cp stockfish ../../../app/src/main/jniLibs/x86_64/libstockfish.so
+```
+
+`ARCH` neden `sse41-popcnt`: AVX2 daha hızlı olurdu ama desteklemeyen bir
+işlemcide ikili SIGILL ile ölür. x86_64 Android çoğunlukla emülatör
+demek; orada hız değil, çalışması önemli.
+
+Doğrulama: `file stockfish` çıktısı
+`ELF 64-bit LSB pie executable, x86-64 ... interpreter /system/bin/linker64`
+demeli.
+
 ## APK'ya paketleme (iki yol)
 
 ### 1) Tercih edilen: jniLibs → nativeLibraryDir

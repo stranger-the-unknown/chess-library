@@ -15,18 +15,26 @@ your system language.
 
 ---
 
-## Engine (Stockfish 8.0)
+## Engine (Stockfish)
 
 - **All engine moves** → official Stockfish as a separate UCI OS process (no Dart engine)
 - **Play vs engine** → Stockfish with strength limit (`Skill Level` / `UCI_LimitStrength`+`UCI_Elo`) for the six UI levels (Beginner→Master). Master = full strength.
-- **Puzzles, live analysis, game review** → full-strength Stockfish
+- **Puzzles and live analysis** → full-strength Stockfish
+- **Cores**: an engine *move* always uses one core, on the phone and on
+  the PC alike, so a level means the same thing everywhere. *Analysis*
+  uses half of the cores (at most four) and a larger hash on the desktop,
+  where the engine is a tool rather than an opponent.
+- **Pace**: an engine reply is never shown sooner than 0.8 s after your
+  move. At the lower levels the search finishes almost instantly and the
+  move used to flash onto the board before you could see what it took.
 - Do **not** use `flutter_stockfish`
 - Binaries are **gitignored**; download steps:
   - Windows: [`windows/stockfish/README.md`](windows/stockfish/README.md)
   - Android: [`android/stockfish/README.md`](android/stockfish/README.md)
 - If Stockfish is missing or crashes: empty result, no hang; UCI process may restart. No Dart fallback.
-
-Game review wall-clock budgets (Stockfish): quick **400ms / depth≤22**, deep **1200ms / depth≤28** (movetime dominates).
+- Cancelling a search does **not** restart the process: the engine is
+  told to `stop` and its own `bestmove` is awaited (with a one-second
+  safety net).
 
 ---
 
@@ -79,13 +87,18 @@ exported to PGN, they are not saved, and they disappear when you leave
 the screen. The buttons on the strip undo the last trial move or take you
 back to the game.
 
-**Game review** — When a game ends the engine scores every move. You get
-an accuracy percentage per side, a quality for each move (best / very
-good / good / inaccuracy / mistake / blunder), an evaluation chart and a
-list of the turning points. Tap the chart to jump between moves.
+**Engine arrows** — While analysis is on, the engine's suggestion is
+drawn as an arrow. It uses the board's own highlight colour but is
+thinner and fainter than an arrow you draw yourself: yours is a
+deliberate note, the engine's is a suggestion that changes with every
+move. The arrows can be turned off in Settings.
 
-The menu also offers: copy PGN, copy and paste FEN, save to a list, flip
-the board and **resign**.
+**The screen stays awake** while you are at the board, so it does not go
+dark while you think. It is released after half an hour without a move,
+and as soon as the game ends.
+
+The menu also offers: **save the board as an image**, copy PGN, copy and
+paste FEN, save to a list, flip the board and **resign**.
 
 **Sounds** — Different sounds for different kinds of move (your move, the
 opponent's move, a capture, castling, promotion, check). The illegal-move
@@ -270,49 +283,6 @@ delete them.
 - **Game details** in the row menu shows the PGN tags: event, site,
   round, ECO code, ratings.
 - Games can carry a note, which can be deleted later.
-
-### Batch analysis
-
-Choose **select games to analyse** from the title menu and the rows
-become selectable. Pick the ones you want and start either **quick** or
-**deep** analysis; the games are worked through one after another while
-you do something else. The screen stays awake while it runs, so a charger
-is a good idea. Progress appears above the lists tab and can be cancelled
-from there.
-
-Each game is saved as it finishes. If the app closes half-way, the
-finished ones stay; only the rest are left undone.
-
-### Analysis lists
-
-At the top of the lists there are two of them: **Recent Deep Analyses**
-and **Recent Quick Analyses**. Each keeps at most a hundred records,
-newest first, and the oldest drops off beyond that.
-
-These two belong to the app rather than to you: they cannot be deleted or
-renamed, and neither can the records inside them be renamed, deleted,
-moved to another list or marked read in bulk; PGN cannot be imported into
-them either. Read and favorite marks, search, filters, sorting, showing a
-range, game details and copying PGN all work.
-
-A review you start from the board screen is saved here too. A game
-opened from one of your lists is linked to the original; a game with no
-list (a game against the engine, a free board, a PGN you just opened) is
-saved as a record that stands on its own. Leaving the screen does not
-throw the work away — the banner on the lists tab shows it running.
-
-Opening a saved analysis does not run the engine again. Analysing the
-same game a second time does not delete the old record, it adds a new one
-— the list is a history.
-
-Marking an analysis record as read or favorite also marks the original
-game. It does not work the other way round: a game can have several
-analyses, so there would be no telling which one to update.
-
-Analysis records are **not included in backups**; they belong to the
-device and can be produced again. "Reset all data" does delete them.
-
----
 
 ## Backups and moving to a new device
 

@@ -15,18 +15,25 @@ dilidir.
 
 ---
 
-## Motor (Stockfish 8.0)
+## Motor (Stockfish)
 
 - **Tüm motor hamleleri** → resmi Stockfish, ayrı UCI OS süreci (Dart motoru yok)
 - **Motora karşı** → altı UI seviyesi için güç sınırı (`Skill Level` / `UCI_LimitStrength`+`UCI_Elo`). Usta = tam güç.
-- **Bulmaca, canlı analiz, oyun incelemesi** → tam güç Stockfish
+- **Bulmaca ve canlı analiz** → tam güç Stockfish
+- **Çekirdek**: motor *hamlesi* telefonda da bilgisayarda da tek
+  çekirdekle üretilir, böylece bir kademe her cihazda aynı anlama gelir.
+  *Analiz* masaüstünde çekirdeklerin yarısını (en çok dördünü) ve daha
+  büyük bir hash kullanır; orada motor rakip değil, araçtır.
+- **Tempo**: motorun cevabı, senin hamlenden en erken 0,8 saniye sonra
+  görünür. Alt kademelerde arama neredeyse anında bitiyor ve hamle,
+  neyin alındığı görülmeden tahtada beliriyordu.
 - `flutter_stockfish` **kullanılmaz**
 - İkili dosyalar **gitignore**'dadır; indirme:
   - Windows: [`windows/stockfish/README.md`](windows/stockfish/README.md)
   - Android: [`android/stockfish/README.md`](android/stockfish/README.md)
 - Stockfish yoksa veya çökerse: boş sonuç, takılma yok; UCI süreci yeniden başlatılabilir. Dart yedek yok.
-
-Oyun incelemesi bütçeleri (Stockfish): hızlı **400ms / derinlik≤22**, derin **1200ms / derinlik≤28** (movetime baskın).
+- Arama iptali süreci **yeniden kurmaz**: motora `stop` yazılır ve kendi
+  `bestmove` satırı beklenir (bir saniyelik emniyetle).
 
 ---
 
@@ -74,13 +81,16 @@ hamleler oyunun kendisine yazılmaz: hamle listesinde görünmez, PGN'e girmez,
 kaydedilmez ve ekrandan çıkınca kaybolur. Şeritteki düğmelerle son denemeyi
 geri alır ya da oyuna dönersin.
 
-**Oyun incelemesi** — Oyun bitince motor bütün hamleleri değerlendirir.
-Taraf başına doğruluk yüzdesi, her hamlenin niteliği (en iyi / çok iyi /
-iyi / yanlışlık / hata / ciddi hata), değerlendirme grafiği ve oyunun dönüm
-noktaları listelenir. Grafiğe dokunarak hamleler arasında atlarsın.
+**Motor okları** — Analiz açıkken motorun önerisi ok olarak çizilir.
+Tahtanın kendi vurgu rengini kullanır ama senin çizdiğin oktan daha ince
+ve daha sönüktür: seninki kasıtlı bir not, motorunki her hamlede değişen
+bir öneridir. Oklar Ayarlar'dan kapatılabilir.
 
-Menüden ayrıca: PGN kopyalama, FEN kopyalama/yapıştırma, listeye kaydetme,
-tahtayı çevirme ve **pes etme**.
+**Tahta başındayken ekran kapanmaz**, düşünürken sönmesin diye. Hamle
+yapılmadan yarım saat geçerse ve oyun bittiğinde bırakılır.
+
+Menüden ayrıca: **tahtayı görsel olarak kaydetme**, PGN kopyalama, FEN
+kopyalama/yapıştırma, listeye kaydetme, tahtayı çevirme ve **pes etme**.
 
 **Sesler** — Hamle türüne göre farklı ses çalar (kendi hamlen, rakibin
 hamlesi, alma, rok, terfi, şah). Kural dışı hamle uyarısı yalnızca **şah
@@ -262,48 +272,6 @@ taşıma, silme.
 - Satır menüsündeki **oyun bilgileri** PGN başlıklarını gösterir: turnuva,
   yer, tur, ECO, derece.
 - Oyunlara not düşebilir, notu sonradan silebilirsin.
-
-### Toplu analiz
-
-Başlık menüsünden **analiz için oyun seç** dersen satırlar işaretlenebilir
-hâle gelir. İstediklerini seçip **hızlı** ya da **derin** analizi
-başlatırsın; oyunlar teker teker incelenir, sen başında beklemezsin.
-Analiz sürerken ekran açık kalır — şarjda yapmak iyi olur. İlerleme
-listeler sekmesinin üstünde görünür ve oradan iptal edilebilir.
-
-Her oyun bittiğinde kaydedilir. Uygulama yarıda kapanırsa o ana kadar
-bitenler durur; yalnızca kalanlar yapılmamış olur.
-
-### Analiz listeleri
-
-Listelerin en üstünde iki liste vardır: **Son Derin Analizler** ve **Son
-Hızlı Analizler**. Her biri en fazla yüz kayıt tutar, en yeni kayıt başta
-olur ve yüzü aşınca en eski düşer.
-
-Bu iki liste kullanıcının değil sistemindir: silinemez, yeniden
-adlandırılamaz. Kayıtları da yerinde durur — yeniden adlandırma, silme,
-başka listeye taşıma, toplu okundu işaretleme ve PGN ekleme burada
-yoktur. Okundu ve favori işaretleri, arama, filtreler, sıralama, aralık
-gösterme, oyun bilgileri ve PGN kopyalama çalışır.
-
-Tahta ekranından başlattığın inceleme de buraya kaydedilir.
-Listelerinden açtığın bir oyun asıl oyuna bağlanır; listesi olmayan bir
-oyun (motora karşı oyun, serbest tahta, yeni açılan bir PGN) kendi başına
-duran bir kayıt olur. Ekrandan çıkmak işi çöpe atmaz — listeler
-sekmesindeki şerit sürdüğünü gösterir.
-
-Kaydedilmiş bir analizi açtığında motor yeniden çalışmaz. Aynı oyunu
-tekrar analiz edersen eski kayıt silinmez, yeni bir kayıt eklenir — liste
-bir analiz geçmişidir.
-
-Bir analiz kaydını okundu ya da favori yaparsan asıl oyun da işaretlenir.
-Tersi olmaz: bir oyunun birden çok analizi olabildiği için hangisinin
-güncelleneceği belirsiz olurdu.
-
-Analiz kayıtları **yedeğe girmez**; cihaza özeldir ve gerekirse yeniden
-üretilebilir. "Tüm verileri sıfırla" onları da siler.
-
----
 
 ## Yedekleme ve cihaz değiştirme
 
