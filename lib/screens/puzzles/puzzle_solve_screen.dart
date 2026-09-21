@@ -59,12 +59,18 @@ class PuzzleSolveScreen extends StatefulWidget {
 }
 
 class _PuzzleSolveScreenState extends State<PuzzleSolveScreen> {
+  /// Çözüm gösteriminde iki hamle arası.
+  ///
+  /// Hamle sesi 209 ms, şah 470 ms, terfi 653 ms sürüyor; adımlar arka
+  /// arkaya aktığı için buradaki bekleme ötekilerden uzun.
+  static const Duration _solutionPace = Duration(milliseconds: 900);
+
   /// Rakibin cevabının ekrana gelme temposu.
   ///
   /// Kayıtlı çözüm dizisinde arama yapılmıyor, yani cevap anında
   /// geliyordu: hangi taşın nereye gittiği görülmüyordu. Çözümün
   /// baştan sona gösterilmesi ayrı ve bilerek daha yavaş (700 ms).
-  static const Duration _movePace = Duration(milliseconds: 650);
+  static const Duration _movePace = Duration(milliseconds: 700);
 
   static const int _toleranceCp = 80;
 
@@ -367,7 +373,6 @@ class _PuzzleSolveScreenState extends State<PuzzleSolveScreen> {
     final entry = MoveEntry.play(_game, move);
     setState(() {
       _moves.add(entry);
-      _busy = false;
       if (_game.isCheckmate) {
         _feedback = _Feedback.finished;
         _feedbackText = t('puzzles.opponentMated');
@@ -377,6 +382,30 @@ class _PuzzleSolveScreenState extends State<PuzzleSolveScreen> {
       }
     });
     SoundService.instance.playForSan(entry.san, opponent: true);
+
+    // Motorla yargılanan bulmacalarda ölçüt yeni konuma göre kuruluyor.
+    //
+    // Eskiden başlangıç konumunun skoru sabit kalıyordu: çok hamleli bir
+    // alıştırmada sonraki hamleler yanlış ölçülüyordu. Kayıtlı çözümden
+    // ayrılıp eşdeğer bir mat bulan kullanıcıda ise ölçüt hiç yoktu ve
+    // sonraki her hamle "yanlış" sayılıyordu.
+    if (!_onSolutionLine || !_puzzle.hasSolution) {
+      await _refreshBaseline(token);
+      if (!mounted || token != _loadToken) return;
+    }
+    setState(() => _busy = false);
+  }
+
+  /// Ölçüt konumu değişince yeniden hesaplanır.
+  Future<void> _refreshBaseline(int token) async {
+    final fen = _game.fen;
+    final result = await EngineService.instance.analyze(
+      fen,
+      depth: 13,
+      movetimeMs: 1200,
+    );
+    if (!mounted || token != _loadToken || _game.fen != fen) return;
+    setState(() => _baseline = result.bestMoveUci.isEmpty ? null : result);
   }
 
   /// Bulmacayı başa sarar ve **bekleyen işleri iptal eder**.
@@ -412,14 +441,18 @@ class _PuzzleSolveScreenState extends State<PuzzleSolveScreen> {
     setState(() => _busy = true);
 
     // Çözümü adım adım oyna.
-    for (final uci in line.take(8)) {
+    for (final uci in line) {
       if (!mounted) return;
       final move = _game.moveFromUci(uci);
       if (move == null) break;
+      final solverMove = _game.sideToMove == _solverColor;
       final entry = MoveEntry.play(_game, move);
       setState(() => _moves.add(entry));
+      // Gösterim sessizdi: hamleler akıyor ama hiçbir ses çıkmıyordu.
+      // Çözen tarafın hamlesi kendi sesiyle, rakibinki rakip sesiyle.
+      SoundService.instance.playForSan(entry.san, opponent: !solverMove);
       // Çözüm gösterimi bilerek daha yavaş: izlenerek takip ediliyor.
-      await Future<void>.delayed(const Duration(milliseconds: 800));
+      await Future<void>.delayed(_solutionPace);
       // Gösterim sürerken başka bulmacaya geçilmiş olabilir.
       if (!mounted || token != _loadToken) return;
     }
@@ -504,6 +537,8 @@ class _PuzzleSolveScreenState extends State<PuzzleSolveScreen> {
       note: note,
       tags: _puzzle.tags,
     );
+    // Yazma sürerken ekrandan çıkılmış olabilir.
+    if (!mounted) return;
     setState(() => _puzzle.note = note);
   }
 

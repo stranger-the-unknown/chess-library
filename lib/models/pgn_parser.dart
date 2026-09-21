@@ -394,8 +394,15 @@ class PgnParser {
     String? startFen,
     String? result,
   }) {
-    final position = startFen != null
-        ? engine.ChessGame.fromFen(startFen)
+    // Bozuk bir kayıttan gelen FEN burada da ekranı düşürüyordu:
+    // `fromFen` FormatException atıyor ve "PGN kopyala" / dışa aktarma
+    // yolunda kimse yakalamıyordu. Okunamayan konum yok sayılıyor.
+    final validFen =
+        startFen != null && engine.ChessGame.validateFen(startFen) == null
+            ? startFen
+            : null;
+    final position = validFen != null
+        ? engine.ChessGame.fromFen(validFen)
         : engine.ChessGame();
 
     final buffer = StringBuffer();
@@ -412,9 +419,9 @@ class PgnParser {
       'Black': tags?['Black'] ?? '?',
       'Result': result ?? tags?['Result'] ?? '*',
     };
-    if (startFen != null) {
+    if (validFen != null) {
       headerTags['SetUp'] = '1';
-      headerTags['FEN'] = startFen;
+      headerTags['FEN'] = validFen;
     }
     if (tags != null) {
       for (final entry in tags.entries) {

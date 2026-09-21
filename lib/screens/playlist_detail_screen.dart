@@ -126,6 +126,21 @@ class _PlaylistDetailScreenState extends State<PlaylistDetailScreen> {
     return 8.0 * digits + 12;
   }
 
+  /// Diske yazan bir işi çalıştırır; başarısız olursa kullanıcıya söyler.
+  ///
+  /// `StorageService._save` cihazda yer kalmadığında hata fırlatıyor.
+  /// Liste **içindeki** işlemler (ad değiştir, sil, taşı, okundu, PGN
+  /// ekle) bunu yakalamıyordu; ana liste ekranı 9.0.8'de kapatılmıştı.
+  Future<bool> _guard(Future<void> Function() task) async {
+    try {
+      await task();
+      return true;
+    } catch (_) {
+      if (mounted) AppDialogs.snack(context, t('lists.saveFailed'));
+      return false;
+    }
+  }
+
   Future<void> _rename(SavedGame game) async {
     final name = await AppDialogs.prompt(
       context,
@@ -135,7 +150,7 @@ class _PlaylistDetailScreenState extends State<PlaylistDetailScreen> {
     );
     if (name == null) return;
     game.name = name;
-    await _storage.updateGame(widget.playlistId, game);
+    await _guard(() => _storage.updateGame(widget.playlistId, game));
     await _load();
   }
 
@@ -148,7 +163,7 @@ class _PlaylistDetailScreenState extends State<PlaylistDetailScreen> {
       destructive: true,
     );
     if (!confirmed) return;
-    await _storage.deleteGame(widget.playlistId, game.id);
+    await _guard(() => _storage.deleteGame(widget.playlistId, game.id));
     await _load();
   }
 
@@ -197,7 +212,7 @@ class _PlaylistDetailScreenState extends State<PlaylistDetailScreen> {
       ),
     );
     if (target == null) return;
-    await _storage.moveGame(widget.playlistId, target, game.id);
+    await _guard(() => _storage.moveGame(widget.playlistId, target, game.id));
     await _load();
   }
 
@@ -227,7 +242,13 @@ class _PlaylistDetailScreenState extends State<PlaylistDetailScreen> {
       return;
     }
 
-    final added = await PgnImportService.addToList(widget.playlistId, games);
+    final int added;
+    try {
+      added = await PgnImportService.addToList(widget.playlistId, games);
+    } catch (_) {
+      if (mounted) AppDialogs.snack(context, t('lists.saveFailed'));
+      return;
+    }
     await _load();
     if (mounted) {
       AppDialogs.snack(context, t('pgn.saved', {'count': added}));
@@ -403,15 +424,15 @@ class _PlaylistDetailScreenState extends State<PlaylistDetailScreen> {
   }
 
   Future<void> _toggleRead(SavedGame game) async {
-    await _storage.toggleGameRead(widget.playlistId, game.id);
+    await _guard(() => _storage.toggleGameRead(widget.playlistId, game.id));
   }
 
   Future<void> _setAllRead(bool read) async {
-    await _storage.setAllRead(widget.playlistId, read);
+    await _guard(() => _storage.setAllRead(widget.playlistId, read));
   }
 
   Future<void> _toggleFavorite(SavedGame game) async {
-    await _storage.toggleGameFavorite(widget.playlistId, game.id);
+    await _guard(() => _storage.toggleGameFavorite(widget.playlistId, game.id));
   }
 
   /// Oyunun notunu siler.
@@ -419,7 +440,7 @@ class _PlaylistDetailScreenState extends State<PlaylistDetailScreen> {
   /// Not ekrandan kalkıyor; ayrıca bir bildirim göstermeye gerek yok.
   Future<void> _deleteNote(SavedGame game) async {
     game.note = null;
-    await _storage.updateGame(widget.playlistId, game);
+    await _guard(() => _storage.updateGame(widget.playlistId, game));
   }
 
   /// Sıra numarası aralığındaki oyunları okundu/okunmadı yapar.

@@ -115,6 +115,12 @@ class _ChessBoardWidgetState extends State<ChessBoardWidget>
   /// `onTapUp` hiç gelmiyordu ve hamle sessizce kayboluyordu.
   Offset? _lastPointer;
 
+  /// Terfi penceresi açık mı?
+  ///
+  /// Açıkken ikinci bir dokunuş ikinci bir pencere açıyor ve iki hamle
+  /// birden bildirilebiliyordu.
+  bool _askingPromotion = false;
+
   /// Hangi animasyonun sürdüğünü ayırt eden sayaç.
   ///
   /// `forward` yeniden çağrılınca önceki `TickerFuture` **iptal** oluyor
@@ -247,8 +253,11 @@ class _ChessBoardWidgetState extends State<ChessBoardWidget>
 
     engine.ChessMove move = candidates.first;
     if (candidates.length > 1 && candidates.any((m) => m.promotion != null)) {
+      if (_askingPromotion) return;
+      _askingPromotion = true;
       final piece = widget.game.pieceAt(from);
       final chosen = await _askPromotion(piece!.color, candidates);
+      _askingPromotion = false;
       // Diyalog açıkken ekran kapatılmış olabilir; aşağıdaki iki yol da
       // setState çağırıyor.
       if (!mounted) return;

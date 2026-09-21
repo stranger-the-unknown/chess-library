@@ -24,19 +24,29 @@ class MoveEntry {
   /// [position] hamle oynanmış hâlde geri döner.
   static MoveEntry play(engine.ChessGame position, engine.ChessMove move) {
     final san = position.sanFor(move);
-    position.makeMove(move);
+    // `makeMove` yasadışı hamlede `false` dönüyor ve bu sessizce
+    // yutuluyordu: tahta oynamıyor ama kayıt listesine ekleniyor, geçmiş
+    // ile tahta ayrışıyordu. Çağıranların hepsi yasal hamle veriyor;
+    // burada yakalanan bir hata varsa o çağıran bozuktur.
+    final played = position.makeMove(move);
+    assert(played, 'yasadışı hamle oynatılmaya çalışıldı: ${move.uci}');
     return MoveEntry(move: move, san: san, fenAfter: position.fen);
   }
 
   /// UCI listesini baştan oynayarak kayıt listesi üretir.
   /// Geçersiz bir hamlede durur.
+  ///
+  /// Bozuk bir başlangıç konumu (elle düzenlenmiş kayıt) `fromFen` ile
+  /// hata fırlatıyordu; okunamayan konum yok sayılıp standart dizilişten
+  /// başlanıyor.
   static List<MoveEntry> fromUciList(
     List<String> uciMoves, {
     String? startFen,
   }) {
-    final position = startFen != null
-        ? engine.ChessGame.fromFen(startFen)
-        : engine.ChessGame();
+    final position =
+        startFen != null && engine.ChessGame.validateFen(startFen) == null
+            ? engine.ChessGame.fromFen(startFen)
+            : engine.ChessGame();
     final entries = <MoveEntry>[];
     for (final uci in uciMoves) {
       final move = position.moveFromUci(uci);

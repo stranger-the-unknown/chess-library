@@ -91,6 +91,16 @@ class _GameScreenState extends State<GameScreen> {
   /// Kaydedilmemiş bir oyunda geri tuşu hamleleri sessizce siliyordu.
   bool _savedToList = false;
 
+  /// Motor hamlesi aramalarının nesil sayacı.
+  ///
+  /// Motor düşünürken hamle listesinde gezinmek konumu değiştiriyor;
+  /// dönen sonuç artık geçersiz. Eskiden yalnızca FEN'e bakılıyordu:
+  /// aynı konuma geri dönüldüğünde (ya da yeniden başlatıp aynı
+  /// başlangıca gelince) iki arama birden geçerli sayılıp çift hamle
+  /// oynanabiliyordu. Sayaç, yalnızca en son aramanın hamlesini kabul
+  /// ediyor.
+  int _engineToken = 0;
+
   /// Motor cevap veremedi mi?
   ///
   /// Motora karşı oyunda tahta yalnızca senin rengine açık. Motor boş
@@ -338,6 +348,13 @@ class _GameScreenState extends State<GameScreen> {
       _announce(_history[clamped], replay: true);
     }
     _afterPositionChanged();
+
+    // Motor düşünürken gezinmek aramayı geçersiz kılıyor; canlı konuma
+    // dönüldüğünde kimse motoru yeniden çağırmıyordu ve sıra motorda
+    // olduğu için tahta kilitli kalıyordu. Tek çıkış yeniden başlatmaktı.
+    if (widget.mode == GameMode.versusEngine && !_thinking) {
+      _maybePlayEngineMove();
+    }
   }
 
   /// Hamlenin sesini çalar ve oyun bittiyse sonucu yazar.
@@ -465,7 +482,7 @@ class _GameScreenState extends State<GameScreen> {
   }
 
   /// Motor hamlesinin ekranda görünmesi için geçmesi gereken en kısa süre.
-  static const Duration _minEngineThink = Duration(milliseconds: 650);
+  static const Duration _minEngineThink = Duration(milliseconds: 700);
 
   Future<void> _maybePlayEngineMove() async {
     if (widget.mode != GameMode.versusEngine) return;
@@ -477,6 +494,7 @@ class _GameScreenState extends State<GameScreen> {
     if (_autoResult() != null) return;
     if (_cursor != _history.length - 1) return;
 
+    final token = ++_engineToken;
     setState(() {
       _thinking = true;
       _engineStalled = false;
@@ -493,7 +511,7 @@ class _GameScreenState extends State<GameScreen> {
     if (thought < _minEngineThink) {
       await Future<void>.delayed(_minEngineThink - thought);
     }
-    if (!mounted) return;
+    if (!mounted || token != _engineToken) return;
     setState(() => _thinking = false);
 
     // Pes etmek konumu değiştirmediği için aşağıdaki FEN denetimi bunu
@@ -858,8 +876,12 @@ class _GameScreenState extends State<GameScreen> {
       if (mounted) AppDialogs.snack(context, t('lists.saveFailed'));
       return;
     }
-    _savedToList = true;
-    if (mounted) AppDialogs.snack(context, t('game.saved'));
+    // `setState` gerekiyor: çıkış onayı bu bayrağa bakıyor ve yazı
+    // tek başına yeniden çizim tetiklemiyordu.
+    if (mounted) {
+      setState(() => _savedToList = true);
+      AppDialogs.snack(context, t('game.saved'));
+    }
   }
 
 

@@ -161,10 +161,28 @@ class _OpeningStudyScreenState extends State<OpeningStudyScreen> {
   }
 
   /// Rakip cevabının en erken görünme süresi (motora karşı oyunla aynı).
-  static const Duration _replyPace = Duration(milliseconds: 650);
+  static const Duration _replyPace = Duration(milliseconds: 700);
 
   /// Siyahı çalışırken tahtanın oynadığı ilk hamle.
   static const Duration _openingPace = Duration(milliseconds: 500);
+
+  /// "Göster": beklenen hamleyi oynar, ardından rakibin cevabını da.
+  ///
+  /// Eskiden yalnızca bir yarım hamle ilerletiyordu: senin hamlen
+  /// oynanıyor, tahta rakibin hamlesini bekler hâlde kalıyordu. Çalıştığın
+  /// tarafı sen oynadığın için ilerleyemiyor, ikinci kez basmak
+  /// gerekiyordu. Rakibin cevabı doğru hamle yaptığındakiyle aynı
+  /// tempoda ve aynı jetona bağlı.
+  Future<void> _showNextMove() async {
+    final token = _token;
+    _goTo(_cursor + 1);
+    if (_mode != StudyMode.practice) return;
+    if (_cursor >= widget.opening.uciMoves.length - 1) return;
+
+    await Future<void>.delayed(_replyPace);
+    if (!mounted || token != _token || _mode != StudyMode.practice) return;
+    _goTo(_cursor + 1);
+  }
 
   void _toggleAutoPlay() {
     if (_autoPlaying) {
@@ -322,7 +340,15 @@ class _OpeningStudyScreenState extends State<OpeningStudyScreen> {
           IconButton(
             tooltip: t('common.flipBoard'),
             icon: const Icon(Icons.swap_vert_rounded),
-            onPressed: () => setState(() => _flipped = !_flipped),
+            onPressed: () {
+              setState(() => _flipped = !_flipped);
+              // Alıştırmada çevirmek yalnızca bakışı değil, **hangi
+              // tarafı çalıştığını** da değiştiriyor. Hat ortasındayken
+              // sıra karşı tarafa geçtiği için tahta kilitleniyor ve tek
+              // çıkış tekrar çevirmek ya da baştan başlamak oluyordu.
+              // Taraf değişince alıştırma yeniden kuruluyor.
+              if (_mode == StudyMode.practice) _setMode(StudyMode.practice);
+            },
           ),
           PopupMenuButton<String>(
             onSelected: (value) async {
@@ -715,7 +741,7 @@ class _OpeningStudyScreenState extends State<OpeningStudyScreen> {
                   label: Text(t('common.restart')),
                 ),
                 TextButton.icon(
-                  onPressed: atEnd ? null : () => _goTo(_cursor + 1),
+                  onPressed: atEnd ? null : _showNextMove,
                   icon: const Icon(Icons.skip_next_rounded, size: 19),
                   label: Text(t('openings.show')),
                 ),
