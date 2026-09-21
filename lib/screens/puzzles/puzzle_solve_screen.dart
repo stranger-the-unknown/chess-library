@@ -59,6 +59,13 @@ class PuzzleSolveScreen extends StatefulWidget {
 }
 
 class _PuzzleSolveScreenState extends State<PuzzleSolveScreen> {
+  /// Rakibin cevabının ekrana gelme temposu.
+  ///
+  /// Kayıtlı çözüm dizisinde arama yapılmıyor, yani cevap anında
+  /// geliyordu: hangi taşın nereye gittiği görülmüyordu. Çözümün
+  /// baştan sona gösterilmesi ayrı ve bilerek daha yavaş (700 ms).
+  static const Duration _movePace = Duration(milliseconds: 500);
+
   static const int _toleranceCp = 80;
 
   final PuzzleService _service = PuzzleService.instance;
@@ -282,6 +289,7 @@ class _PuzzleSolveScreenState extends State<PuzzleSolveScreen> {
 
   Future<void> _playOpponentReply() async {
     final fen = _game.fen;
+    final started = DateTime.now();
 
     // Kayıtlı çözüm dizisi varsa rakip o diziyi oynar.
     final scripted = _expectedMove;
@@ -293,6 +301,11 @@ class _PuzzleSolveScreenState extends State<PuzzleSolveScreen> {
         movetimeMs: 900,
       );
       uci = result.bestMoveUci;
+    }
+    // Kayıtlı dizide arama yok, cevap anında gelirdi.
+    final thought = DateTime.now().difference(started);
+    if (thought < _movePace) {
+      await Future<void>.delayed(_movePace - thought);
     }
     if (!mounted || _game.fen != fen) return;
 
@@ -346,7 +359,8 @@ class _PuzzleSolveScreenState extends State<PuzzleSolveScreen> {
       if (move == null) break;
       final entry = MoveEntry.play(_game, move);
       setState(() => _moves.add(entry));
-      await Future<void>.delayed(const Duration(milliseconds: 840));
+      // Çözüm gösterimi bilerek daha yavaş: izlenerek takip ediliyor.
+      await Future<void>.delayed(const Duration(milliseconds: 700));
     }
     if (!mounted) return;
     setState(() {
@@ -616,15 +630,18 @@ class _PuzzleSolveScreenState extends State<PuzzleSolveScreen> {
               if (_puzzle.note != null && _puzzle.note!.isNotEmpty)
                 _noteCard(scheme),
               _feedbackCard(scheme),
-              if (_moves.isNotEmpty)
-                SizedBox(
-                  height: 46,
-                  child: MoveList(
-                    moves: _moves,
-                    currentIndex: _moves.length - 1,
-                    onMoveTap: (_) {},
-                  ),
-                ),
+              // Şeridin yeri boşken de duruyor: ilk hamlede tahta
+              // yukarı kaymasın (geri bildirim kartında da aynısı var).
+              SizedBox(
+                height: 46,
+                child: _moves.isEmpty
+                    ? null
+                    : MoveList(
+                        moves: _moves,
+                        currentIndex: _moves.length - 1,
+                        onMoveTap: (_) {},
+                      ),
+              ),
               _actions(scheme),
             ],
           ),

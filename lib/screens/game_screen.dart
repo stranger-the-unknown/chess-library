@@ -371,7 +371,7 @@ class _GameScreenState extends State<GameScreen> {
   }
 
   /// Motor hamlesinin ekranda görünmesi için geçmesi gereken en kısa süre.
-  static const Duration _minEngineThink = Duration(milliseconds: 800);
+  static const Duration _minEngineThink = Duration(milliseconds: 500);
 
   Future<void> _maybePlayEngineMove() async {
     if (widget.mode != GameMode.versusEngine) return;
