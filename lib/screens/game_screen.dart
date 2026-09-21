@@ -86,6 +86,11 @@ class _GameScreenState extends State<GameScreen> {
   /// Pes edildi mi? (Oyun bitmiş sayılır, tahta kilitlenir.)
   bool _resigned = false;
 
+  /// Oyun bir listeye kaydedildi mi?
+  ///
+  /// Kaydedilmemiş bir oyunda geri tuşu hamleleri sessizce siliyordu.
+  bool _savedToList = false;
+
   /// Motor cevap veremedi mi?
   ///
   /// Motora karşı oyunda tahta yalnızca senin rengine açık. Motor boş
@@ -110,6 +115,23 @@ class _GameScreenState extends State<GameScreen> {
   /// Böyle bir oyunda tahtaya oynanan hamleler oyunu değiştirmez, deneme
   /// sayılır. Serbest tahtada ise hamleler oyunun kendisidir. Okunamayan
   /// bir PGN hamle üretmediyse ekran yine serbest tahta gibi davranır.
+  /// Kaybolacak bir şey var mı? (Kayıtlı bir oyunu okurken yok: oradaki
+  /// hamleler deneme sayılıyor ve oyunun kendisine yazılmıyor.)
+  bool get _unsaved =>
+      !_replayMode && _history.isNotEmpty && !_savedToList;
+
+  Future<void> _onPopInvoked(bool didPop, Object? result) async {
+    if (didPop || !mounted) return;
+    final leave = await AppDialogs.confirm(
+      context,
+      title: t('game.exitTitle'),
+      message: t('game.exitMessage'),
+      confirmLabel: t('game.exitConfirm'),
+      destructive: true,
+    );
+    if (leave && mounted) Navigator.of(context).pop();
+  }
+
   bool get _replayMode =>
       widget.mode == GameMode.analysis &&
       (widget.pgnContent != null || widget.uciMoves != null) &&
@@ -183,6 +205,11 @@ class _GameScreenState extends State<GameScreen> {
             'tokens': parser.skippedTokens.take(4).join(', '),
           });
         }
+        if (parser.startFenRejected) {
+          // Başlıktaki konum okunamadı: hamleler standart açılıştan
+          // oynandı, yani ekrandaki parti PGN'deki parti olmayabilir.
+          _warning = t('game.pgnFenIgnored');
+        }
         if (parser.moves.isEmpty) {
           _warning = t('game.pgnNoMoves');
         }
@@ -238,6 +265,7 @@ class _GameScreenState extends State<GameScreen> {
       _history.add(entry);
       _cursor = _history.length - 1;
       _resultText = null;
+      _savedToList = false;
     });
 
     _announce(entry);
@@ -470,7 +498,10 @@ class _GameScreenState extends State<GameScreen> {
     if (_resigned || _resultText != null) return;
 
     if (result.bestMoveUci.isEmpty) {
-      setState(() => _engineStalled = true);
+      setState(() {
+        _engineStalled = true;
+        _warning = t('game.engineStalled');
+      });
       return;
     }
     // Kullanıcı bu sırada geri aldıysa hamleyi uygulama.
@@ -478,7 +509,10 @@ class _GameScreenState extends State<GameScreen> {
 
     final move = _game.moveFromUci(result.bestMoveUci);
     if (move == null) {
-      setState(() => _engineStalled = true);
+      setState(() {
+        _engineStalled = true;
+        _warning = t('game.engineStalled');
+      });
       return;
     }
 
@@ -504,6 +538,11 @@ class _GameScreenState extends State<GameScreen> {
       _cursor = _history.length - 1;
       _game = _positionAt(_cursor);
       _resultText = null;
+      // Pes edip geri alınca tahta kilitli kalıyordu: sonuç siliniyor
+      // ama "pes edildi" bayrağı duruyordu. Tahta kapalı (`atLive`
+      // false), motor da oynamıyor (`_maybePlayEngineMove` ilk satırda
+      // bu bayrağa bakıyor); tek çıkış oyunu baştan başlatmaktı.
+      _resigned = false;
     });
     _afterPositionChanged();
     // Geri alınca sıra motora geçmiş olabilir (siyah oynarken ilk
@@ -651,6 +690,7 @@ class _GameScreenState extends State<GameScreen> {
       _evalScoreCp = null;
       _resigned = false;
       _engineStalled = false;
+      _savedToList = false;
     });
     if (widget.mode == GameMode.versusEngine) _maybePlayEngineMove();
   }
@@ -773,6 +813,7 @@ class _GameScreenState extends State<GameScreen> {
       if (mounted) AppDialogs.snack(context, t('lists.saveFailed'));
       return;
     }
+    _savedToList = true;
     if (mounted) AppDialogs.snack(context, t('game.saved'));
   }
 
@@ -841,7 +882,7 @@ class _GameScreenState extends State<GameScreen> {
       }
     }
 
-    return Scaffold(
+    final screen = Scaffold(
       appBar: AppBar(
         title: Text(
           widget.title ??
@@ -872,7 +913,15 @@ class _GameScreenState extends State<GameScreen> {
                 if (!engineTurn) _runAnalysis();
               } else {
                 _analysisToken++;
-                EngineService.instance.stopAnalysis();
+                // Analizi **kapatmak** da motorun aramasını kesiyordu:
+                // ikisi tek bir Stockfish sürecini paylaşıyor, `stop`
+                // sıradaki hamle aramasına gidiyor ve motor ya zayıf
+                // oynuyor ya hiç oynamıyordu. Açarkenki koruma vardı,
+                // kapatırkenki yoktu.
+                final engineSearching =
+                    widget.mode == GameMode.versusEngine &&
+                        _game.sideToMove != widget.playerColor;
+                if (!engineSearching) EngineService.instance.stopAnalysis();
                 setState(() {
                   _analysis = null;
                   _evalScoreCp = null;
@@ -1043,6 +1092,14 @@ class _GameScreenState extends State<GameScreen> {
           ),
         ),
       ),
+    );
+
+    // Kaydedilmemiş oyunda geri tuşu hamleleri sessizce siliyordu:
+    // yirmi hamlelik bir oyun sistem geri jestiyle yok oluyordu.
+    return PopScope(
+      canPop: !_unsaved,
+      onPopInvokedWithResult: _onPopInvoked,
+      child: screen,
     );
   }
 

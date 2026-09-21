@@ -90,8 +90,10 @@ olacak şekilde yazıldı. Çizimin kendisi değişmedi.
   kapatılırsa kullanılabilir, o da uygulamanın özgür yazılım olmaktan
   çıkması demektir.
 - **shahi-ivory-brown**: türetme ve değiştirme yasak.
-- **Lichess tahta görselleri**: uygulamada tahta görseli yok; tahta
-  kullanıcının seçtiği iki renkten çiziliyor.
+- **Lichess taş takımları** (yukarıdakiler): alınmadı. Lichess'in
+  **tahta dokuları** ise alındı; bkz. "Lichess'ten alınan dokular".
+  Bu satır eskiden "uygulamada tahta görseli yok" diyordu; dokular
+  eklendiğinde güncellenmemişti.
 
 ---
 
@@ -147,6 +149,16 @@ lisansıyla alınamazlardı.
 Dosyalar olduğu gibi kopyalanmıştır, yalnızca adları projenin adlandırma
 düzenine uydurulmuştur (`blue-marble.jpg` → `blue_marble.jpg`,
 `canvas2.jpg` → `canvas.jpg`, `grey.jpg` → `stone.jpg`).
+
+### Yazı tipi — `assets/fonts/`
+
+`NotoSansSymbols2-Regular.ttf`, Google'ın Noto ailesinden,
+**SIL Open Font License 1.1** ile. Lisans metni dosyanın yanında
+duruyor: `assets/fonts/OFL.txt`.
+
+Uygulamayla birlikte geliyor çünkü satranç taşı simgeleri (♔♕♖) Windows
+ile Android'de farklı yazı tipleriyle çiziliyordu; ana menü simgesi,
+uygulama simgesi ve tahta üçü ayrı görünüyordu.
 
 ### Kare renkleri ve kare adları
 

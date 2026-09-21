@@ -45,6 +45,14 @@ değişmez. Lisans değişikliği 3.0.0 ve sonrası için geçerlidir.
 
 ## Varlıklar
 
-Taş takımlarının çizeni ve lisansı [ASSETS.md](ASSETS.md) içinde tek tek
-listelenmiştir. Sesler, uygulama simgesi ve tahta çizimi bu proje için
-üretilmiştir ve uygulamanın lisansı altındadır.
+Taş takımlarının ve tahtaların çizeni ile lisansı
+[ASSETS.md](ASSETS.md) içinde tek tek listelenmiştir. Özetle:
+
+- **Bu proje için üretilenler** (uygulamanın lisansı altında): sesler,
+  uygulama simgesi, düz renkli tahtalar ve `tools/assets/make_boards.py`
+  ile üretilen üç doku (`dark_wood`, `walnut`, `oak`).
+- **Lichess'ten alınanlar**: on yedi tahta dokusu ve bir bölüm taş
+  takımı, **AGPLv3+** ile. Uygulamanın AGPLv3 olmasının sebebi budur.
+- **Yazı tipi**: `NotoSansSymbols2-Regular.ttf`, **SIL OFL 1.1**;
+  lisans metni `assets/fonts/OFL.txt` içinde uygulamayla birlikte
+  dağıtılır.

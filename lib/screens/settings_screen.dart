@@ -9,6 +9,7 @@ import '../l10n/app_strings.dart';
 import '../models/chess_engine.dart' as engine;
 import '../services/backup_service.dart';
 import '../services/settings_service.dart';
+import '../services/file_pick.dart';
 import '../services/text_file_service.dart';
 import '../widgets/app_dialogs.dart';
 import '../widgets/picker_panel.dart';
@@ -315,7 +316,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
     );
     if (!mounted) return;
 
-    String? path;
+    final String? path;
     try {
       path = await TextFileService.save(
         'chess-library-${_stamp()}',
@@ -323,22 +324,28 @@ class _SettingsScreenState extends State<SettingsScreen> {
         extension: 'json',
       );
     } catch (_) {
-      path = null;
+      // Eskiden burada "içerik panoya kopyalandı" yazıyordu; böyle bir
+      // kopyalama yok. (Açılış ve bulmaca dışa aktarmasında gerçekten
+      // panoya düşülüyor, orası doğru.)
+      if (mounted) AppDialogs.snack(context, t('backup.exportFailed'));
+      return;
     }
     if (!mounted) return;
-    AppDialogs.snack(
-      context,
-      path == null ? t('puzzles.exportFallback') : t('backup.exported'),
-    );
+    // Kaydetme penceresini kapatmak iptaldir; sessiz geçilir.
+    if (path == null) return;
+    AppDialogs.snack(context, t('backup.exported'));
   }
 
   Future<void> _importBackup() async {
-    final picked = await TextFileService.pick();
-    if (!mounted) return;
-    if (picked == null) {
-      AppDialogs.snack(context, t('puzzles.fileEmpty'));
+    final PickedText? picked;
+    try {
+      picked = await TextFileService.pick();
+    } catch (error) {
+      if (mounted) AppDialogs.snack(context, pickFailureMessage(error));
       return;
     }
+    if (!mounted || picked == null) return;
+    final content = picked.content;
 
     final BackupSummary summary;
     final Map<String, Object?> data;
@@ -348,7 +355,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
         message: t('backup.reading'),
         task: (report) async {
           report(0.3);
-          return BackupService.instance.read(picked.content);
+          return BackupService.instance.read(content);
         },
       );
       summary = read.$1;
@@ -519,6 +526,14 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   title: Text(t(entry.$2)),
                   onTap: () {
                     _settings.language = entry.$1;
+                    // Sekmeler yeniden kurulsun.
+                    //
+                    // Ana kabugun sayfalari `const`: Flutter ayni widget
+                    // ornegini gorunce o alt agaci hic yeniden kurmuyor
+                    // ve Oyna / Bulmacalar / Acilislar / Listeler eski
+                    // dilde kaliyordu. Bu sayac zaten "verileri sifirla"
+                    // ve "yedekten donme" icin ayni isi yapiyor.
+                    dataVersion.value++;
                     setSheetState(() {});
                   },
                 ),

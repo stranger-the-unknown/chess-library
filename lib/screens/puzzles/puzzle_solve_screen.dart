@@ -379,8 +379,16 @@ class _PuzzleSolveScreenState extends State<PuzzleSolveScreen> {
     SoundService.instance.playForSan(entry.san, opponent: true);
   }
 
+  /// Bulmacayı başa sarar ve **bekleyen işleri iptal eder**.
+  ///
+  /// Eskiden yalnızca tahtayı sıfırlıyordu: rakip cevabı beklenirken
+  /// basıldığında bekleyen iş konumun değiştiğini görüp `_busy`'yi
+  /// indirmeden çıkıyor, tahta ve ileri/geri düğmeleri kilitli kalıyordu.
+  /// Tek çıkış ekrandan çıkıp geri dönmekti.
   void _retry() {
+    _loadToken++;
     setState(() {
+      _busy = false;
       _game = _freshGame();
       _onSolutionLine = _puzzle.hasSolution;
       _moves.clear();
@@ -391,12 +399,14 @@ class _PuzzleSolveScreenState extends State<PuzzleSolveScreen> {
   }
 
   Future<void> _revealSolution() async {
-    final token = _loadToken;
     final line = _puzzle.hasSolution
         ? _puzzle.solution
         : (_baseline?.pvUci ?? const <String>[]);
     if (line.isEmpty) return;
     _retry();
+    // Jeton `_retry`'den sonra alınıyor: o çağrı bekleyen işleri iptal
+    // etmek için jetonu ilerletiyor.
+    final token = _loadToken;
     // Çözüm oynanırken tahta kapalı. Eskiden açık kalıyordu: 700 ms'lik
     // adımlar arasında kullanıcı hamle yapabiliyor ve tahta karışıyordu.
     setState(() => _busy = true);
@@ -592,7 +602,10 @@ class _PuzzleSolveScreenState extends State<PuzzleSolveScreen> {
                     MaterialPageRoute(
                       builder: (_) => GameScreen(
                         mode: GameMode.versusEngine,
-                        startFen: _puzzle.fen,
+                        // "Devam" tahtadaki konumdan başlar; eskiden
+                        // bulmacanın ilk konumuna dönüyordu, yani
+                        // bulduğun hamleler siliniyordu.
+                        startFen: _game.fen,
                         playerColor: _solverColor,
                         title: t('puzzles.continueVsEngine'),
                       ),

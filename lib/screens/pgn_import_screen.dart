@@ -29,9 +29,15 @@ class PgnImportScreen extends StatefulWidget {
 }
 
 class _PgnImportScreenState extends State<PgnImportScreen> {
-  late final Set<int> _selected = Set<int>.from(
-    List<int>.generate(widget.games.length, (i) => i),
-  );
+  /// Başlangıçta yalnızca **eksiksiz okunan** oyunlar seçili.
+  ///
+  /// Eskiden hepsi seçili geliyordu: hamlesi atlanmış ya da başlığındaki
+  /// konum okunamamış bir oyun, kullanıcı fark etmeden listeye
+  /// kaydediliyordu. Şerit hâlâ hepsini gösteriyor; isteyen işaretler.
+  late final Set<int> _selected = {
+    for (int i = 0; i < widget.games.length; i++)
+      if (widget.games[i].isClean) i,
+  };
   bool _saving = false;
 
   /// Okunamayan hamlesi olan oyunlar listeden gizlensin mi?
@@ -41,14 +47,13 @@ class _PgnImportScreenState extends State<PgnImportScreen> {
   /// değiştirilmiyor, yalnızca görünenlerle kesiştiriliyor.
   bool _hidePartial = false;
 
-  /// Hamlesi eksik okunan oyun sayısı.
-  int get _partialCount =>
-      widget.games.where((g) => g.skippedCount > 0).length;
+  /// Eksik okunan oyun sayısı (atlanan hamle ya da reddedilen konum).
+  int get _partialCount => widget.games.where((g) => !g.isClean).length;
 
   /// Listede gösterilen oyunların sıra numaraları.
   List<int> get _shown => [
         for (int i = 0; i < widget.games.length; i++)
-          if (!_hidePartial || widget.games[i].skippedCount == 0) i,
+          if (!_hidePartial || widget.games[i].isClean) i,
       ];
 
   List<PgnGame> get _selectedGames => [
@@ -376,6 +381,17 @@ class _PgnImportScreenState extends State<PgnImportScreen> {
                           ],
                         ],
                       ),
+                      if (game.fenRejected)
+                        Padding(
+                          padding: const EdgeInsets.only(top: 2),
+                          child: Text(
+                            t('pgn.fenIgnored'),
+                            style: TextStyle(
+                              fontSize: 11,
+                              color: scheme.error,
+                            ),
+                          ),
+                        ),
                       if (game.skippedCount > 0)
                         Padding(
                           padding: const EdgeInsets.only(top: 3),

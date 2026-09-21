@@ -17,6 +17,7 @@ import '../../widgets/range_dialog.dart';
 import '../board_editor_screen.dart';
 import 'puzzle_solve_screen.dart';
 import '../../widgets/cursors.dart';
+import '../../services/file_pick.dart';
 import '../../services/text_file_service.dart';
 
 import 'package:flutter/services.dart';
@@ -216,6 +217,9 @@ class _PuzzleListScreenState extends State<PuzzleListScreen> {
       label: t('puzzles.nameOptional'),
       initialValue: t('puzzles.defaultName', {'n': _all.length + 1}),
     );
+    // Ad penceresini iptal etmek bulmacayı iptal eder. Eskiden iptale
+    // rağmen adsız bir bulmaca ekleniyordu.
+    if (title == null || !mounted) return;
     await _service.addPuzzle(widget.collection, fen: fen, title: title);
     await _load();
   }
@@ -287,12 +291,14 @@ class _PuzzleListScreenState extends State<PuzzleListScreen> {
   }
 
   Future<void> _importFromFile() async {
-    final picked = await TextFileService.pick();
-    if (picked == null) {
-      if (mounted) AppDialogs.snack(context, t('puzzles.fileEmpty'));
+    final PickedText? picked;
+    try {
+      picked = await TextFileService.pick();
+    } catch (error) {
+      if (mounted) AppDialogs.snack(context, pickFailureMessage(error));
       return;
     }
-    if (!mounted) return;
+    if (!mounted || picked == null) return;
     await _runImport(picked.content);
   }
 

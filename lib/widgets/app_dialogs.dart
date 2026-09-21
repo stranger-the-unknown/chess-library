@@ -197,7 +197,11 @@ class AppDialogs {
       return await task((value) => progress.value = value);
     } finally {
       if (navigator.canPop()) navigator.pop();
-      progress.dispose();
+      // `progress.dispose()` bilerek çağrılmıyor: diyalog kapanma
+      // animasyonu boyunca ekranda kalıyor ve bu bildiriciyi dinlemeyi
+      // sürdürüyor; hemen atılınca ayrılırken "disposed" hatası
+      // veriyordu. Bildirici bu çağrıya özel, dışarıda tutulmuyor:
+      // diyalog gidince çöp toplayıcıya kalıyor.
     }
   }
 

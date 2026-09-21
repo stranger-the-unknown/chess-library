@@ -1,8 +1,9 @@
 import 'dart:convert';
-import 'dart:io';
 
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/foundation.dart';
+
+import 'file_pick.dart';
 
 /// Düz metin dosyalarını açar ve kaydeder.
 ///
@@ -14,25 +15,15 @@ class TextFileService {
 
   /// Kullanıcıya bir metin dosyası seçtirir ve içeriğini döner.
   ///
-  /// Seçim iptal edilirse ya da dosya boşsa `null` döner.
+  /// İptal edilirse `null`; dosya uygun değilse [PickException]. Yedek
+  /// dosyası `.json`, açılış ve bulmaca listeleri `.txt` uzantılıdır;
+  /// `.pgn` ve `.csv` de elle hazırlanmış listelerde geçiyor.
   static Future<PickedText?> pick() async {
-    final result = await FilePicker.platform.pickFiles(
-      type: FileType.any,
-      withData: true,
+    final picked = await pickTextFile(
+      extensions: const ['txt', 'json', 'pgn', 'csv', 'fen'],
     );
-    if (result == null || result.files.isEmpty) return null;
-
-    final file = result.files.first;
-    String? text;
-    final bytes = file.bytes;
-    if (bytes != null) {
-      text = _decode(bytes);
-    } else if (file.path != null) {
-      text = _decode(await File(file.path!).readAsBytes());
-    }
-    if (text == null || text.trim().isEmpty) return null;
-
-    return PickedText(name: file.name, content: text);
+    if (picked == null) return null;
+    return PickedText(name: picked.name, content: picked.content);
   }
 
   /// Metni dosya olarak kaydettirir; seçilen yolu döner.
@@ -49,15 +40,6 @@ class TextFileService {
       fileName: '${safe.isEmpty ? 'chess-library' : safe}.$extension',
       bytes: Uint8List.fromList(utf8.encode(content)),
     );
-  }
-
-  /// Metin dosyaları çoğunlukla UTF-8'dir; değilse Latin-1'e düşülür.
-  static String _decode(List<int> bytes) {
-    try {
-      return utf8.decode(bytes);
-    } catch (_) {
-      return latin1.decode(bytes);
-    }
   }
 }
 

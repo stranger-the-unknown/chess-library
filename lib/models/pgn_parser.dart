@@ -28,6 +28,12 @@ class PgnParser {
   /// Çözümlenemeyen hamle metinleri (kullanıcıya uyarı göstermek için).
   final List<String> skippedTokens = <String>[];
 
+  /// `[FEN "..."]` başlığı vardı ama okunamadı mı?
+  ///
+  /// Böyle bir oyunda hamleler **standart açılıştan** oynanıyor ve
+  /// ortaya bambaşka bir parti çıkabiliyor. Eskiden bu sessizdi.
+  bool startFenRejected = false;
+
   PgnParser() {
     game = engine.ChessGame();
   }
@@ -36,6 +42,7 @@ class PgnParser {
     moves.clear();
     headers.clear();
     skippedTokens.clear();
+    startFenRejected = false;
     startFen = null;
     gameResult = null;
 
@@ -49,6 +56,7 @@ class PgnParser {
         startFen = fenHeader;
         game = engine.ChessGame.fromFen(fenHeader);
       } else {
+        startFenRejected = fenHeader != null;
         game = engine.ChessGame();
       }
 
@@ -342,6 +350,7 @@ class PgnParser {
       startFen: parser.startFen,
       result: parser.gameResult,
       skippedCount: parser.skippedTokens.length,
+      fenRejected: parser.startFenRejected,
     );
   }
 
@@ -437,12 +446,19 @@ class PgnGame {
   /// Çözümlenemeyen hamle sayısı (0 değilse oyun eksik okunmuştur).
   final int skippedCount;
 
+  /// Başlıktaki konum okunamadı; hamleler standart açılıştan oynandı.
+  final bool fenRejected;
+
+  /// Oyun olduğu gibi okunabildi mi?
+  bool get isClean => skippedCount == 0 && !fenRejected;
+
   const PgnGame({
     required this.headers,
     required this.uciMoves,
     this.startFen,
     this.result,
     this.skippedCount = 0,
+    this.fenRejected = false,
   });
 
   String get white => _headerOrUnknown('White');

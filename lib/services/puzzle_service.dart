@@ -4,6 +4,7 @@ import 'package:flutter/services.dart' show rootBundle;
 import 'package:shared_preferences/shared_preferences.dart';
 
 import 'corrupt_data.dart';
+import 'prefs_write.dart';
 
 import '../models/chess_engine.dart' as engine;
 import '../models/puzzle.dart';
@@ -99,7 +100,8 @@ class PuzzleService {
 
   Future<void> _saveCollections() async {
     final prefs = await SharedPreferences.getInstance();
-    await prefs.setString(
+    await writeString(
+      prefs,
       _collectionsKey,
       jsonEncode(_collections!.map((c) => c.toJson()).toList()),
     );
@@ -446,7 +448,7 @@ class PuzzleService {
 
   Future<void> _saveOverrides() async {
     final prefs = await SharedPreferences.getInstance();
-    await prefs.setString(_overridesKey, jsonEncode(_overrides));
+    await writeString(prefs, _overridesKey, jsonEncode(_overrides));
   }
 
   // ---------------------------------------------------------------------
@@ -477,7 +479,8 @@ class PuzzleService {
 
   Future<void> _saveProgress() async {
     final prefs = await SharedPreferences.getInstance();
-    await prefs.setString(
+    await writeString(
+      prefs,
       _progressKey,
       jsonEncode(_progress!.map((key, value) => MapEntry(key, value.toJson()))),
     );

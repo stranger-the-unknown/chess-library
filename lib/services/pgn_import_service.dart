@@ -1,9 +1,10 @@
 import 'dart:convert';
-import 'dart:io';
 
 import 'package:file_picker/file_picker.dart';
 
 import 'package:flutter/foundation.dart';
+
+import 'file_pick.dart';
 
 import '../models/pgn_parser.dart';
 import '../models/playlist.dart';
@@ -13,37 +14,13 @@ import 'storage_service.dart';
 class PgnImportService {
   PgnImportService._();
 
-  /// Kullanıcıya dosya seçtirir ve içeriği metin olarak döner.
+  /// Kullanıcıya PGN dosyası seçtirir ve içeriği metin olarak döner.
   ///
-  /// Seçim iptal edilirse ya da dosya okunamazsa `null` döner.
+  /// İptal edilirse `null`; dosya uygun değilse [PickException].
   static Future<PickedPgn?> pickFile() async {
-    final result = await FilePicker.platform.pickFiles(
-      type: FileType.any,
-      withData: true,
-    );
-    if (result == null || result.files.isEmpty) return null;
-
-    final file = result.files.first;
-    String? text;
-
-    final bytes = file.bytes;
-    if (bytes != null) {
-      text = _decode(bytes);
-    } else if (file.path != null) {
-      text = _decode(await File(file.path!).readAsBytes());
-    }
-    if (text == null || text.trim().isEmpty) return null;
-
-    return PickedPgn(name: file.name, content: text);
-  }
-
-  /// PGN dosyaları çoğunlukla UTF-8'dir; değilse Latin-1'e düşülür.
-  static String _decode(List<int> bytes) {
-    try {
-      return utf8.decode(bytes);
-    } catch (_) {
-      return latin1.decode(bytes);
-    }
+    final picked = await pickTextFile(extensions: const ['pgn', 'txt']);
+    if (picked == null) return null;
+    return PickedPgn(name: picked.name, content: picked.content);
   }
 
   /// Listeyi PGN dosyası olarak kaydeder.

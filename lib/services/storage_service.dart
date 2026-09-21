@@ -4,6 +4,7 @@ import 'package:flutter/foundation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import 'corrupt_data.dart';
+import 'prefs_write.dart';
 
 import '../models/playlist.dart';
 
@@ -134,8 +135,7 @@ class StorageService extends ChangeNotifier {
   Future<void> _save({bool notify = true}) async {
     final prefs = await SharedPreferences.getInstance();
     final payload = jsonEncode(_cache!.map((p) => p.toJson()).toList());
-    var ok = await prefs.setString(_key, payload);
-    if (!ok) ok = await prefs.setString(_key, payload);
+    final ok = await writeString(prefs, _key, payload);
     if (!ok) throw StateError('listeler diske yazılamadı');
     if (notify) notifyListeners();
   }

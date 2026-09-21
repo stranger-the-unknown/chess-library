@@ -12,6 +12,7 @@ import '../models/game_filter.dart';
 import '../models/pgn_parser.dart';
 import '../models/playlist.dart';
 import '../models/puzzle_search.dart';
+import '../services/file_pick.dart';
 import '../services/pgn_import_service.dart';
 import '../services/storage_service.dart';
 import '../theme/app_theme.dart';
@@ -202,17 +203,14 @@ class _PlaylistDetailScreenState extends State<PlaylistDetailScreen> {
 
   /// Bir PGN dosyasındaki tüm oyunları bu listeye ekler.
   Future<void> _importPgnFile() async {
-    PickedPgn? picked;
+    final PickedPgn? picked;
     try {
       picked = await PgnImportService.pickFile();
-    } catch (_) {
-      picked = null;
-    }
-    if (!mounted) return;
-    if (picked == null) {
-      AppDialogs.snack(context, t('pgn.readError'));
+    } catch (error) {
+      if (mounted) AppDialogs.snack(context, pickFailureMessage(error));
       return;
     }
+    if (!mounted || picked == null) return;
 
     final content = picked.content;
     final games = await AppDialogs.runWithProgress<List<PgnGame>>(

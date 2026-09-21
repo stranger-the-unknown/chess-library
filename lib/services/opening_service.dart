@@ -3,6 +3,7 @@ import 'dart:convert';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import 'corrupt_data.dart';
+import 'prefs_write.dart';
 
 import '../l10n/app_strings.dart';
 import '../models/chess_engine.dart' as engine;
@@ -80,7 +81,8 @@ class OpeningService {
 
   Future<void> _saveCustom() async {
     final prefs = await SharedPreferences.getInstance();
-    await prefs.setString(
+    await writeString(
+      prefs,
       _customKey,
       jsonEncode(_custom!.map((o) => o.toJson()).toList()),
     );
@@ -368,7 +370,7 @@ class OpeningService {
     _progress = <String, OpeningProgress>{};
     await _saveProgress();
     _notes = <String, String>{};
-    await prefs.setString(_notesKey, jsonEncode(_notes));
+    await writeString(prefs, _notesKey, jsonEncode(_notes));
     _hidden = <String>{};
     await prefs.setStringList(_hiddenKey, const []);
     return count;
@@ -433,7 +435,7 @@ class OpeningService {
     if (progressChanged) await _saveProgress();
     if (notesChanged) {
       final prefs = await SharedPreferences.getInstance();
-      await prefs.setString(_notesKey, jsonEncode(notes));
+      await writeString(prefs, _notesKey, jsonEncode(notes));
     }
   }
 
@@ -517,7 +519,7 @@ class OpeningService {
       notes[openingId] = note;
     }
     final prefs = await SharedPreferences.getInstance();
-    await prefs.setString(_notesKey, jsonEncode(notes));
+    await writeString(prefs, _notesKey, jsonEncode(notes));
   }
 
   // ---------------------------------------------------------------------
@@ -548,7 +550,8 @@ class OpeningService {
 
   Future<void> _saveProgress() async {
     final prefs = await SharedPreferences.getInstance();
-    await prefs.setString(
+    await writeString(
+      prefs,
       _progressKey,
       jsonEncode(_progress!.map((k, v) => MapEntry(k, v.toJson()))),
     );

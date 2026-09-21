@@ -10,6 +10,7 @@ import '../../theme/app_theme.dart';
 import '../../widgets/app_dialogs.dart';
 import 'opening_study_screen.dart';
 import 'package:flutter/services.dart';
+import '../../services/file_pick.dart';
 import '../../services/text_file_service.dart';
 
 /// Açılış kütüphanesi: aileye göre gruplanmış varyantlar.
@@ -225,17 +226,22 @@ class _OpeningListScreenState extends State<OpeningListScreen> {
   }
 
   Future<void> _importFromFile() async {
-    final picked = await TextFileService.pick();
-    if (picked == null) {
-      if (mounted) AppDialogs.snack(context, t('puzzles.fileEmpty'));
+    final PickedText? picked;
+    try {
+      picked = await TextFileService.pick();
+    } catch (error) {
+      if (mounted) AppDialogs.snack(context, pickFailureMessage(error));
       return;
     }
-    if (!mounted) return;
+    if (!mounted || picked == null) return;
+    // Kapanistaki (closure) kullanim icin ayri degisken: cozumleyici
+    // govdesi disarida atanan final bir yereli kapanis icinde daraltmiyor.
+    final content = picked.content;
     final result = await AppDialogs.runWithProgress<ImportResult>(
       context,
       message: t('openings.importing'),
       task: (report) => _service.importText(
-        picked.content,
+        content,
         onProgress: (done, total) => report(total == 0 ? 0 : done / total),
       ),
     );

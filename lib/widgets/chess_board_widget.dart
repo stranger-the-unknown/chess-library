@@ -107,6 +107,14 @@ class _ChessBoardWidgetState extends State<ChessBoardWidget>
     duration: const Duration(milliseconds: 170),
   );
   engine.ChessMove? _animatingMove;
+
+  /// Hangi animasyonun sürdüğünü ayırt eden sayaç.
+  ///
+  /// `forward` yeniden çağrılınca önceki `TickerFuture` **iptal** oluyor
+  /// ve `whenComplete` iptalde de çalışıyordu: eski animasyonun bitiş
+  /// işi yeni animasyonun durumunu siliyor, hızlı ileri sarmada taş
+  /// uçarken kayboluyordu.
+  int _animationRun = 0;
   engine.Piece? _animatingPiece;
 
   @override
@@ -116,6 +124,13 @@ class _ChessBoardWidgetState extends State<ChessBoardWidget>
     if (!identical(oldWidget.game, widget.game)) {
       _selected = null;
       _legalFromSelected = const [];
+      // Sürükleme yarıda kalmışsa taş parmağın altında asılı kalıyordu.
+      _dragFrom = null;
+      _dragPosition = null;
+    }
+    if (!widget.interactive) {
+      _dragFrom = null;
+      _dragPosition = null;
     }
 
     final previous = oldWidget.lastMove;
@@ -126,16 +141,26 @@ class _ChessBoardWidgetState extends State<ChessBoardWidget>
         current.uci != previous?.uci) {
       final piece = widget.game.pieceAt(current.to);
       if (piece != null) {
+        final run = ++_animationRun;
         _animatingMove = current;
         _animatingPiece = piece;
         _animation.forward(from: 0).whenComplete(() {
-          if (!mounted) return;
+          // İptal edilen animasyon da buraya düşüyor; yalnızca en son
+          // başlatılan kendi izini silebilir.
+          if (!mounted || run != _animationRun) return;
           setState(() {
             _animatingMove = null;
             _animatingPiece = null;
           });
         });
       }
+    } else if (current?.uci != previous?.uci && _animatingMove != null) {
+      // Geri giderken (animasyon kapalı) süren animasyon duruyor: eski
+      // hamlenin uçan taşı yeni konumda başka bir taşı gizleyebiliyordu.
+      _animationRun++;
+      _animation.stop();
+      _animatingMove = null;
+      _animatingPiece = null;
     }
   }
 
@@ -320,6 +345,17 @@ class _ChessBoardWidgetState extends State<ChessBoardWidget>
     });
   }
 
+  /// Sürükleme yarıda kesildi (izin penceresi, gelen arama, ikinci
+  /// parmak). Eskiden yalnızca `onPanEnd` temizliyordu: taş karesinden
+  /// eksik, büyütülmüş kopyası parmağın son yerinde asılı kalıyordu.
+  void _onPanCancel() {
+    if (_dragFrom == null && _dragPosition == null) return;
+    setState(() {
+      _dragFrom = null;
+      _dragPosition = null;
+    });
+  }
+
   void _onPanUpdate(DragUpdateDetails details) {
     if (_dragFrom == null) return;
     setState(() => _dragPosition = details.localPosition);
@@ -426,6 +462,7 @@ class _ChessBoardWidgetState extends State<ChessBoardWidget>
                 onPanStart: (details) => _onPanStart(details, square),
                 onPanUpdate: _onPanUpdate,
                 onPanEnd: (_) => _onPanEnd(square),
+                onPanCancel: _onPanCancel,
                 child: SizedBox(
                   width: size,
                   height: size,

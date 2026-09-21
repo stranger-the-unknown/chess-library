@@ -117,6 +117,7 @@ class Strings {
     'backup.reading': 'Dosya okunuyor...',
     'backup.applying': 'Veriler yazılıyor...',
     'backup.exported': 'Yedek dosyaya yazıldı.',
+    'backup.exportFailed': 'Yedek dosyaya yazılamadı.',
     'backup.imported': 'Yedek geri yüklendi.',
     'backup.badFile': 'Bu dosya bir Chess Library yedeği değil.',
     'backup.newerFormat': 'Bu yedek uygulamanın daha yeni bir sürümüyle alınmış. Önce uygulamayı güncelleyin.',
@@ -261,6 +262,12 @@ class Strings {
     'game.restartMessage': 'Tüm hamleler silinecek. Devam edilsin mi?',
     'game.nothingToSave': 'Kaydedilecek hamle yok.',
     'game.defaultSaveName': 'Oyun',
+    'game.exitTitle': 'Oyundan çıkılsın mı?',
+    'game.exitMessage':
+        'Bu oyun bir listeye kaydedilmedi; çıkarsan hamleler kaybolur.',
+    'game.exitConfirm': 'Çık',
+    'game.engineStalled':
+        'Motor cevap vermedi. Tahta iki tarafa da açıldı; oyuna sen devam edebilirsin.',
     'game.fenCorrupt':
         'Kayıttaki konum okunamadı; başlangıç konumu kuruldu.',
     'game.newList': 'Yeni liste',
@@ -280,7 +287,14 @@ class Strings {
     'game.forward': 'İleri',
     'game.toEnd': 'Sona git',
     'game.pgnUnreadable': 'PGN çözümlenemedi.',
+    'file.wrongType':
+        'Bu dosya metin değil. PGN (.pgn) ya da metin (.txt) dosyası seç.',
+    'file.tooLarge': 'Dosya çok büyük (en çok 32 MB).',
+    'file.empty': 'Dosya boş.',
     'game.pgnNoMoves': 'PGN içinde okunabilir hamle bulunamadı.',
+    'game.pgnFenIgnored':
+        'Başlıktaki konum okunamadı; hamleler başlangıç konumundan oynandı.',
+    'pgn.fenIgnored': 'Başlıktaki konum okunamadı',
     'game.pgnSkipped': '{count} hamle okunamadı: {tokens}',
     'game.promotion': 'Terfi',
     'game.resign': 'Pes et',
@@ -417,7 +431,6 @@ class Strings {
     'puzzles.exportEmpty': 'Bu listede verilecek bulmaca yok.',
     'puzzles.exported': '{count} bulmaca dosyaya yazıldı.',
     'puzzles.exportFallback': 'Dosya kaydedilemedi; içerik panoya kopyalandı.',
-    'puzzles.fileEmpty': 'Dosya okunamadı ya da boş.',
     'puzzles.oneFenPerLine': 'Her satıra bir FEN',
     'puzzles.imported': '{count} pozisyon eklendi.',
     'puzzles.random': 'Rastgele bulmaca',
@@ -622,6 +635,7 @@ class Strings {
     'backup.reading': 'Reading file...',
     'backup.applying': 'Writing data...',
     'backup.exported': 'Backup written to file.',
+    'backup.exportFailed': 'The backup could not be written.',
     'backup.imported': 'Backup restored.',
     'backup.badFile': 'This file is not a Chess Library backup.',
     'backup.newerFormat': 'This backup was taken with a newer version of the app. Update the app first.',
@@ -758,6 +772,12 @@ class Strings {
     'game.restartMessage': 'All moves will be deleted. Continue?',
     'game.nothingToSave': 'There are no moves to save.',
     'game.defaultSaveName': 'Game',
+    'game.exitTitle': 'Leave the game?',
+    'game.exitMessage':
+        'This game has not been saved to a list; if you leave, the moves are lost.',
+    'game.exitConfirm': 'Leave',
+    'game.engineStalled':
+        'The engine did not answer. The board is open for both sides, so you can carry on.',
     'game.fenCorrupt':
         'The stored position could not be read; the starting position was set up.',
     'game.newList': 'New list',
@@ -777,7 +797,14 @@ class Strings {
     'game.forward': 'Forward',
     'game.toEnd': 'Go to end',
     'game.pgnUnreadable': 'The PGN could not be parsed.',
+    'file.wrongType':
+        'That file is not text. Pick a PGN (.pgn) or text (.txt) file.',
+    'file.tooLarge': 'The file is too large (32 MB at most).',
+    'file.empty': 'The file is empty.',
     'game.pgnNoMoves': 'No readable moves were found in the PGN.',
+    'game.pgnFenIgnored':
+        'The position in the header could not be read; the moves were played from the starting position.',
+    'pgn.fenIgnored': 'Header position could not be read',
     'game.pgnSkipped': '{count} moves could not be read: {tokens}',
     'game.promotion': 'Promotion',
     'game.resign': 'Resign',
@@ -907,7 +934,6 @@ class Strings {
     'puzzles.exportEmpty': 'This list has nothing to export.',
     'puzzles.exported': 'Wrote {count} puzzles to the file.',
     'puzzles.exportFallback': 'Could not save the file; copied to clipboard.',
-    'puzzles.fileEmpty': 'The file could not be read or is empty.',
     'puzzles.oneFenPerLine': 'One FEN per line',
     'puzzles.imported': '{count} positions added.',
     'puzzles.random': 'Random puzzle',

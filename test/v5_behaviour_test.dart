@@ -112,7 +112,13 @@ void main() {
         tester,
         PgnImportScreen(games: games, suggestedName: 'Deneme'),
       );
-      // Başlangıçta hepsi seçili.
+      // Başlangıçta yalnızca eksiksiz okunan iki oyun seçili: eksik
+      // okunan bir oyun fark edilmeden kaydedilmesin diye (9.0.6).
+      expect(find.textContaining('· 2 seçili'), findsOneWidget);
+
+      // Kullanıcı eksik olanı da isterse elle işaretliyor.
+      await tester.tap(find.text('Eksik - Rakip'));
+      await tester.pumpAndSettle();
       expect(find.textContaining('· 3 seçili'), findsOneWidget);
 
       await tester.tap(find.byType(FilterChip));
@@ -154,6 +160,8 @@ void main() {
         tester,
         PgnImportScreen(games: games, suggestedName: 'Deneme'),
       );
+      await tester.tap(find.text('Eksik - Rakip'));
+      await tester.pumpAndSettle();
       await tester.tap(find.byType(FilterChip));
       await tester.pumpAndSettle();
       await tester.tap(find.byType(FilterChip));
@@ -384,6 +392,14 @@ C00|French|İleri Varyant|e4 e6 d4 d5 e5
         ),
       );
 
+      // Eksik okunan oyun kendiliğinden seçili gelmiyor (9.0.6);
+      // kullanıcı işaretleyince düğme etkinleşiyor.
+      expect(
+        tester.widget<ElevatedButton>(find.byType(ElevatedButton)).onPressed,
+        isNull,
+      );
+      await tester.tap(find.text('Eksik - Rakip'));
+      await tester.pumpAndSettle();
       expect(
         tester.widget<ElevatedButton>(find.byType(ElevatedButton)).onPressed,
         isNotNull,

@@ -3,6 +3,7 @@ import 'package:flutter/services.dart';
 
 import 'l10n/app_strings.dart';
 import 'screens/home_shell.dart';
+import 'services/prefs_write.dart';
 import 'services/settings_service.dart';
 import 'services/sound_service.dart';
 import 'theme/app_theme.dart';
@@ -22,8 +23,41 @@ void unawaited(Future<void> future) {
   future.catchError((_) {});
 }
 
-class ChessApp extends StatelessWidget {
+class ChessApp extends StatefulWidget {
   const ChessApp({super.key});
+
+  @override
+  State<ChessApp> createState() => _ChessAppState();
+}
+
+class _ChessAppState extends State<ChessApp> {
+  /// Diske yazma hatasını tek yerden duyurmak için.
+  final GlobalKey<ScaffoldMessengerState> _messengerKey =
+      GlobalKey<ScaffoldMessengerState>();
+
+  @override
+  void initState() {
+    super.initState();
+    diskWriteFailures.addListener(_onWriteFailure);
+  }
+
+  @override
+  void dispose() {
+    diskWriteFailures.removeListener(_onWriteFailure);
+    super.dispose();
+  }
+
+  /// Bir kayıt diske yazılamadı.
+  ///
+  /// Bulmaca, açılış ve ilerleme kayıtları onlarca ekrandan yazılıyor;
+  /// her çağrıyı ayrı ayrı yakalamak yerine hata burada tek bir yerde
+  /// söyleniyor. Eskiden ekran "kaydedildi" diyor, veri diske hiç
+  /// ulaşmıyordu.
+  void _onWriteFailure() {
+    _messengerKey.currentState
+      ?..hideCurrentSnackBar()
+      ..showSnackBar(SnackBar(content: Text(t('lists.saveFailed'))));
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -49,6 +83,7 @@ class ChessApp extends StatelessWidget {
         );
 
         return MaterialApp(
+          scaffoldMessengerKey: _messengerKey,
           title: t('app.title'),
           debugShowCheckedModeBanner: false,
           theme: AppTheme.light,

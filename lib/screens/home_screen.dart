@@ -9,6 +9,7 @@ import 'package:flutter/services.dart';
 import '../l10n/app_strings.dart';
 import '../models/chess_engine.dart' as engine;
 import '../models/pgn_parser.dart';
+import '../services/file_pick.dart';
 import '../services/pgn_import_service.dart';
 import '../services/engine/engine_service.dart';
 import '../services/settings_service.dart';
@@ -567,17 +568,20 @@ class HomeScreen extends StatelessWidget {
   }
 
   Future<void> _openPgnFile(BuildContext context) async {
-    PickedPgn? picked;
+    final PickedPgn? picked;
     try {
       picked = await PgnImportService.pickFile();
-    } catch (_) {
-      picked = null;
-    }
-    if (!context.mounted) return;
-    if (picked == null) {
-      AppDialogs.snack(context, t('pgn.readError'));
+    } catch (error) {
+      // Dosya uygun değil: türü, boyutu ya da içeriği.
+      if (context.mounted) {
+        AppDialogs.snack(context, pickFailureMessage(error));
+      }
       return;
     }
+    if (!context.mounted) return;
+    // İptal sessizdir. Eskiden pencereyi kapatan herkes "dosya
+    // okunamadı" hatası görüyordu.
+    if (picked == null) return;
     await _handlePgnText(context, picked.content, picked.suggestedListName);
   }
 
