@@ -154,11 +154,15 @@ class _PuzzleSolveScreenState extends State<PuzzleSolveScreen> {
     );
     if (token != _loadToken || !mounted) return;
 
+    // Motor yoksa (ya da çöktüyse) sonuç boş geliyor: skor 0, en iyi
+    // hamle yok. Eskiden bu, 80 santipiyonluk toleransla **her hamlenin
+    // doğru sayılması** demekti. Yargılayamıyorsak yargılamıyoruz.
+    final unavailable = baseline.bestMoveUci.isEmpty;
     setState(() {
-      _baseline = baseline;
+      _baseline = unavailable ? null : baseline;
       _busy = false;
-      _feedback = _Feedback.none;
-      _feedbackText = '';
+      _feedback = unavailable ? _Feedback.finished : _Feedback.none;
+      _feedbackText = unavailable ? t('puzzles.engineUnavailable') : '';
     });
   }
 
@@ -223,7 +227,16 @@ class _PuzzleSolveScreenState extends State<PuzzleSolveScreen> {
     });
     SoundService.instance.playForSan(san);
 
-    if (!_solved) {
+    // "Çözüldü" yalnızca hat bittiğinde yazılıyor.
+    //
+    // Çözümü kayıtlı bir bulmacada (mat-2 gibi) ilk doğru hamleyi bulup
+    // ikincisini batıran biri çözmüş sayılmamalı; eskiden sayılıyordu ve
+    // liste yalan söylüyordu. Çözümü olmayan bulmacalarda ise tek doğru
+    // hamle zaten alıştırmanın tamamı, orada davranış değişmiyor.
+    final lineComplete = !_puzzle.hasSolution ||
+        _game.isCheckmate ||
+        (_onSolutionLine && _moves.length >= _puzzle.solution.length);
+    if (lineComplete && !_solved) {
       await _service.markSolved(_puzzle.id);
       if (mounted) setState(() => _solved = true);
     }

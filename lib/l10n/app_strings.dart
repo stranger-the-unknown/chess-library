@@ -430,6 +430,8 @@ class Strings {
     'puzzles.markSolved': 'Çözüldü işaretle',
     'puzzles.solved': 'Çözüldü',
     'puzzles.analysing': 'Motor pozisyonu inceliyor…',
+    'puzzles.engineUnavailable':
+        'Motor bu cihazda kullanılamıyor; bu bulmaca değerlendirilemez.',
     'puzzles.evaluating': 'Hamlen değerlendiriliyor…',
     'puzzles.wrong': '{move} yerine daha iyisi var. Tekrar dene.',
     'puzzles.correct': 'Doğru! {move}',
@@ -912,6 +914,8 @@ class Strings {
     'puzzles.markSolved': 'Mark as solved',
     'puzzles.solved': 'Solved',
     'puzzles.analysing': 'The engine is studying the position…',
+    'puzzles.engineUnavailable':
+        'The engine is not available on this device, so this puzzle cannot be judged.',
     'puzzles.evaluating': 'Checking your move…',
     'puzzles.wrong': 'There is something better than {move}. Try again.',
     'puzzles.correct': 'Correct! {move}',

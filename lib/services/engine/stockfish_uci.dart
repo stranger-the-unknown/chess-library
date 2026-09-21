@@ -320,8 +320,14 @@ class StockfishUci {
           if (partial == null) return;
           if (partial.depth > reachedDepth) reachedDepth = partial.depth;
           if (partial.nodes > nodes) nodes = partial.nodes;
-          scoreCp = partial.scoreCp;
-          mateIn = partial.mateIn;
+          // Skoru yalnızca skor taşıyan satırlar güncelliyor.
+          // `info depth N currmove ...` satırında skor yok; eskiden bu
+          // satır çalışan skoru sıfıra çekiyordu ve bazen son söz o
+          // oluyordu (eval 0.00, bulmaca yargısı bozuk).
+          if (line.contains(' score ')) {
+            scoreCp = partial.scoreCp;
+            mateIn = partial.mateIn;
+          }
           if (partial.pvUci.isNotEmpty) pv = partial.pvUci;
           if (partial.bestMoveUci.isNotEmpty) best = partial.bestMoveUci;
           onProgress?.call(

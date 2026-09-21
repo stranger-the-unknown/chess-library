@@ -9,6 +9,7 @@ import 'package:flutter/services.dart';
 import '../l10n/app_strings.dart';
 import '../models/chess_engine.dart' as engine;
 import '../models/move_entry.dart';
+import '../models/repetition.dart';
 import '../models/pgn_parser.dart';
 import '../models/playlist.dart';
 import '../services/board_image_service.dart';
@@ -289,7 +290,11 @@ class _GameScreenState extends State<GameScreen> {
     bool opponent = false,
     bool replay = false,
   }) {
-    final gameOver = _game.isCheckmate || _game.isStalemate;
+    // Elli hamle, yetersiz materyal ve üç tekrar da oyunu bitiriyor;
+    // eskiden `_autoResult()` bunları biliyordu ama kimse sormuyordu,
+    // yani şah ve piyon kalmayan oyun sonsuza kadar sürüyordu.
+    final result = _autoResult();
+    final gameOver = result != null;
 
     if (gameOver) {
       SoundService.instance.playGameEnd();
@@ -307,17 +312,34 @@ class _GameScreenState extends State<GameScreen> {
     }
 
     if (!replay && gameOver) {
-      setState(() => _resultText = _autoResult());
-      // review removed
+      setState(() => _resultText = result);
     }
   }
 
   /// Oyun bitince incelemeyi teklif eder.
+  /// Aynı konum üçüncü kez mi tekrarlandı?
+  ///
+  /// Anahtar, FEN'in ilk dört alanı: taş dizilimi, sıra, rok hakları ve
+  /// geçerken alma karesi. Son iki alan (yarım hamle sayacı ve hamle
+  /// numarası) tekrarı bozmamalı. Geçmiş zaten hamle hamle tutuluyor,
+  /// başlangıç konumu da sayıma giriyor.
+  bool get _isThreefold => isThreefold(
+        [
+          _positionAt(-1).fen,
+          for (var i = 0; i <= _cursor && i < _history.length; i++)
+            _history[i].fenAfter,
+        ],
+        _game.fen,
+      );
+
   String? _autoResult() {
     if (_game.isCheckmate) {
       return _game.sideToMove == engine.Color.white ? '0-1' : '1-0';
     }
     if (_game.isStalemate) return '1/2-1/2';
+    // Üç tekrar kendiliğinden beraberlik: uygulamada saat ve "beraberlik
+    // iste" yok, mat/pat gibi doğrudan bitiriliyor.
+    if (_isThreefold) return '1/2-1/2';
     if (_game.fiftyMoveRule) return '1/2-1/2';
     if (_game.insufficientMaterial) return '1/2-1/2';
     return null;
@@ -435,6 +457,10 @@ class _GameScreenState extends State<GameScreen> {
       _resultText = null;
     });
     _afterPositionChanged();
+    // Geri alınca sıra motora geçmiş olabilir (siyah oynarken ilk
+    // hamleden sonra geri almak gibi). Eskiden kimse oynamıyordu:
+    // tahta kilitli kalıyor, menüden yeniden başlatmak gerekiyordu.
+    if (widget.mode == GameMode.versusEngine) _maybePlayEngineMove();
   }
 
   Future<void> _showHint() async {
@@ -768,7 +794,12 @@ class _GameScreenState extends State<GameScreen> {
             onPressed: () {
               setState(() => _analysisOn = !_analysisOn);
               if (_analysisOn) {
-                _runAnalysis();
+                // Sıra motordayken analiz başlatmak motorun aramasını
+                // keser ve motor daha zayıf bir hamle oynar. Motor
+                // oynayınca analiz kendiliğinden başlıyor.
+                final engineTurn = widget.mode == GameMode.versusEngine &&
+                    _game.sideToMove != widget.playerColor;
+                if (!engineTurn) _runAnalysis();
               } else {
                 _analysisToken++;
                 EngineService.instance.stopAnalysis();

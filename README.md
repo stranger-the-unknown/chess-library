@@ -66,10 +66,11 @@ PNG.
 Move a piece by dragging it, or by tapping the piece and then the target
 square. When a pawn promotes you are asked which piece you want.
 
-**Engine analysis** — Opens from the chart icon in the top right. You get
-an evaluation bar, an arrow for the best move, the main line and the
-search depth. The analysis runs on a separate thread, so the board stays
-smooth.
+**Engine analysis** — Opens from the chart icon in the top right. The
+line under the board shows the score, the main line and the search depth,
+and the best move is drawn on the board as an arrow. The engine runs in a
+separate process, so the board stays smooth. In a game against the engine
+the arrow is drawn only on your turn.
 
 **Navigation** — Tap any move in the move strip to go to that position;
 the buttons below step back and forward, or jump to the start or the end.
@@ -340,7 +341,7 @@ to keep them: take a backup before you uninstall.
   boards whose two square colours are close to each other, such as stone
   and marble, the contrast is measured and the text falls back to black
   or white so it does not disappear.
-- Legal move hints, last move highlight, move animation, evaluation bar.
+- Legal move hints, last move highlight, move animation, engine arrows.
 - **Daily solved count** — shows the daily counter on puzzle list cards.
 - **Move sounds** and **vibration** — vibration exists only on the phone;
   turning sounds off turns vibration off too, and it cannot be turned on

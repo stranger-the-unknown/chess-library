@@ -63,9 +63,10 @@ oynarsın; menüden tahtayı PNG olarak kaydedebilirsin.
 Taşları sürükleyerek ya da önce taşa, sonra hedef kareye dokunarak
 oynarsın. Terfi ederken hangi taşı istediğin sorulur.
 
-**Motor analizi** — Sağ üstteki grafik simgesiyle açılır. Değerlendirme
-çubuğu, en iyi hamle oku, ana varyant ve arama derinliği görünür. Analiz
-ayrı bir iş parçacığında çalışır, tahta akıcı kalır.
+**Motor analizi** — Sağ üstteki grafik simgesiyle açılır. Tahtanın
+altındaki satırda skor, ana varyant ve arama derinliği görünür; en iyi
+hamle de tahtada ok olarak çizilir. Motor ayrı bir süreçte çalışır, tahta
+akıcı kalır. Motora karşı oyunda ok yalnızca senin sıranda çizilir.
 
 **Gezinme** — Hamle listesindeki herhangi bir hamleye dokunarak o konuma
 gidersin; alttaki düğmelerle bir ileri, bir geri, başa ya da sona gidersin.
@@ -329,7 +330,7 @@ silmeden önce yedek al.
   kaybolmasın diye karşıtlık ölçülür ve gerekirse siyah ya da beyaza
   düşülür.
 - Yasal hamle göstergeleri, son hamle vurgusu, hamle animasyonu,
-  değerlendirme çubuğu.
+  motor okları.
 - **Bugün çözülen sayısı** — bulmaca listesi kartlarında günlük sayacı
   gösterir.
 - **Hamle sesleri** ve **titreşim** — titreşim yalnızca telefonda

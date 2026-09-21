@@ -75,9 +75,19 @@ class StorageService extends ChangeNotifier {
 
     final raw = prefs.getString(_key);
     if (raw != null) {
-      _cache = (jsonDecode(raw) as List)
-          .map((e) => Playlist.fromJson(Map<String, dynamic>.from(e as Map)))
-          .toList();
+      // Bozuk ya da yarım yazılmış bir kayıt yüzünden "Listelerim"
+      // sekmesi hiç açılmasın: çözümlenemeyen veri bir kenara konuyor,
+      // uygulama boş listeyle açılıyor. Eski veri silinmiyor, elle
+      // kurtarılabilsin diye ayrı bir anahtara taşınıyor.
+      try {
+        _cache = (jsonDecode(raw) as List)
+            .map((e) => Playlist.fromJson(Map<String, dynamic>.from(e as Map)))
+            .toList();
+      } catch (_) {
+        await prefs.setString('${_key}_bozuk', raw);
+        _cache = <Playlist>[];
+        return _cache!;
+      }
       if (_repairDuplicateIds(_cache!)) await _save(notify: false);
       return _cache!;
     }
@@ -105,12 +115,19 @@ class StorageService extends ChangeNotifier {
     return null;
   }
 
+  /// Diske yazar; yazma başarısız olursa bir kez daha dener.
+  ///
+  /// `setString` disk dolduğunda ya da depo kilitliyken `false` dönüyor
+  /// ve eskiden bu sessizce yutuluyordu: kullanıcı kaydettiğini sanıp
+  /// veriyi kaybedebilirdi. Şimdi tekrar deniyor, yine olmazsa hata
+  /// fırlatıyor — çağıran yolun sessizce "kaydedildi" demesindense
+  /// görünür bir hata iyidir.
   Future<void> _save({bool notify = true}) async {
     final prefs = await SharedPreferences.getInstance();
-    await prefs.setString(
-      _key,
-      jsonEncode(_cache!.map((p) => p.toJson()).toList()),
-    );
+    final payload = jsonEncode(_cache!.map((p) => p.toJson()).toList());
+    var ok = await prefs.setString(_key, payload);
+    if (!ok) ok = await prefs.setString(_key, payload);
+    if (!ok) throw StateError('listeler diske yazılamadı');
     if (notify) notifyListeners();
   }
 
