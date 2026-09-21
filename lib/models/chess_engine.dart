@@ -715,7 +715,8 @@ class ChessGame {
   }
 
   bool makeUciMove(String uci) {
-    if (uci.length < 4) {
+    // [isLegalUci] ve [moveFromUci] ile aynı kural: dört ya da beş.
+    if (uci.length != 4 && uci.length != 5) {
       return false;
     }
 

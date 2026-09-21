@@ -79,9 +79,10 @@ class OpeningService {
     return _custom!;
   }
 
-  Future<void> _saveCustom() async {
+  /// Kullanıcının açılışlarını yazar; başarısız olursa `false`.
+  Future<bool> _saveCustom() async {
     final prefs = await SharedPreferences.getInstance();
-    await writeString(
+    return writeString(
       prefs,
       _customKey,
       jsonEncode(_custom!.map((o) => o.toJson()).toList()),
@@ -307,7 +308,10 @@ class OpeningService {
     }
     onProgress?.call(lines.length, lines.length);
 
-    if (added > 0) await _saveCustom();
+    // Yazma başarısızsa "eklendi" denmesin.
+    if (added > 0 && !await _saveCustom()) {
+      throw StateError('açılışlar diske yazılamadı');
+    }
     return ImportResult(added: added, skipped: skipped);
   }
 

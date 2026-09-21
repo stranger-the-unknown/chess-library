@@ -77,11 +77,11 @@ void main() {
     expect(_nextEnabled(tester), isFalse,
         reason: 'gösterim sürerken bulmaca değiştirilebiliyor');
 
-    // Üç adım, her biri 700 ms.
-    await tester.pump(const Duration(milliseconds: 700));
+    // Üç adım, her biri 800 ms (9.0.8'de 700'den çıkarıldı).
+    await tester.pump(const Duration(milliseconds: 800));
     expect(_boardOpen(tester), isFalse);
-    await tester.pump(const Duration(milliseconds: 700));
-    await tester.pump(const Duration(milliseconds: 700));
+    await tester.pump(const Duration(milliseconds: 800));
+    await tester.pump(const Duration(milliseconds: 800));
     await tester.pumpAndSettle();
 
     // Gösterim bitti: tahta yine kapalı (çözüm görüldü) ama artık

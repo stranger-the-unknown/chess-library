@@ -141,7 +141,16 @@ class _OpeningStudyScreenState extends State<OpeningStudyScreen> {
     }
   }
 
+  /// Bekleyen otomatik hamleleri geçersiz kılan jeton.
+  ///
+  /// Rakibin cevabı bir gecikmeyle oynanıyor; başa sarma ya da kip
+  /// değiştirme o gecikmeyi iptal etmiyordu ve bekleyen hamle sıfırlanan
+  /// tahtada yine oynanıyordu. Bulmacada aynı sınıf hata `_loadToken`
+  /// ile kapatılmıştı, burası atlanmıştı.
+  int _token = 0;
+
   void _reset() {
+    _token++;
     _autoTimer?.cancel();
     setState(() {
       _autoPlaying = false;
@@ -150,6 +159,12 @@ class _OpeningStudyScreenState extends State<OpeningStudyScreen> {
     });
     _goTo(-1, silent: true);
   }
+
+  /// Rakip cevabının en erken görünme süresi (motora karşı oyunla aynı).
+  static const Duration _replyPace = Duration(milliseconds: 650);
+
+  /// Siyahı çalışırken tahtanın oynadığı ilk hamle.
+  static const Duration _openingPace = Duration(milliseconds: 500);
 
   void _toggleAutoPlay() {
     if (_autoPlaying) {
@@ -201,10 +216,13 @@ class _OpeningStudyScreenState extends State<OpeningStudyScreen> {
       });
     });
 
-    // Rakip hamlesini otomatik oynat ki kullanıcı hep aynı tarafı çalışsın.
+    // Rakip hamlesini otomatik oynat ki kullanıcı hep aynı tarafı
+    // çalışsın. Tempo motora karşı oyunla aynı: hamlenin görülmesi için
+    // en az bu kadar bekleniyor.
     if (_cursor < widget.opening.uciMoves.length - 1) {
-      await Future<void>.delayed(const Duration(milliseconds: 380));
-      if (!mounted || _mode != StudyMode.practice) return;
+      final token = _token;
+      await Future<void>.delayed(_replyPace);
+      if (!mounted || token != _token || _mode != StudyMode.practice) return;
       _goTo(_cursor + 1);
     }
 
@@ -226,6 +244,7 @@ class _OpeningStudyScreenState extends State<OpeningStudyScreen> {
   }
 
   void _setMode(StudyMode mode) {
+    _token++;
     _autoTimer?.cancel();
     setState(() {
       _mode = mode;
@@ -237,8 +256,9 @@ class _OpeningStudyScreenState extends State<OpeningStudyScreen> {
 
     // Alıştırmada siyahı çalışıyorsan ilk hamleyi tahta oynasın.
     if (mode == StudyMode.practice && _flipped) {
-      Future<void>.delayed(const Duration(milliseconds: 350), () {
-        if (mounted && _cursor == -1) _goTo(0);
+      final token = _token;
+      Future<void>.delayed(_openingPace, () {
+        if (mounted && token == _token && _cursor == -1) _goTo(0);
       });
     }
   }

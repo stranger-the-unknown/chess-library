@@ -48,6 +48,21 @@ class _PlaylistScreenState extends State<PlaylistScreen> {
     });
   }
 
+  /// Diske yazan bir işi çalıştırır; başarısız olursa kullanıcıya söyler.
+  ///
+  /// `StorageService._save` cihazda yer kalmadığında hata fırlatıyor.
+  /// Oluşturma, yeniden adlandırma ve silme bunu yakalamıyordu: işlem ya
+  /// sessizce düşüyor ya da kırmızı ekran veriyordu.
+  Future<bool> _guard(Future<void> Function() task) async {
+    try {
+      await task();
+      return true;
+    } catch (_) {
+      if (mounted) AppDialogs.snack(context, t('lists.saveFailed'));
+      return false;
+    }
+  }
+
   Future<void> _create() async {
     final name = await AppDialogs.prompt(
       context,
@@ -55,7 +70,7 @@ class _PlaylistScreenState extends State<PlaylistScreen> {
       label: t('game.listName'),
     );
     if (name == null) return;
-    await _storage.createPlaylist(name);
+    if (!await _guard(() => _storage.createPlaylist(name))) return;
     await _load();
   }
 
@@ -67,7 +82,9 @@ class _PlaylistScreenState extends State<PlaylistScreen> {
       initialValue: playlist.name,
     );
     if (name == null) return;
-    await _storage.renamePlaylist(playlist.id, name);
+    if (!await _guard(() => _storage.renamePlaylist(playlist.id, name))) {
+      return;
+    }
     await _load();
   }
 
@@ -83,7 +100,7 @@ class _PlaylistScreenState extends State<PlaylistScreen> {
       destructive: true,
     );
     if (!confirmed) return;
-    await _storage.deletePlaylist(playlist.id);
+    if (!await _guard(() => _storage.deletePlaylist(playlist.id))) return;
     await _load();
   }
 

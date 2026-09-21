@@ -5,6 +5,8 @@ import 'package:file_picker/file_picker.dart';
 import 'package:flutter/rendering.dart';
 import 'package:flutter/widgets.dart';
 
+import '../l10n/app_strings.dart';
+
 /// Tahtanın ekran görüntüsünü PNG olarak kaydeder.
 ///
 /// Kaydedilecek tahta bir [RepaintBoundary] ile sarılır; buradaki
@@ -65,6 +67,6 @@ class BoardImageService {
   /// Dosya adından işletim sisteminin kabul etmediği karakterleri atar.
   static String _safeName(String name) {
     final clean = name.replaceAll(RegExp(r'[\\/:*?"<>|]'), '_').trim();
-    return clean.isEmpty ? 'tahta.png' : clean;
+    return clean.isEmpty ? '${t('file.defaultBoardName')}.png' : clean;
   }
 }

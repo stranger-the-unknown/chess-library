@@ -24,7 +24,7 @@ dilidir.
   çekirdekle üretilir, böylece bir kademe her cihazda aynı anlama gelir.
   *Analiz* masaüstünde çekirdeklerin yarısını (en çok dördünü) ve daha
   büyük bir hash kullanır; orada motor rakip değil, araçtır.
-- **Tempo**: motorun cevabı, senin hamlenden en erken 0,5 saniye sonra
+- **Tempo**: motorun cevabı, senin hamlenden en erken 0,65 saniye sonra
   görünür. Alt kademelerde arama neredeyse anında bitiyor ve hamle,
   neyin alındığı görülmeden tahtada beliriyordu.
 - `flutter_stockfish` **kullanılmaz**

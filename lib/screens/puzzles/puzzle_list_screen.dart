@@ -304,15 +304,23 @@ class _PuzzleListScreenState extends State<PuzzleListScreen> {
 
   /// Metni listeye aktarır; uzun sürebileceği için ilerleme gösterir.
   Future<void> _runImport(String text) async {
-    final added = await AppDialogs.runWithProgress<int>(
-      context,
-      message: t('puzzles.importing'),
-      task: (report) => _service.importFens(
-        widget.collection,
-        text,
-        onProgress: (done, total) => report(total == 0 ? 0 : done / total),
-      ),
-    );
+    final int added;
+    try {
+      added = await AppDialogs.runWithProgress<int>(
+        context,
+        message: t('puzzles.importing'),
+        task: (report) => _service.importFens(
+          widget.collection,
+          text,
+          onProgress: (done, total) => report(total == 0 ? 0 : done / total),
+        ),
+      );
+    } catch (_) {
+      // Diske yazılamadıysa "eklendi" demek yanlış: veri yalnızca
+      // bellekte kalıyor ve uygulama kapanınca gidiyor.
+      if (mounted) AppDialogs.snack(context, t('lists.saveFailed'));
+      return;
+    }
     await _load();
     if (mounted) {
       AppDialogs.snack(context, t('puzzles.imported', {'count': added}));

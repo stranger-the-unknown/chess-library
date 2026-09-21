@@ -31,9 +31,23 @@ class CapturedPieces extends StatelessWidget {
         side == engine.Color.white ? engine.Color.black : engine.Color.white;
     final remaining = game.pieceCounts(opponent);
 
+    // Terfi eden piyon "alınmış" sayılmamalı.
+    //
+    // Sayım başlangıç takımına göre yapılıyor: rakip bir piyonu vezire
+    // çevirdiğinde piyon eksiliyor ve şeritte alınmış gibi görünüyordu;
+    // ikinci vezir de fazladan sayıldığı için "eksi" çıkıp hiç
+    // gösterilmiyordu. Fazla taş sayısı kadar piyon düşülüyor.
+    int promoted = 0;
+    _startCounts.forEach((type, start) {
+      if (type == engine.PieceType.pawn) return;
+      final extra = (remaining[type] ?? 0) - start;
+      if (extra > 0) promoted += extra;
+    });
+
     final captured = <engine.PieceType, int>{};
     _startCounts.forEach((type, start) {
-      final missing = start - (remaining[type] ?? 0);
+      var missing = start - (remaining[type] ?? 0);
+      if (type == engine.PieceType.pawn) missing -= promoted;
       if (missing > 0) captured[type] = missing;
     });
 

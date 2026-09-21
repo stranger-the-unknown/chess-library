@@ -4,6 +4,7 @@ import 'package:file_picker/file_picker.dart';
 
 import 'package:flutter/foundation.dart';
 
+import '../l10n/app_strings.dart';
 import 'file_pick.dart';
 
 import '../models/pgn_parser.dart';
@@ -38,7 +39,8 @@ class PgnImportService {
     final safeName =
         playlist.name.replaceAll(RegExp(r'[\\/:*?"<>|]'), '_').trim();
     return FilePicker.platform.saveFile(
-      fileName: '${safeName.isEmpty ? 'oyunlar' : safeName}.pgn',
+      fileName:
+          '${safeName.isEmpty ? t('file.defaultGamesName') : safeName}.pgn',
       bytes: Uint8List.fromList(utf8.encode(text)),
     );
   }

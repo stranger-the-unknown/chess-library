@@ -233,7 +233,12 @@ class BackupService {
           value = _merged(prefs, entries[i].key, value);
           if (value == null) continue;
         }
-        await _write(prefs, entries[i].key, value);
+        // Yazma başarısızsa (disk dolu) geri yükleme başarılı
+        // sayılmıyordu: ilerleme %100'e gidiyor, "içeri aktarıldı"
+        // yazıyor ama veri diske hiç ulaşmıyordu.
+        if (!await _write(prefs, entries[i].key, value)) {
+          throw const FormatException('writeFailed');
+        }
         if (i % 4 == 3) {
           onProgress?.call(0.1 + 0.85 * (i + 1) / entries.length);
           await Future<void>.delayed(Duration.zero);
@@ -288,7 +293,7 @@ class BackupService {
   // Yardımcılar
   // -------------------------------------------------------------------
 
-  Future<void> _write(SharedPreferences prefs, String key, Object? value) {
+  Future<bool> _write(SharedPreferences prefs, String key, Object? value) {
     if (value is String) return prefs.setString(key, value);
     if (value is bool) return prefs.setBool(key, value);
     if (value is int) return prefs.setInt(key, value);
@@ -422,6 +427,8 @@ class BackupService {
           return t('backup.newerFormat');
         case 'corrupt':
           return t('backup.corrupt');
+        case 'writeFailed':
+          return t('backup.writeFailed');
         default:
           return t('backup.badFile');
       }

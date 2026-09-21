@@ -237,14 +237,20 @@ class _OpeningListScreenState extends State<OpeningListScreen> {
     // Kapanistaki (closure) kullanim icin ayri degisken: cozumleyici
     // govdesi disarida atanan final bir yereli kapanis icinde daraltmiyor.
     final content = picked.content;
-    final result = await AppDialogs.runWithProgress<ImportResult>(
-      context,
-      message: t('openings.importing'),
-      task: (report) => _service.importText(
-        content,
-        onProgress: (done, total) => report(total == 0 ? 0 : done / total),
-      ),
-    );
+    final ImportResult result;
+    try {
+      result = await AppDialogs.runWithProgress<ImportResult>(
+        context,
+        message: t('openings.importing'),
+        task: (report) => _service.importText(
+          content,
+          onProgress: (done, total) => report(total == 0 ? 0 : done / total),
+        ),
+      );
+    } catch (_) {
+      if (mounted) AppDialogs.snack(context, t('lists.saveFailed'));
+      return;
+    }
     await _load();
     if (!mounted) return;
     // Atlananları söylemezsek, listede zaten bulunan bir dosyayı yeniden

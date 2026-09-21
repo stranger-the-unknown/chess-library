@@ -64,7 +64,7 @@ class _PuzzleSolveScreenState extends State<PuzzleSolveScreen> {
   /// Kayıtlı çözüm dizisinde arama yapılmıyor, yani cevap anında
   /// geliyordu: hangi taşın nereye gittiği görülmüyordu. Çözümün
   /// baştan sona gösterilmesi ayrı ve bilerek daha yavaş (700 ms).
-  static const Duration _movePace = Duration(milliseconds: 500);
+  static const Duration _movePace = Duration(milliseconds: 650);
 
   static const int _toleranceCp = 80;
 
@@ -419,7 +419,7 @@ class _PuzzleSolveScreenState extends State<PuzzleSolveScreen> {
       final entry = MoveEntry.play(_game, move);
       setState(() => _moves.add(entry));
       // Çözüm gösterimi bilerek daha yavaş: izlenerek takip ediliyor.
-      await Future<void>.delayed(const Duration(milliseconds: 700));
+      await Future<void>.delayed(const Duration(milliseconds: 800));
       // Gösterim sürerken başka bulmacaya geçilmiş olabilir.
       if (!mounted || token != _loadToken) return;
     }

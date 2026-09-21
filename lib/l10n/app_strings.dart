@@ -118,6 +118,8 @@ class Strings {
     'backup.applying': 'Veriler yazılıyor...',
     'backup.exported': 'Yedek dosyaya yazıldı.',
     'backup.exportFailed': 'Yedek dosyaya yazılamadı.',
+    'backup.writeFailed':
+        'Yedek diske yazılamadı: cihazda yer kalmamış olabilir.',
     'backup.imported': 'Yedek geri yüklendi.',
     'backup.badFile': 'Bu dosya bir Chess Library yedeği değil.',
     'backup.newerFormat': 'Bu yedek uygulamanın daha yeni bir sürümüyle alınmış. Önce uygulamayı güncelleyin.',
@@ -260,6 +262,8 @@ class Strings {
     'game.fenCopiedToClipboard': 'FEN panoya kopyalandı.',
     'game.restart': 'Yeniden başlat',
     'game.restartMessage': 'Tüm hamleler silinecek. Devam edilsin mi?',
+    'game.restartReplayMessage':
+        'Oyun baştan kurulacak; denemeleriniz silinecek.',
     'game.nothingToSave': 'Kaydedilecek hamle yok.',
     'game.defaultSaveName': 'Oyun',
     'game.exitTitle': 'Oyundan çıkılsın mı?',
@@ -291,6 +295,8 @@ class Strings {
         'Bu dosya metin değil. PGN (.pgn) ya da metin (.txt) dosyası seç.',
     'file.tooLarge': 'Dosya çok büyük (en çok 32 MB).',
     'file.empty': 'Dosya boş.',
+    'file.defaultBoardName': 'tahta',
+    'file.defaultGamesName': 'oyunlar',
     'game.pgnNoMoves': 'PGN içinde okunabilir hamle bulunamadı.',
     'game.pgnFenIgnored':
         'Başlıktaki konum okunamadı; hamleler başlangıç konumundan oynandı.',
@@ -638,6 +644,8 @@ class Strings {
     'backup.applying': 'Writing data...',
     'backup.exported': 'Backup written to file.',
     'backup.exportFailed': 'The backup could not be written.',
+    'backup.writeFailed':
+        'The backup could not be written to disk: the device may be out of space.',
     'backup.imported': 'Backup restored.',
     'backup.badFile': 'This file is not a Chess Library backup.',
     'backup.newerFormat': 'This backup was taken with a newer version of the app. Update the app first.',
@@ -772,6 +780,8 @@ class Strings {
     'game.fenCopiedToClipboard': 'FEN copied to the clipboard.',
     'game.restart': 'Restart',
     'game.restartMessage': 'All moves will be deleted. Continue?',
+    'game.restartReplayMessage':
+        'The game will be set up again; your trial moves are discarded.',
     'game.nothingToSave': 'There are no moves to save.',
     'game.defaultSaveName': 'Game',
     'game.exitTitle': 'Leave the game?',
@@ -803,6 +813,8 @@ class Strings {
         'That file is not text. Pick a PGN (.pgn) or text (.txt) file.',
     'file.tooLarge': 'The file is too large (32 MB at most).',
     'file.empty': 'The file is empty.',
+    'file.defaultBoardName': 'board',
+    'file.defaultGamesName': 'games',
     'game.pgnNoMoves': 'No readable moves were found in the PGN.',
     'game.pgnFenIgnored':
         'The position in the header could not be read; the moves were played from the starting position.',

@@ -465,7 +465,7 @@ class _GameScreenState extends State<GameScreen> {
   }
 
   /// Motor hamlesinin ekranda görünmesi için geçmesi gereken en kısa süre.
-  static const Duration _minEngineThink = Duration(milliseconds: 500);
+  static const Duration _minEngineThink = Duration(milliseconds: 650);
 
   Future<void> _maybePlayEngineMove() async {
     if (widget.mode != GameMode.versusEngine) return;
@@ -501,6 +501,12 @@ class _GameScreenState extends State<GameScreen> {
     // ekranda "pes ettin" yazarken tahta oynuyordu.
     if (_resigned || _resultText != null) return;
 
+    // Konum denetimi önce: kullanıcı bu sırada geri aldıysa arama iptal
+    // edilmiş olabilir ve boş dönen sonuç "motor cevap vermedi" değil,
+    // "bu arama artık geçersiz" demektir. Sıra tersken yanlış uyarı
+    // çıkıyor ve tahta gereksiz yere iki tarafa açılıyordu.
+    if (_game.fen != fen) return;
+
     if (result.bestMoveUci.isEmpty) {
       setState(() {
         _engineStalled = true;
@@ -508,8 +514,6 @@ class _GameScreenState extends State<GameScreen> {
       });
       return;
     }
-    // Kullanıcı bu sırada geri aldıysa hamleyi uygulama.
-    if (_game.fen != fen) return;
 
     final move = _game.moveFromUci(result.bestMoveUci);
     if (move == null) {
@@ -602,6 +606,33 @@ class _GameScreenState extends State<GameScreen> {
     if (mounted) AppDialogs.snack(context, t('game.fenCopiedToClipboard'));
   }
 
+  /// Tahtaya yeni bir başlangıç konumu kurar (yapıştırma, düzenleyici).
+  ///
+  /// Eskiden iki yol da kendi içinde yalnızca geçmişi ve sonucu
+  /// siliyordu; "pes edildi", "motor tıkandı", "kaydedildi" bayrakları
+  /// ve hamle listesi numarası olduğu gibi kalıyordu. Pes ettikten sonra
+  /// bir FEN yapıştırmak tahtayı kilitli bırakıyor, sıra motordaysa da
+  /// kimse oynamıyordu. 9.0.6'da geri alma için kapatılan kilit buradan
+  /// geri geliyordu.
+  void _applyNewPosition(String fen) {
+    setState(() {
+      _startFen = fen;
+      _history.clear();
+      _explore.clear();
+      _cursor = -1;
+      _game = engine.ChessGame.fromFen(fen);
+      _blackFirst = _game.sideToMove == engine.Color.black;
+      _resultText = null;
+      _resigned = false;
+      _engineStalled = false;
+      _savedToList = false;
+      _warning = null;
+    });
+    _afterPositionChanged();
+    // Kurulan konumda sıra motordaysa motor oynasın.
+    if (widget.mode == GameMode.versusEngine) _maybePlayEngineMove();
+  }
+
   Future<void> _pasteFen() async {
     final data = await Clipboard.getData(Clipboard.kTextPlain);
     final text = data?.text?.trim();
@@ -616,14 +647,7 @@ class _GameScreenState extends State<GameScreen> {
       }
       return;
     }
-    setState(() {
-      _startFen = text;
-      _history.clear();
-      _cursor = -1;
-      _game = engine.ChessGame.fromFen(text);
-      _resultText = null;
-    });
-    _afterPositionChanged();
+    _applyNewPosition(text);
   }
 
   Future<void> _editPosition() async {
@@ -634,14 +658,7 @@ class _GameScreenState extends State<GameScreen> {
       ),
     );
     if (fen == null || !mounted) return;
-    setState(() {
-      _startFen = fen;
-      _history.clear();
-      _cursor = -1;
-      _game = engine.ChessGame.fromFen(fen);
-      _resultText = null;
-    });
-    _afterPositionChanged();
+    _applyNewPosition(fen);
   }
 
   /// Kullanıcı pes eder; oyun rakibin kazancıyla biter.
@@ -683,14 +700,32 @@ class _GameScreenState extends State<GameScreen> {
   }
 
   Future<void> _restart() async {
+    // Kayıtlı bir oyunu okurken "yeniden başlat" oyunu **silmiyor**:
+    // hamleler yeniden kuruluyor ve başa dönülüyor. Eskiden geçmiş
+    // boşaltılıyor, incelenen parti geri alınamayacak şekilde gidiyordu.
+    final replay = _replayMode;
     final confirmed = await AppDialogs.confirm(
       context,
       title: t('game.restart'),
-      message: t('game.restartMessage'),
-      confirmLabel: t('common.delete'),
-      destructive: true,
+      message: replay ? t('game.restartReplayMessage') : t('game.restartMessage'),
+      // Düğme "Sil" yazıyordu; yaptığı iş bu değil.
+      confirmLabel: t('game.restart'),
+      destructive: !replay,
     );
     if (!confirmed || !mounted) return;
+
+    if (replay) {
+      setState(() {
+        _explore.clear();
+        _warning = null;
+        _resigned = false;
+        _engineStalled = false;
+        _loadInitialPosition();
+      });
+      _afterPositionChanged();
+      return;
+    }
+
     setState(() {
       _history.clear();
       _cursor = -1;
@@ -1409,7 +1444,9 @@ class _GameScreenState extends State<GameScreen> {
                 if (widget.mode == GameMode.versusEngine)
                   _navButton(
                     Icons.undo_rounded,
-                    _history.isEmpty ? null : _takeBack,
+                    // Motor düşünürken geri almak iki aramayı
+                    // çakıştırıyordu.
+                    _history.isEmpty || _thinking ? null : _takeBack,
                     t('game.takeBack'),
                   )
                 else

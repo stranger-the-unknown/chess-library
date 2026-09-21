@@ -98,9 +98,10 @@ class PuzzleService {
     return _collections!;
   }
 
-  Future<void> _saveCollections() async {
+  /// Listeleri yazar; başarısız olursa `false`.
+  Future<bool> _saveCollections() async {
     final prefs = await SharedPreferences.getInstance();
-    await writeString(
+    return writeString(
       prefs,
       _collectionsKey,
       jsonEncode(_collections!.map((c) => c.toJson()).toList()),
@@ -391,11 +392,12 @@ class PuzzleService {
     }
     onProgress?.call(total, total);
 
-    if (collection.isBuiltIn) {
-      await _saveOverrides();
-    } else {
-      await _saveCollections();
-    }
+    // Yazma başarısızsa ekran "12 pozisyon eklendi" demesin: veri
+    // yalnızca bellekte kalıyor ve uygulama kapanınca gidiyor.
+    final ok = collection.isBuiltIn
+        ? await _saveOverrides()
+        : await _saveCollections();
+    if (!ok) throw StateError('bulmacalar diske yazılamadı');
     return added;
   }
 
@@ -446,9 +448,9 @@ class PuzzleService {
     return _overrides!;
   }
 
-  Future<void> _saveOverrides() async {
+  Future<bool> _saveOverrides() async {
     final prefs = await SharedPreferences.getInstance();
-    await writeString(prefs, _overridesKey, jsonEncode(_overrides));
+    return writeString(prefs, _overridesKey, jsonEncode(_overrides));
   }
 
   // ---------------------------------------------------------------------

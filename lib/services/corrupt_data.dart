@@ -32,6 +32,9 @@ Future<T> readOrQuarantine<T>(
     return parse(jsonDecode(raw));
   } catch (_) {
     await prefs.setString('${key}_bozuk', raw);
+    // Asıl anahtar kaldırılıyor: yoksa her açılışta aynı bozuk veri
+    // yeniden çözümlenip aynı uyarı çıkıyordu. Veri kopyada duruyor.
+    await prefs.remove(key);
     corruptRecords.value++;
     return fallback();
   }
