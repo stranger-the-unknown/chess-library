@@ -338,11 +338,19 @@ class _GameScreenState extends State<GameScreen> {
     _analysisDebounce?.cancel();
     _analysisToken++;
     EngineService.instance.stopAnalysis();
-    // Serit/bar kaybolmasin: eski skoru tut, sadece yeni sonuc gelince degistir.
-    // Isaret ters donmesin diye skor beyaz bakisinda (_evalScoreCp) saklanir.
-    if (_thinking) {
-      setState(() => _thinking = false);
-    }
+    // Konuma bağlı olan her şey hemen gidiyor: en iyi hamle oku, ana
+    // varyant ve derinlik. Eskiden bunlar yeni sonuç gelene kadar
+    // duruyordu, yani bir buçuk saniye boyunca **önceki konumun**
+    // hamlesi tahtada ok olarak çiziliyor ve altta yazıyordu.
+    //
+    // Skor (`_evalScoreCp`) bilerek duruyor: sayının her hamlede
+    // kaybolup gelmesi şeridi titretiyordu ve eski skor yeni konum için
+    // de kaba bir tahmin. Isaret ters donmesin diye beyaz bakisinda
+    // saklanir.
+    setState(() {
+      _analysis = null;
+      _thinking = false;
+    });
     _analysisDebounce = Timer(const Duration(milliseconds: 700), _runAnalysis);
   }
 
@@ -1092,9 +1100,13 @@ class _GameScreenState extends State<GameScreen> {
 
   Widget _engineLine(ColorScheme scheme) {
     final analysis = _analysis;
-    // Sonuç yokken yazı gösterme; dışardaki sabit yükseklik tahtayı tutar.
-    if (analysis == null) return const SizedBox.expand();
-    final text = _describeAnalysis(analysis);
+    final score = _evalScoreCp;
+    // Yeni sonuç beklenirken yalnızca skor yazıyor: ana varyant ve
+    // derinlik önceki konuma ait, onları göstermek yanlış olurdu.
+    // Hiçbiri yoksa yazı yok; dışardaki sabit yükseklik tahtayı tutar.
+    if (analysis == null && score == null) return const SizedBox.expand();
+    final text =
+        analysis == null ? _formatScoreCp(score!) : _describeAnalysis(analysis);
 
     return Container(
       width: double.infinity,

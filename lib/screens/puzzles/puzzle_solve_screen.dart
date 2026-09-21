@@ -184,6 +184,10 @@ class _PuzzleSolveScreenState extends State<PuzzleSolveScreen> {
 
     setState(() {
       _busy = true;
+      // İpucu tek hamlelik: basınca o anki hamlenin oku çıkıyor, hamle
+      // oynanınca sönüyor. Açık kalsaydı bir kez basmak çözümün geri
+      // kalanını da hamle hamle gösterirdi.
+      _showHint = false;
       _feedback = _Feedback.thinking;
       _feedbackText = t('puzzles.evaluating');
     });
