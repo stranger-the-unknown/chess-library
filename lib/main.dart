@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:flutter_localizations/flutter_localizations.dart';
 
 import 'l10n/app_strings.dart';
 import 'screens/home_shell.dart';
@@ -94,6 +95,16 @@ class _ChessAppState extends State<ChessApp> {
 
         return MaterialApp(
           scaffoldMessengerKey: _messengerKey,
+          // Flutter'ın kendi metinleri de uygulamanın dilini izlesin.
+          // Bunlar olmadan üç nokta menüsünün ipucu "Show menu", metin
+          // kutusunun menüsü "Paste" diye çıkıyordu.
+          locale: Locale(Strings.code),
+          localizationsDelegates: const [
+            GlobalMaterialLocalizations.delegate,
+            GlobalWidgetsLocalizations.delegate,
+            GlobalCupertinoLocalizations.delegate,
+          ],
+          supportedLocales: const [Locale('tr'), Locale('en')],
           title: t('app.title'),
           debugShowCheckedModeBanner: false,
           theme: AppTheme.light,

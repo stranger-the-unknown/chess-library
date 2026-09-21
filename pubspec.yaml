@@ -9,6 +9,11 @@ environment:
 dependencies:
   flutter:
     sdk: flutter
+  # Flutter'ın kendi metinleri (üç nokta menüsünün "Show menu" ipucu,
+  # metin kutusundaki "Paste", geri okunun etiketi) bu paket olmadan
+  # İngilizce kalıyor.
+  flutter_localizations:
+    sdk: flutter
   shared_preferences: ^2.3.2
   just_audio: ^0.9.46
   file_picker: ^10.0.0

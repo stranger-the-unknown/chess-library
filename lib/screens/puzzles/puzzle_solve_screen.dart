@@ -112,7 +112,11 @@ class _PuzzleSolveScreenState extends State<PuzzleSolveScreen> {
   void initState() {
     super.initState();
     _awake.keep();
-    _index = widget.initialIndex.clamp(0, widget.puzzles.length - 1);
+    // Boş listede `clamp(0, -1)` hata fırlatıyor. Arayüz bu ekranı boş
+    // listeyle açmıyor ama kapı açık kalmasın.
+    _index = widget.puzzles.isEmpty
+        ? 0
+        : widget.initialIndex.clamp(0, widget.puzzles.length - 1);
     _loadPuzzle();
   }
 
@@ -143,6 +147,7 @@ class _PuzzleSolveScreenState extends State<PuzzleSolveScreen> {
   }
 
   Future<void> _loadPuzzle() async {
+    if (widget.puzzles.isEmpty) return;
     final token = ++_loadToken;
     _puzzle = widget.puzzles[_index];
 
@@ -180,6 +185,8 @@ class _PuzzleSolveScreenState extends State<PuzzleSolveScreen> {
       movetimeMs: 1800,
     );
     if (token != _loadToken || !mounted) return;
+    // Kesilen arama motorun yokluğu sayılmaz.
+    if (baseline.cancelled) return;
 
     // Motor yoksa (ya da çöktüyse) sonuç boş geliyor: skor 0, en iyi
     // hamle yok. Eskiden bu, 80 santipiyonluk toleransla **her hamlenin
@@ -351,6 +358,7 @@ class _PuzzleSolveScreenState extends State<PuzzleSolveScreen> {
         depth: 10,
         movetimeMs: 900,
       );
+      if (result.cancelled) return;
       uci = result.bestMoveUci;
     }
     // Kayıtlı dizide arama yok, cevap anında gelirdi.
@@ -405,6 +413,8 @@ class _PuzzleSolveScreenState extends State<PuzzleSolveScreen> {
       movetimeMs: 1200,
     );
     if (!mounted || token != _loadToken || _game.fen != fen) return;
+    // İptal edilen arama eldeki ölçütü silmemeli.
+    if (result.cancelled) return;
     setState(() => _baseline = result.bestMoveUci.isEmpty ? null : result);
   }
 

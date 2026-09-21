@@ -3,6 +3,7 @@ import 'dart:io';
 import 'package:flutter/foundation.dart' show kIsWeb;
 
 import '../../l10n/app_strings.dart';
+import 'engine_coordinator.dart';
 import 'search_result.dart';
 import 'stockfish_android.dart';
 import 'stockfish_uci.dart';
@@ -85,6 +86,16 @@ class EngineService {
   EngineService._();
 
   StockfishUci? _stockfish;
+
+  /// Tek motorun sahibi: istekler buradan sıraya giriyor.
+  ///
+  /// Analiz, ipucu ve motorun kendi hamlesi aynı süreci paylaşıyor.
+  /// Eskiden her çağıran motoru doğrudan kullanıyordu ve yeni arama
+  /// öncekini kesiyordu; ortaya çıkan hataları 9.0.3–9.0.9 arasında tek
+  /// tek yamamıştık. Kural artık tek yerde.
+  late final EngineCoordinator _coordinator = EngineCoordinator(
+    stopSearch: () async => _stockfish?.stopSearch(),
+  );
   /// İkili bulunamadığında tekrar tekrar denemeyi keser; dispose ile sıfırlanır.
   bool _binaryMissing = false;
 
@@ -96,8 +107,24 @@ class EngineService {
     int skill = 20,
     List<int> repetitionHashes = const [],
     void Function(SearchResult partial)? onProgress,
+    EngineJobKind kind = EngineJobKind.analysis,
   }) async {
     // skill / repetitionHashes API uyumu için duruyor; SF yolu tam güç kullanır.
+    return _coordinator.submit(kind, () => _runAnalysis(
+          fen,
+          depth: depth,
+          movetimeMs: movetimeMs,
+          onProgress: onProgress,
+        ));
+  }
+
+  /// Aramanın kendisi; sıraya sokmayı [_coordinator] yapıyor.
+  Future<SearchResult> _runAnalysis(
+    String fen, {
+    required int depth,
+    required int movetimeMs,
+    void Function(SearchResult partial)? onProgress,
+  }) async {
     final sf = await _ensureStockfish();
     if (sf == null) return SearchResult.empty;
 
@@ -119,6 +146,20 @@ class EngineService {
     return result;
   }
 
+  /// İpucu: analizle aynı arama, ama sırada analizin önünde.
+  Future<SearchResult> hint(
+    String fen, {
+    int depth = 12,
+    int movetimeMs = 1500,
+  }) {
+    return analyze(
+      fen,
+      depth: depth,
+      movetimeMs: movetimeMs,
+      kind: EngineJobKind.hint,
+    );
+  }
+
   /// Analizde kullanılacak çekirdek sayısı.
   ///
   /// Telefonda tek çekirdek (pil); masaüstünde çekirdeklerin yarısı, en
@@ -138,7 +179,15 @@ class EngineService {
   }
 
   /// Motora karşı oyun: seviye → Skill Level (+ LimitStrength/Elo).
-  Future<SearchResult> bestMoveForLevel(String fen, EngineLevel level) async {
+  Future<SearchResult> bestMoveForLevel(String fen, EngineLevel level) {
+    // Oyun hamlesi en yüksek öncelikli: analiz ya da ipucu onu kesemez.
+    return _coordinator.submit(
+      EngineJobKind.play,
+      () => _runPlay(fen, level),
+    );
+  }
+
+  Future<SearchResult> _runPlay(String fen, EngineLevel level) async {
     final sf = await _ensureStockfish();
     if (sf == null) return SearchResult.empty;
 
@@ -226,9 +275,15 @@ class EngineService {
     // binaryMissing'i açma — ikili yoksa zaten true kalır.
   }
 
-  /// Canlı analiz / inceleme iptali: SF `stop` (UI asılı kalmasın).
+  /// Canlı analiz / ipucu iptali.
+  ///
+  /// **Motorun hamlesine dokunmaz.** Eskiden doğrudan `stop` yazıyordu ve
+  /// ekranlar analizi kapatırken motorun aramasını da kesiyordu; bu yüzden
+  /// çağıran taraflara "sıra motordaysa çağırma" gibi denetimler
+  /// eklenmişti. Kural artık burada.
   Future<void> stopAnalysis() async {
-    await _stockfish?.stopSearch();
+    await _coordinator.cancel(EngineJobKind.analysis);
+    await _coordinator.cancel(EngineJobKind.hint);
   }
 
   /// Süren aramayı iptal eder.

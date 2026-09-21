@@ -160,10 +160,27 @@ class SettingsService extends ChangeNotifier {
   ///
   /// Eskiden dönüş değerine hiç bakılmıyordu: cihazda yer kalmadığında
   /// tema, ses ya da seviye seçimi sessizce kayboluyordu.
+  /// Aynı ayarın bekleyen yazması (anahtar başına sıra).
+  ///
+  /// Eskiden her değişiklik beklenmeden gönderiliyordu; aynı ayarı art
+  /// arda değiştirince diske ulaşma sırası garanti değildi ("ayarı
+  /// değiştirdim, uygulamayı açınca eskiye dönmüş"). Sıra anahtar başına
+  /// tutuluyor: ilgisiz ayarlar birbirini beklemiyor ve bekleyen bir
+  /// yazma yoksa iş hemen başlıyor.
+  static final Map<String, Future<void>> _writeQueues = {};
+
   void _set(String key, Object value) {
     final prefs = _prefs;
     if (prefs == null) return;
-    unawaited(_write(prefs, key, value));
+    final pending = _writeQueues[key];
+    final job = pending == null
+        ? _write(prefs, key, value)
+        : pending.then((_) => _write(prefs, key, value));
+    final guarded = job.catchError((_) {});
+    _writeQueues[key] = guarded;
+    guarded.whenComplete(() {
+      if (identical(_writeQueues[key], guarded)) _writeQueues.remove(key);
+    });
   }
 
   static Future<void> _write(

@@ -164,16 +164,6 @@ def build(out_dir):
     sounds['notify'] = chime([880.00, 1174.66], seconds=0.55,
                              decay=0.18, amp=0.38)
 
-    # On hamle: cok kisa, hafif tik.
-    sounds['premove'] = click(760, 0.09, bright=0.8, body=0.45) * 0.55
-
-    # Son on saniye: uc kisa bip.
-    ten = silence(0.80)
-    for i in range(3):
-        ten = place(ten, chime([1046.50], seconds=0.18, decay=0.05, amp=0.42),
-                    i * 0.22)
-    sounds['tenseconds'] = ten
-
     total = 0
     for name, wave in sorted(sounds.items()):
         path = os.path.join(out_dir, name + '.mp3')

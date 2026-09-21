@@ -444,12 +444,16 @@ class _GameScreenState extends State<GameScreen> {
       _thinking = false;
     });
 
-    // Motora karşı oyunda sıra motordaysa canlı analiz başlatılmıyor.
-    // İkisi de tek bir Stockfish sürecini kullanıyor: analiz araya
-    // girince motorun aramasını kesiyordu, motor da hamlesini hiç
-    // oynamıyordu. Motor hamlesini oynayınca bu yordam yeniden çağrılıyor
-    // ve analiz orada başlıyor.
+    // Motora karşı oyunda sıra motordayken canlı analiz başlatılmıyor:
+    // motorun hamlesini beklerken analiz göstermenin anlamı yok ve ok
+    // rakibe akıl verirdi. (Artık motoru kesme sakıncası yok; kuyruk
+    // bunu engelliyor. Kalan sebep bu ikisi.)
+    //
+    // Oyun bittiyse kural işlemiyor: orada artık inceleme yapılıyor ve
+    // motorun oynayacağı bir hamle yok. Eskiden mat olduktan sonra geri
+    // sarınca motorun hamlelerinde analiz şeridi boş kalıyordu.
     if (widget.mode == GameMode.versusEngine &&
+        _resultText == null &&
         _game.sideToMove != widget.playerColor) {
       return;
     }
@@ -473,6 +477,9 @@ class _GameScreenState extends State<GameScreen> {
       movetimeMs: 800,
     );
     if (!mounted || token != _analysisToken) return;
+    // Başka bir istek (motorun hamlesi, ipucu) bu aramayı düşürdüyse
+    // ekranda bir şey değiştirmiyoruz: sonuç motorun sözü değil.
+    if (result.cancelled) return;
     final sign = side == engine.Color.white ? 1 : -1;
     setState(() {
       _analysis = result;
@@ -524,6 +531,8 @@ class _GameScreenState extends State<GameScreen> {
     // "bu arama artık geçersiz" demektir. Sıra tersken yanlış uyarı
     // çıkıyor ve tahta gereksiz yere iki tarafa açılıyordu.
     if (_game.fen != fen) return;
+    // Kesilen arama motorun sessizliği sayılmaz.
+    if (result.cancelled) return;
 
     if (result.bestMoveUci.isEmpty) {
       setState(() {
@@ -586,12 +595,13 @@ class _GameScreenState extends State<GameScreen> {
     EngineService.instance.stopAnalysis();
     setState(() => _thinking = true);
     final side = _game.sideToMove;
-    final result = await EngineService.instance.analyze(
+    final result = await EngineService.instance.hint(
       _game.fen,
       depth: 12,
       movetimeMs: 1200,
     );
     if (!mounted || token != _analysisToken) return;
+    if (result.cancelled) return;
     final sign = side == engine.Color.white ? 1 : -1;
     setState(() {
       _thinking = false;
@@ -980,15 +990,11 @@ class _GameScreenState extends State<GameScreen> {
                 if (!engineTurn) _runAnalysis();
               } else {
                 _analysisToken++;
-                // Analizi **kapatmak** da motorun aramasını kesiyordu:
-                // ikisi tek bir Stockfish sürecini paylaşıyor, `stop`
-                // sıradaki hamle aramasına gidiyor ve motor ya zayıf
-                // oynuyor ya hiç oynamıyordu. Açarkenki koruma vardı,
-                // kapatırkenki yoktu.
-                final engineSearching =
-                    widget.mode == GameMode.versusEngine &&
-                        _game.sideToMove != widget.playerColor;
-                if (!engineSearching) EngineService.instance.stopAnalysis();
+                // `stopAnalysis` artık yalnızca analiz/ipucu isteklerini
+                // iptal ediyor; motorun hamlesine dokunamıyor (bkz.
+                // EngineCoordinator). Eskiden burada "sıra motordaysa
+                // çağırma" denetimi gerekiyordu.
+                EngineService.instance.stopAnalysis();
                 setState(() {
                   _analysis = null;
                   _evalScoreCp = null;
@@ -1379,14 +1385,15 @@ class _GameScreenState extends State<GameScreen> {
   }
 
   String _describeAnalysis(SearchResult analysis) {
-    // Mat sayısı beyaz bakışında: "Mat 3" beyaz mat ediyor, "Mat -3"
-    // siyah. Eskiden mutlak değer yazılıyordu, yani mat olurken de mat
-    // ederken de aynı satır görünüyordu.
+    // Kimin mat ettiği yazıyla söyleniyor. Eskiden yalnızca mutlak
+    // değer vardı (mat olurken de mat ederken de "Mat 3"), sonra işaretli
+    // sayıya çevrildi ("Mat -3") — ikisi de okunaksızdı.
     final mate = analysis.mateIn;
+    final whiteMates =
+        (_game.sideToMove == engine.Color.white ? mate : -(mate ?? 0))! > 0;
     final evaluation = mate != null
-        ? t('game.mateIn', {
-            'n': _game.sideToMove == engine.Color.white ? mate : -mate,
-          })
+        ? t(whiteMates ? 'game.mateWhite' : 'game.mateBlack',
+            {'n': mate.abs()})
         : _formatScoreCp(_evalScoreCp!);
 
     // Ana varyantı SAN'a çevir.

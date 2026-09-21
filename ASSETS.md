@@ -97,7 +97,7 @@ olacak şekilde yazıldı. Çizimin kendisi değişmedi.
 
 ---
 
-## Sesler — `assets/sounds/` (12 dosya, ~89 KB)
+## Sesler — `assets/sounds/` (10 dosya, ~74 KB)
 
 `tools/assets/make_sounds.py` ile sentezlenir; kayıt kullanılmaz.
 

@@ -30,8 +30,6 @@ class SoundService {
   static const String gameStart = 'game-start';
   static const String gameEnd = 'game-end';
   static const String notify = 'notify';
-  static const String premove = 'premove';
-  static const String tenSeconds = 'tenseconds';
 
   static const List<String> _names = [
     moveSelf,
@@ -44,8 +42,6 @@ class SoundService {
     gameStart,
     gameEnd,
     notify,
-    premove,
-    tenSeconds,
   ];
 
   /// Her ses kendi hazırlık Future'ını taşır.
@@ -211,11 +207,6 @@ class SoundService {
     play(notify);
     _vibrate();
   }
-
-  void playPremove() => play(premove);
-
-  /// Süre uyarısı (zamanlı bulmaca modu).
-  void playTenSeconds() => play(tenSeconds);
 
   Future<void> dispose() async {
     // Hazırlığı süren oynatıcılar da kapatılmalı; yoksa yükleme bitince

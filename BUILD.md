@@ -105,8 +105,10 @@ ilgili paket güncellenirse kaldırılabilirler.
 
 ## Kod düzeni üzerine notlar
 
-- Motor `lib/services/engine/` altında ve Flutter'dan bağımsız, saf
-  Dart'tır; `engine_service.dart` onu bir `Isolate` içinde çalıştırır.
+- Motor `lib/services/engine/` altındadır. Stockfish **ayrı bir işletim
+  sistemi süreci** olarak çalışır (Isolate değil); `engine_coordinator.dart`
+  o tek sürecin sahibidir ve analiz / ipucu / oyun hamlesi isteklerini tek
+  sıraya sokar.
 - Masaüstü yerleşim sınırları tek yerde toplanmıştır:
   `lib/widgets/responsive.dart` (tahta en fazla 520, içerik en fazla 760,
   geniş pencere eşiği 900).

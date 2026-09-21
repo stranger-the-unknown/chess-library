@@ -145,7 +145,9 @@ class BackupService {
       'checksum': checksum(payload),
       'data': data,
     };
-    final text = const JsonEncoder.withIndent('  ').convert(document);
+    // Girintili yazım dosyayı büyütüyordu; binlerce oyunluk bir
+    // kütüphanede fark ciddi. Okuyan taraf için bir şey değişmiyor.
+    final text = jsonEncode(document);
     onProgress?.call(1);
     return text;
   }

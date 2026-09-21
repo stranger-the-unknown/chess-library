@@ -8,6 +8,14 @@ class SearchResult {
   final List<String> pvUci;
   final bool isGameOver;
 
+  /// İstek başka bir istek yüzünden düştü mü?
+  ///
+  /// "Motor cevap veremedi" ile "benim aramam iptal edildi" ayrı şeyler.
+  /// İkisi de boş sonuç döndürdüğü için eskiden karışıyordu: geri alma
+  /// yüzünden iptal olan arama, ekranda "motor cevap vermedi" uyarısına
+  /// ve tahtanın iki tarafa açılmasına yol açıyordu.
+  final bool cancelled;
+
   const SearchResult({
     required this.bestMoveUci,
     required this.scoreCp,
@@ -16,9 +24,10 @@ class SearchResult {
     required this.pvUci,
     this.mateIn,
     this.isGameOver = false,
+    this.cancelled = false,
   });
 
-  /// SF yok / çöktü / iptal: boş ama güvenli sonuç.
+  /// SF yok / çöktü: boş ama güvenli sonuç.
   static const empty = SearchResult(
     bestMoveUci: '',
     scoreCp: 0,
@@ -26,6 +35,17 @@ class SearchResult {
     nodes: 0,
     pvUci: [],
     isGameOver: false,
+  );
+
+  /// Arama başka bir istek yüzünden kesildi; ekran buna göre sessiz kalır.
+  static const superseded = SearchResult(
+    bestMoveUci: '',
+    scoreCp: 0,
+    depth: 0,
+    nodes: 0,
+    pvUci: [],
+    isGameOver: false,
+    cancelled: true,
   );
 
   Map<String, dynamic> toMap() => {
