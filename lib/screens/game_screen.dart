@@ -293,8 +293,14 @@ class _GameScreenState extends State<GameScreen> {
     // Elli hamle, yetersiz materyal ve üç tekrar da oyunu bitiriyor;
     // eskiden `_autoResult()` bunları biliyordu ama kimse sormuyordu,
     // yani şah ve piyon kalmayan oyun sonsuza kadar sürüyordu.
+    //
+    // Kayıtlı oyunda gezinirken (replay) yalnızca mat ve pat bitiş
+    // sayılıyor: gerçek oyuncular üç tekrardan sonra oynamaya devam
+    // etmiş olabilir — beraberlik talep edilir, kendiliğinden olmaz.
+    // Orada bitiş sesi çalmak yanlış olurdu.
     final result = _autoResult();
-    final gameOver = result != null;
+    final gameOver =
+        replay ? (_game.isCheckmate || _game.isStalemate) : result != null;
 
     if (gameOver) {
       SoundService.instance.playGameEnd();
