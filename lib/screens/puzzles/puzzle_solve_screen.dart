@@ -83,6 +83,9 @@ class _PuzzleSolveScreenState extends State<PuzzleSolveScreen> {
   _Feedback _feedback = _Feedback.none;
   String _feedbackText = '';
   bool _busy = false;
+
+  /// Bulmacanın konumu okunamıyorsa hata metni; okunuyorsa `null`.
+  String? _fenError;
   bool _showHint = false;
   bool _solved = false;
   bool _favorite = false;
@@ -120,12 +123,25 @@ class _PuzzleSolveScreenState extends State<PuzzleSolveScreen> {
   // Yükleme
   // -------------------------------------------------------------------------
 
+  /// Bulmacanın konumundan yeni bir oyun kurar.
+  ///
+  /// Bozuk FEN'de `fromFen` FormatException atıyor ve ekran hiç
+  /// açılmıyordu (elle düzenlenmiş yedek, yarım yazılmış kayıt). Böyle
+  /// bir kayıtta başlangıç konumu kuruluyor, tahta kapalı kalıyor ve
+  /// durum yazıyla söyleniyor; diğer bulmacalara geçiş açık.
+  engine.ChessGame _freshGame() {
+    _fenError = engine.ChessGame.validateFen(_puzzle.fen);
+    return _fenError == null
+        ? engine.ChessGame.fromFen(_puzzle.fen)
+        : engine.ChessGame();
+  }
+
   Future<void> _loadPuzzle() async {
     final token = ++_loadToken;
     _puzzle = widget.puzzles[_index];
 
     setState(() {
-      _game = engine.ChessGame.fromFen(_puzzle.fen);
+      _game = _freshGame();
       _solverColor = _game.sideToMove;
       if (!_manualFlip) _flipped = _solverColor == engine.Color.black;
       _moves.clear();
@@ -133,9 +149,13 @@ class _PuzzleSolveScreenState extends State<PuzzleSolveScreen> {
       _baseline = null;
       _showHint = false;
       // Çözümü bilinen bulmacalarda motoru beklemeye gerek yok.
-      _busy = !_puzzle.hasSolution;
-      _feedback = _puzzle.hasSolution ? _Feedback.none : _Feedback.thinking;
-      _feedbackText = _puzzle.hasSolution ? '' : t('puzzles.analysing');
+      _busy = _fenError == null && !_puzzle.hasSolution;
+      _feedback = _fenError != null
+          ? _Feedback.finished
+          : (_puzzle.hasSolution ? _Feedback.none : _Feedback.thinking);
+      _feedbackText = _fenError != null
+          ? t('puzzles.fenCorrupt')
+          : (_puzzle.hasSolution ? '' : t('puzzles.analysing'));
     });
 
     final progress = await _service.progressOf(_puzzle.id);
@@ -145,6 +165,7 @@ class _PuzzleSolveScreenState extends State<PuzzleSolveScreen> {
       _favorite = progress.favorite;
     });
 
+    if (_fenError != null) return;
     if (_puzzle.hasSolution) return;
 
     final baseline = await EngineService.instance.analyze(
@@ -360,7 +381,7 @@ class _PuzzleSolveScreenState extends State<PuzzleSolveScreen> {
 
   void _retry() {
     setState(() {
-      _game = engine.ChessGame.fromFen(_puzzle.fen);
+      _game = _freshGame();
       _onSolutionLine = _puzzle.hasSolution;
       _moves.clear();
       _feedback = _Feedback.none;
@@ -376,6 +397,9 @@ class _PuzzleSolveScreenState extends State<PuzzleSolveScreen> {
         : (_baseline?.pvUci ?? const <String>[]);
     if (line.isEmpty) return;
     _retry();
+    // Çözüm oynanırken tahta kapalı. Eskiden açık kalıyordu: 700 ms'lik
+    // adımlar arasında kullanıcı hamle yapabiliyor ve tahta karışıyordu.
+    setState(() => _busy = true);
 
     // Çözümü adım adım oyna.
     for (final uci in line.take(8)) {
@@ -391,6 +415,7 @@ class _PuzzleSolveScreenState extends State<PuzzleSolveScreen> {
     }
     if (!mounted) return;
     setState(() {
+      _busy = false;
       _feedback = _Feedback.finished;
       _feedbackText = t('puzzles.solutionShown');
     });

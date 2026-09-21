@@ -3,6 +3,8 @@ import 'dart:convert';
 import 'package:flutter/foundation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
+import 'corrupt_data.dart';
+
 import '../models/playlist.dart';
 
 /// Oyun listelerini cihazda saklar.
@@ -94,9 +96,16 @@ class StorageService extends ChangeNotifier {
 
     final legacy = prefs.getString(_legacyKey);
     if (legacy != null) {
-      _cache = (jsonDecode(legacy) as List)
-          .map((e) => Playlist.fromJson(Map<String, dynamic>.from(e as Map)))
-          .toList();
+      // v2 kaydı 9.0.3'te korunmuştu; eski anahtar açıkta kalmıştı.
+      _cache = await readOrQuarantine<List<Playlist>>(
+        prefs,
+        _legacyKey,
+        legacy,
+        (decoded) => (decoded as List)
+            .map((e) => Playlist.fromJson(Map<String, dynamic>.from(e as Map)))
+            .toList(),
+        () => <Playlist>[],
+      );
       await _save(notify: false);
       await prefs.remove(_legacyKey);
       return _cache!;

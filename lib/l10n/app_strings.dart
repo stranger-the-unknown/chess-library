@@ -260,6 +260,9 @@ class Strings {
     'game.restart': 'Yeniden başlat',
     'game.restartMessage': 'Tüm hamleler silinecek. Devam edilsin mi?',
     'game.nothingToSave': 'Kaydedilecek hamle yok.',
+    'game.defaultSaveName': 'Oyun',
+    'game.fenCorrupt':
+        'Kayıttaki konum okunamadı; başlangıç konumu kuruldu.',
     'game.newList': 'Yeni liste',
     'game.listName': 'Liste adı',
     'game.defaultListName': 'Oyunlarım',
@@ -435,6 +438,7 @@ class Strings {
     'puzzles.engineUnavailable':
         'Motor bu cihazda kullanılamıyor; bu bulmaca değerlendirilemez.',
     'puzzles.evaluating': 'Hamlen değerlendiriliyor…',
+    'puzzles.fenCorrupt': 'Bu bulmacanın konumu okunamadı.',
     'puzzles.wrong': '{move} yerine daha iyisi var. Tekrar dene.',
     'puzzles.correct': 'Doğru! {move}',
     'puzzles.mateDone': 'Mat! Bulmaca tamam.',
@@ -753,6 +757,9 @@ class Strings {
     'game.restart': 'Restart',
     'game.restartMessage': 'All moves will be deleted. Continue?',
     'game.nothingToSave': 'There are no moves to save.',
+    'game.defaultSaveName': 'Game',
+    'game.fenCorrupt':
+        'The stored position could not be read; the starting position was set up.',
     'game.newList': 'New list',
     'game.listName': 'List name',
     'game.defaultListName': 'My games',
@@ -921,6 +928,8 @@ class Strings {
     'puzzles.engineUnavailable':
         'The engine is not available on this device, so this puzzle cannot be judged.',
     'puzzles.evaluating': 'Checking your move…',
+    'puzzles.fenCorrupt':
+        "This puzzle's position could not be read.",
     'puzzles.wrong': 'There is something better than {move}. Try again.',
     'puzzles.correct': 'Correct! {move}',
     'puzzles.mateDone': 'Checkmate! Puzzle solved.',

@@ -3,6 +3,8 @@ import 'dart:convert';
 import 'package:flutter/services.dart' show rootBundle;
 import 'package:shared_preferences/shared_preferences.dart';
 
+import 'corrupt_data.dart';
+
 import '../models/chess_engine.dart' as engine;
 import '../models/puzzle.dart';
 
@@ -56,9 +58,15 @@ class PuzzleService {
       _collections = List<PuzzleCollection>.from(_defaults);
       await _saveCollections();
     } else {
-      final list = (jsonDecode(raw) as List)
-          .map((e) => PuzzleCollection.fromJson(Map<String, dynamic>.from(e)))
-          .toList();
+      final list = await readOrQuarantine<List<PuzzleCollection>>(
+        prefs,
+        _collectionsKey,
+        raw,
+        (decoded) => (decoded as List)
+            .map((e) => PuzzleCollection.fromJson(Map<String, dynamic>.from(e)))
+            .toList(),
+        () => List<PuzzleCollection>.from(_defaults),
+      );
       // Artık uygulamayla gelmeyen hazır listeleri düşür.
       //
       // Önceki sürümlerde gömülü bulmaca kitapları vardı. Bu kayıtlar
@@ -421,11 +429,17 @@ class PuzzleService {
     final raw = prefs.getString(_overridesKey);
     _overrides = raw == null
         ? <String, Map<String, dynamic>>{}
-        : (jsonDecode(raw) as Map).map(
-            (key, value) => MapEntry(
-              key as String,
-              Map<String, dynamic>.from(value as Map),
+        : await readOrQuarantine<Map<String, Map<String, dynamic>>>(
+            prefs,
+            _overridesKey,
+            raw,
+            (decoded) => (decoded as Map).map(
+              (key, value) => MapEntry(
+                key as String,
+                Map<String, dynamic>.from(value as Map),
+              ),
             ),
+            () => <String, Map<String, dynamic>>{},
           );
     return _overrides!;
   }
@@ -445,11 +459,18 @@ class PuzzleService {
     final raw = prefs.getString(_progressKey);
     _progress = raw == null
         ? <String, PuzzleProgress>{}
-        : (jsonDecode(raw) as Map).map(
-            (key, value) => MapEntry(
-              key as String,
-              PuzzleProgress.fromJson(Map<String, dynamic>.from(value as Map)),
+        : await readOrQuarantine<Map<String, PuzzleProgress>>(
+            prefs,
+            _progressKey,
+            raw,
+            (decoded) => (decoded as Map).map(
+              (key, value) => MapEntry(
+                key as String,
+                PuzzleProgress.fromJson(
+                    Map<String, dynamic>.from(value as Map)),
+              ),
             ),
+            () => <String, PuzzleProgress>{},
           );
     return _progress!;
   }

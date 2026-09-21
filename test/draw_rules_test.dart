@@ -70,6 +70,37 @@ void main() {
       expect(position.isStalemate, isFalse);
     });
 
+    test('aynı renk karelerdeki filler mat edemiyor', () {
+      // c8 ile f1 aynı renk kare. Eskiden yalnızca tahtada **tek** fil
+      // varsa beraberlik yazılıyordu; iki tarafın da aynı renk karede
+      // fili olduğu final sonsuza kadar sürüyordu.
+      final sameColour =
+          engine.ChessGame.fromFen('2b1k3/8/8/8/8/8/8/4KB2 w - - 0 1');
+      expect(sameColour.insufficientMaterial, isTrue);
+
+      // Aynı taraftaki iki fil de tek renk karedeyse mat edilemez.
+      final pair =
+          engine.ChessGame.fromFen('4k3/8/8/8/8/8/8/3B1BK1 w - - 0 1');
+      expect(pair.insufficientMaterial, isTrue);
+    });
+
+    test('farklı renk karelerdeki filler beraberlik değil', () {
+      // c8 açık, g1 koyu: mat kurulabilir, oyun sürmeli.
+      final opposite =
+          engine.ChessGame.fromFen('2b1k3/8/8/8/8/8/8/4K1B1 w - - 0 1');
+      expect(opposite.insufficientMaterial, isFalse);
+
+      // İki at FIDE'de otomatik beraberlik değil; mat mümkün.
+      final knights =
+          engine.ChessGame.fromFen('4k3/8/8/8/8/8/8/1N2K1N1 w - - 0 1');
+      expect(knights.insufficientMaterial, isFalse);
+
+      // Fil + at mat edebilir.
+      final bishopKnight =
+          engine.ChessGame.fromFen('4k3/8/8/8/8/8/8/2B1K1N1 w - - 0 1');
+      expect(bishopKnight.insufficientMaterial, isFalse);
+    });
+
     test('elli hamle kuralı sayaçtan okunuyor', () {
       final position =
           engine.ChessGame.fromFen('8/8/4k3/8/8/4K3/7R/8 w - - 100 80');

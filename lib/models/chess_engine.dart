@@ -1148,8 +1148,13 @@ class ChessGame {
     // kontrolü başarısızdır.
     int bishops = 0;
     int knights = 0;
+    // Fillerin bulunduğu karelerin rengi: hepsi aynı renkteyse -- kimin
+    // fili olduğu fark etmez -- mat imkânsızdır.
+    bool lightBishop = false;
+    bool darkBishop = false;
 
-    for (final piece in board) {
+    for (int square = 0; square < board.length; square++) {
+      final piece = board[square];
       if (piece == null) {
         continue;
       }
@@ -1160,6 +1165,11 @@ class ChessGame {
 
         case PieceType.bishop:
           bishops++;
+          if ((square ~/ 8 + square % 8).isEven) {
+            lightBishop = true;
+          } else {
+            darkBishop = true;
+          }
           break;
 
         case PieceType.knight:
@@ -1178,8 +1188,11 @@ class ChessGame {
       return true;
     }
 
-    // Şah + tek fil
-    if (bishops == 1 && knights == 0) {
+    // Filler tek renk karede ve at yok: şah+fil / şah+fil vs şah+fil gibi
+    // pozisyonlarda mat edilemez. Eskiden yalnızca tahtada **tek** fil
+    // varsa beraberlik yazılıyordu; iki tarafın da aynı renk karede fili
+    // olduğu final sonsuza kadar sürüyordu.
+    if (knights == 0 && !(lightBishop && darkBishop)) {
       return true;
     }
 

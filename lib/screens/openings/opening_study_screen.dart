@@ -115,6 +115,16 @@ class _OpeningStudyScreenState extends State<OpeningStudyScreen> {
     return _game.moveFromUci(widget.opening.uciMoves[index]);
   }
 
+  /// Hamlenin SAN metni; kayıt bozuksa boş metin.
+  ///
+  /// `sanMoves` ile `uciMoves` birlikte yazılıyor, ama elle düzenlenmiş
+  /// bir yedekte uzunlukları tutmayabilir: indis `uciMoves`'a göre
+  /// sınırlandığı için kısa olan listede RangeError çıkıyordu.
+  String _san(int index) =>
+      index >= 0 && index < widget.opening.sanMoves.length
+          ? widget.opening.sanMoves[index]
+          : '';
+
   void _goTo(int index, {bool silent = false}) {
     final clamped = index.clamp(-1, widget.opening.uciMoves.length - 1);
     final forward = clamped > _cursor;
@@ -125,7 +135,7 @@ class _OpeningStudyScreenState extends State<OpeningStudyScreen> {
     });
     if (forward && clamped >= 0 && !silent) {
       SoundService.instance.playForSan(
-        widget.opening.sanMoves[clamped],
+        _san(clamped),
         opponent: clamped.isOdd,
       );
     }
@@ -187,7 +197,7 @@ class _OpeningStudyScreenState extends State<OpeningStudyScreen> {
     setState(() {
       _messageIsError = false;
       _message = t('openings.rightMove', {
-        'move': widget.opening.sanMoves[expectedIndex],
+        'move': _san(expectedIndex),
       });
     });
 

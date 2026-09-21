@@ -86,6 +86,14 @@ class _GameScreenState extends State<GameScreen> {
   /// Pes edildi mi? (Oyun bitmiş sayılır, tahta kilitlenir.)
   bool _resigned = false;
 
+  /// Motor cevap veremedi mi?
+  ///
+  /// Motora karşı oyunda tahta yalnızca senin rengine açık. Motor boş
+  /// cevap dönerse sıra motorda kalıyor ve hiç hamle yapamıyordun: tek
+  /// çıkış oyunu yeniden başlatmaktı. Bu bayrak açıkken tahta iki tarafa
+  /// da açılıyor, oyuna elle devam edebiliyorsun.
+  bool _engineStalled = false;
+
   /// Son hamle canlandırılsın mı? Geri giderken ve uzağa atlarken
   /// kapatılıyor: taşın ileri doğru kayması geriye gidişte yanıltıyor.
   bool _animateBoard = true;
@@ -152,6 +160,14 @@ class _GameScreenState extends State<GameScreen> {
 
   void _loadInitialPosition() {
     _startFen = widget.startFen ?? engine.ChessGame().fen;
+    // Bozuk bir kayıttan gelen FEN ekranı düşürüyordu: `fromFen`
+    // FormatException atıyor, hata da initState içinde olduğu için ekran
+    // hiç açılmıyor, kullanıcı kırmızı hata sayfası görüyordu. Artık
+    // başlangıç konumuna dönülüyor ve durum yazıyla söyleniyor.
+    if (engine.ChessGame.validateFen(_startFen) != null) {
+      _startFen = engine.ChessGame().fen;
+      _warning = t('game.fenCorrupt');
+    }
 
     if (widget.pgnContent != null) {
       final parser = PgnParser();
@@ -429,7 +445,10 @@ class _GameScreenState extends State<GameScreen> {
     if (_autoResult() != null) return;
     if (_cursor != _history.length - 1) return;
 
-    setState(() => _thinking = true);
+    setState(() {
+      _thinking = true;
+      _engineStalled = false;
+    });
     final fen = _game.fen;
     final started = DateTime.now();
     final result = await EngineService.instance.bestMoveForLevel(fen, _level);
@@ -445,12 +464,23 @@ class _GameScreenState extends State<GameScreen> {
     if (!mounted) return;
     setState(() => _thinking = false);
 
-    if (result.bestMoveUci.isEmpty) return;
+    // Pes etmek konumu değiştirmediği için aşağıdaki FEN denetimi bunu
+    // yakalamıyordu: motor düşünürken pes edersen hamle yine oynanıyor,
+    // ekranda "pes ettin" yazarken tahta oynuyordu.
+    if (_resigned || _resultText != null) return;
+
+    if (result.bestMoveUci.isEmpty) {
+      setState(() => _engineStalled = true);
+      return;
+    }
     // Kullanıcı bu sırada geri aldıysa hamleyi uygulama.
     if (_game.fen != fen) return;
 
     final move = _game.moveFromUci(result.bestMoveUci);
-    if (move == null) return;
+    if (move == null) {
+      setState(() => _engineStalled = true);
+      return;
+    }
 
     final entry = MoveEntry.play(_game, move);
     setState(() {
@@ -620,6 +650,7 @@ class _GameScreenState extends State<GameScreen> {
       _analysis = null;
       _evalScoreCp = null;
       _resigned = false;
+      _engineStalled = false;
     });
     if (widget.mode == GameMode.versusEngine) _maybePlayEngineMove();
   }
@@ -642,7 +673,12 @@ class _GameScreenState extends State<GameScreen> {
         initialValue: t('game.defaultListName'),
       );
       if (name == null || !mounted) return;
-      await storage.createPlaylist(name);
+      try {
+        await storage.createPlaylist(name);
+      } catch (_) {
+        if (mounted) AppDialogs.snack(context, t('lists.saveFailed'));
+        return;
+      }
       playlists = await storage.loadPlaylists();
       if (!mounted) return;
     }
@@ -702,7 +738,7 @@ class _GameScreenState extends State<GameScreen> {
     if (saved != true || !mounted) return;
 
     final saveName = nameController.text.trim().isEmpty
-        ? 'Oyun'
+        ? t('game.defaultSaveName')
         : nameController.text.trim();
     // PGN'den gelen oyuncu adları; yoksa "Beyaz - Siyah" biçimindeki
     // başlıktan ayırmayı dene (tek oyun yapıştırıp kaydetme yolu).
@@ -715,18 +751,28 @@ class _GameScreenState extends State<GameScreen> {
         black = fromTitle.$2;
       }
     }
-    await storage.addGame(
-      selectedId,
-      SavedGame(
-        name: saveName,
-        uciMoves: _history.map((e) => e.uci).toList(),
-        createdAt: DateTime.now(),
-        result: _resultText,
-        startFen: _startFen == engine.ChessGame().fen ? null : _startFen,
-        white: white,
-        black: black,
-      ),
-    );
+    // Diske yazma başarısız olabilir: cihazda yer kalmamışsa
+    // `StorageService` hata fırlatıyor. Eskiden bu hata yakalanmıyordu,
+    // yani ne kayıt oluyor ne de kullanıcıya bir şey söyleniyordu. PGN
+    // içe aktarma tarafı 9.0.4'te düzeltilmişti, tahta tarafı açık
+    // kalmıştı.
+    try {
+      await storage.addGame(
+        selectedId,
+        SavedGame(
+          name: saveName,
+          uciMoves: _history.map((e) => e.uci).toList(),
+          createdAt: DateTime.now(),
+          result: _resultText,
+          startFen: _startFen == engine.ChessGame().fen ? null : _startFen,
+          white: white,
+          black: black,
+        ),
+      );
+    } catch (_) {
+      if (mounted) AppDialogs.snack(context, t('lists.saveFailed'));
+      return;
+    }
     if (mounted) AppDialogs.snack(context, t('game.saved'));
   }
 
@@ -962,10 +1008,11 @@ class _GameScreenState extends State<GameScreen> {
                                 interactive:
                                     (_replayMode || atLive) && !finished,
                                 animateLastMove: _animateBoard,
-                                movableSide:
-                                    widget.mode == GameMode.versusEngine
-                                        ? widget.playerColor
-                                        : null,
+                                movableSide: widget.mode ==
+                                            GameMode.versusEngine &&
+                                        !_engineStalled
+                                    ? widget.playerColor
+                                    : null,
                                 lastMove: _explore.isNotEmpty
                                     ? _explore.last.move
                                     : (_cursor >= 0

@@ -40,32 +40,42 @@ class CapturedPieces extends StatelessWidget {
     final balance = game.materialBalance;
     final advantage = side == engine.Color.white ? balance : -balance;
 
+    // Şerit oyuncu satırının yarısı kadar yer alıyor (360 dp'lik bir
+    // telefonda ~151 dp), dolu bir takım ise ~190 dp istiyor: çok taş
+    // alınan oyunlarda son taşlar ve "+5" yazısı ekranın kenarında
+    // kesiliyordu. `FittedBox` yer yetmediğinde şeridin tamamını
+    // küçültüp sığdırıyor; yer varsa hiçbir şey değişmiyor.
     return SizedBox(
       height: size + 2,
-      child: Row(
-        children: [
-          for (final type in const [
-            engine.PieceType.pawn,
-            engine.PieceType.knight,
-            engine.PieceType.bishop,
-            engine.PieceType.rook,
-            engine.PieceType.queen,
-          ])
-            if (captured[type] != null)
-              _stack(engine.Piece(type, opponent), captured[type]!),
-          if (advantage > 0)
-            Padding(
-              padding: const EdgeInsets.only(left: 6),
-              child: Text(
-                '+$advantage',
-                style: TextStyle(
-                  fontSize: 12,
-                  fontWeight: FontWeight.w700,
-                  color: Theme.of(context).colorScheme.onSurfaceVariant,
+      child: FittedBox(
+        fit: BoxFit.scaleDown,
+        alignment: Alignment.centerLeft,
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            for (final type in const [
+              engine.PieceType.pawn,
+              engine.PieceType.knight,
+              engine.PieceType.bishop,
+              engine.PieceType.rook,
+              engine.PieceType.queen,
+            ])
+              if (captured[type] != null)
+                _stack(engine.Piece(type, opponent), captured[type]!),
+            if (advantage > 0)
+              Padding(
+                padding: const EdgeInsets.only(left: 6),
+                child: Text(
+                  '+$advantage',
+                  style: TextStyle(
+                    fontSize: 12,
+                    fontWeight: FontWeight.w700,
+                    color: Theme.of(context).colorScheme.onSurfaceVariant,
+                  ),
                 ),
               ),
-            ),
-        ],
+          ],
+        ),
       ),
     );
   }

@@ -47,9 +47,12 @@ yourself** instead of the standard arrangement.
 
 **Load PGN** — From a file, or by pasting from the clipboard. A file may
 hold any number of games: they are listed, and you save the ones you pick
-as a **new list** or **add them to an existing list**. Headers, comments,
-variations, NAG marks and games that begin with a `[FEN]` tag are all
-read. Long files show a progress bar and the app stays responsive.
+as a **new list** or **add them to an existing list**. Headers and games
+that begin with a `[FEN]` tag are read. Comments, variations and NAG marks
+are parsed out so the main line stays intact: the file opens without
+trouble, but none of that is stored or shown in the app. Games that carry
+a position but no moves are skipped. Long files show a progress bar and
+the app stays responsive.
 
 **Free board** — An analysis board where you play both sides.
 

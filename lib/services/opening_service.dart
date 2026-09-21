@@ -2,6 +2,8 @@ import 'dart:convert';
 
 import 'package:shared_preferences/shared_preferences.dart';
 
+import 'corrupt_data.dart';
+
 import '../l10n/app_strings.dart';
 import '../models/chess_engine.dart' as engine;
 import '../models/opening.dart';
@@ -63,9 +65,16 @@ class OpeningService {
     final raw = prefs.getString(_customKey);
     _custom = raw == null
         ? <Opening>[]
-        : (jsonDecode(raw) as List)
-            .map((e) => Opening.fromJson(Map<String, dynamic>.from(e as Map)))
-            .toList();
+        : await readOrQuarantine<List<Opening>>(
+            prefs,
+            _customKey,
+            raw,
+            (decoded) => (decoded as List)
+                .map((e) =>
+                    Opening.fromJson(Map<String, dynamic>.from(e as Map)))
+                .toList(),
+            () => <Opening>[],
+          );
     return _custom!;
   }
 
@@ -490,7 +499,13 @@ class OpeningService {
     final raw = prefs.getString(_notesKey);
     _notes = raw == null
         ? <String, String>{}
-        : Map<String, String>.from(jsonDecode(raw) as Map);
+        : await readOrQuarantine<Map<String, String>>(
+            prefs,
+            _notesKey,
+            raw,
+            (decoded) => Map<String, String>.from(decoded as Map),
+            () => <String, String>{},
+          );
     return _notes!;
   }
 
@@ -515,11 +530,18 @@ class OpeningService {
     final raw = prefs.getString(_progressKey);
     _progress = raw == null
         ? <String, OpeningProgress>{}
-        : (jsonDecode(raw) as Map).map(
-            (key, value) => MapEntry(
-              key as String,
-              OpeningProgress.fromJson(Map<String, dynamic>.from(value as Map)),
+        : await readOrQuarantine<Map<String, OpeningProgress>>(
+            prefs,
+            _progressKey,
+            raw,
+            (decoded) => (decoded as Map).map(
+              (key, value) => MapEntry(
+                key as String,
+                OpeningProgress.fromJson(
+                    Map<String, dynamic>.from(value as Map)),
+              ),
             ),
+            () => <String, OpeningProgress>{},
           );
     return _progress!;
   }

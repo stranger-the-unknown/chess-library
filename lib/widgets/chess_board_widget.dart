@@ -217,6 +217,9 @@ class _ChessBoardWidgetState extends State<ChessBoardWidget>
     if (candidates.length > 1 && candidates.any((m) => m.promotion != null)) {
       final piece = widget.game.pieceAt(from);
       final chosen = await _askPromotion(piece!.color, candidates);
+      // Diyalog açıkken ekran kapatılmış olabilir; aşağıdaki iki yol da
+      // setState çağırıyor.
+      if (!mounted) return;
       if (chosen == null) {
         _clearSelection();
         return;

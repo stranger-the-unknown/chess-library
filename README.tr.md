@@ -46,8 +46,11 @@ normal diziliş yerine **kendi kurduğun pozisyondan** başlarsın.
 **PGN yükle** — Bir dosyadan ya da panodan yapıştırarak. Bir dosyada
 istediğin kadar oyun olabilir: oyunlar listelenir, seçtiklerini **yeni bir
 liste olarak kaydedersin** ya da **var olan bir listeye eklersin**.
-Başlıklar, yorumlar, varyantlar, NAG işaretleri ve `[FEN]` ile başlayan
-oyunlar okunur. Uzun dosyalarda ilerleme çubuğu görünür, uygulama donmaz.
+Başlıklar ve `[FEN]` ile başlayan oyunlar okunur. Yorumlar, varyantlar ve
+NAG işaretleri ana hattı bozmadan ayıklanır: dosya sorunsuz açılır, ama bu
+bilgiler saklanmaz ve uygulamada görünmez. Hamlesi olmayan, yalnızca
+pozisyon taşıyan oyunlar listeye alınmaz. Uzun dosyalarda ilerleme çubuğu
+görünür, uygulama donmaz.
 
 **Serbest tahta** — İki tarafı da senin oynadığın analiz tahtası.
 
