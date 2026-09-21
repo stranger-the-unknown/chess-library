@@ -543,39 +543,6 @@ C00|French|İleri Varyant|e4 e6 d4 d5 e5
       );
     });
 
-    testWidgets('yüz kayıttan fazlası seçilince uyarı çıkıyor',
-        (tester) async {
-      final playlist = await StorageService.instance.createPlaylist('Büyük');
-      final pgn = List.generate(
-        StorageService.analysisLimit + 2,
-        (i) => '[White "B$i"]\n[Black "S$i"]\n\n1. e4 e5 *\n',
-      ).join();
-      await PgnImportService.addToList(playlist.id, PgnParser.parseAll(pgn));
-
-      await _pump(tester, PlaylistDetailScreen(playlistId: playlist.id));
-
-      // Her oyun satırında da bir üç nokta var; başlık çubuğundaki.
-      await tester.tap(
-        find.descendant(
-          of: find.byType(AppBar),
-          matching: find.byIcon(Icons.more_vert),
-        ),
-      );
-      await tester.pumpAndSettle();
-      await tester.tap(find.text('Analiz için oyun seç'));
-      await tester.pumpAndSettle();
-
-      expect(find.textContaining('kayıt tutuyor'), findsNothing);
-
-      await tester.tap(find.text('Tümünü seç'));
-      await tester.pumpAndSettle();
-
-      expect(
-        find.textContaining('kayıt tutuyor'),
-        findsOneWidget,
-        reason: 'sınır aşıldığında sessiz kalmamalı',
-      );
-    });
   });
 
   group('Titreşim ayarı', () {

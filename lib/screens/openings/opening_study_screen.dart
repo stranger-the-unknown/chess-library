@@ -260,8 +260,10 @@ class _OpeningStudyScreenState extends State<OpeningStudyScreen> {
           BoardArrow(
             next.from,
             next.to,
+            // İpucu oku da makineden geliyor: sönük ve ince.
             Color(BoardAssets.markColor(SettingsService.instance.boardTheme))
-                .withValues(alpha: 0.85),
+                .withValues(alpha: 0.5),
+            faint: true,
           ),
         );
       }

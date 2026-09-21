@@ -17,7 +17,15 @@ class BoardArrow {
   final engine.Position to;
   final Color color;
 
-  const BoardArrow(this.from, this.to, this.color);
+  /// Makinenin önerdiği ok mu?
+  ///
+  /// Kullanıcının sağ tıkla çizdiği ok kasıtlı ve kalıcı bir nottur;
+  /// motorun oku her hamlede kendiliğinden değişen geçici bir öneridir.
+  /// İkisi aynı renkte olduğu için ayrım kalınlık ve saydamlıkta:
+  /// öneri daha ince ve daha sönük çiziliyor.
+  final bool faint;
+
+  const BoardArrow(this.from, this.to, this.color, {this.faint = false});
 }
 
 /// Etkileşimli satranç tahtası.
@@ -730,37 +738,55 @@ class _ArrowPainter extends CustomPainter {
       if (length == 0) continue;
       final unit = direction / length;
 
-      final headLength = square * 0.42;
+      final headLength = square * (arrow.faint ? 0.36 : 0.42);
       final shaftEnd = to - unit * headLength * 0.85;
       final shaftStart = from + unit * square * 0.28;
 
-      // Kuyruk yuvarlak, üçgen tarafı düz — uçlar üst üste binmesin.
-      final shaftPaint = Paint()
-        ..color = arrow.color
-        ..strokeWidth = square * 0.17
-        ..strokeCap = StrokeCap.butt
-        ..style = PaintingStyle.stroke;
-      final tailPaint = Paint()
-        ..color = arrow.color
-        ..strokeWidth = square * 0.17
-        ..strokeCap = StrokeCap.round
-        ..style = PaintingStyle.stroke;
-      canvas.drawLine(shaftStart, shaftStart + unit * 0.01, tailPaint);
-      canvas.drawLine(shaftStart, shaftEnd, shaftPaint);
-
       final normal = Offset(-unit.dy, unit.dx);
-      final head = Path()
-        ..moveTo(to.dx, to.dy)
-        ..lineTo(
-          shaftEnd.dx + normal.dx * headLength * 0.42,
-          shaftEnd.dy + normal.dy * headLength * 0.42,
+      final half = square * (arrow.faint ? 0.068 : 0.085);
+      final headHalf = headLength * 0.42;
+
+      // Ok tek bir yolla, tek seferde boyanıyor: yarım daire kuyruk,
+      // gövde ve uç üçgeni. Eskiden kuyruk ayrı bir yuvarlak uçlu
+      // çizgiydi; gövdenin ilk yarım kalınlığı iki kez boyanıyor ve
+      // yarı saydam renkte orada koyu bir leke görünüyordu.
+      final path = Path()
+        ..moveTo(
+          shaftStart.dx + normal.dx * half,
+          shaftStart.dy + normal.dy * half,
         )
         ..lineTo(
-          shaftEnd.dx - normal.dx * headLength * 0.42,
-          shaftEnd.dy - normal.dy * headLength * 0.42,
+          shaftEnd.dx + normal.dx * half,
+          shaftEnd.dy + normal.dy * half,
+        )
+        ..lineTo(
+          shaftEnd.dx + normal.dx * headHalf,
+          shaftEnd.dy + normal.dy * headHalf,
+        )
+        ..lineTo(to.dx, to.dy)
+        ..lineTo(
+          shaftEnd.dx - normal.dx * headHalf,
+          shaftEnd.dy - normal.dy * headHalf,
+        )
+        ..lineTo(
+          shaftEnd.dx - normal.dx * half,
+          shaftEnd.dy - normal.dy * half,
+        )
+        ..lineTo(
+          shaftStart.dx - normal.dx * half,
+          shaftStart.dy - normal.dy * half,
+        )
+        // Kuyruğu kapatan yarım daire; geriye doğru şişiyor.
+        ..arcToPoint(
+          Offset(
+            shaftStart.dx + normal.dx * half,
+            shaftStart.dy + normal.dy * half,
+          ),
+          radius: Radius.circular(half),
+          clockwise: false,
         )
         ..close();
-      canvas.drawPath(head, Paint()..color = arrow.color);
+      canvas.drawPath(path, Paint()..color = arrow.color);
     }
   }
 

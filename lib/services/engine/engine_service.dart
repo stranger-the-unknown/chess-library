@@ -107,6 +107,8 @@ class EngineService {
       movetimeMs: movetimeMs,
       skillLevel: 20,
       limitStrength: false,
+      threads: analysisThreads,
+      hashMb: analysisHashMb,
       onProgress: onProgress,
     );
     if (result == null) {
@@ -115,6 +117,24 @@ class EngineService {
       return SearchResult.empty;
     }
     return result;
+  }
+
+  /// Analizde kullanılacak çekirdek sayısı.
+  ///
+  /// Telefonda tek çekirdek (pil); masaüstünde çekirdeklerin yarısı, en
+  /// çok dört. Oyun hamlesi bundan etkilenmiyor — orası her platformda
+  /// tek çekirdek, ki kademelerin anlamı cihazdan cihaza değişmesin.
+  static int get analysisThreads {
+    if (kIsWeb) return 1;
+    if (Platform.isAndroid || Platform.isIOS) return 1;
+    return (Platform.numberOfProcessors / 2).floor().clamp(1, 4);
+  }
+
+  /// Analizde kullanılacak hash boyutu (MB). Telefonda küçük kalıyor.
+  static int get analysisHashMb {
+    if (kIsWeb) return 64;
+    if (Platform.isAndroid || Platform.isIOS) return 64;
+    return 128;
   }
 
   /// Motora karşı oyun: seviye → Skill Level (+ LimitStrength/Elo).
@@ -179,8 +199,12 @@ class EngineService {
   }
 
   Future<void> _recoverStockfish() async {
+    final sf = _stockfish;
+    // Bu arada yeni bir arama başladıysa süreci öldürme: eski aramanın
+    // hatası yüzünden yenisini kesmiş olurduk.
+    if (sf != null && sf.hasActiveSearch) return;
     try {
-      await _stockfish?.dispose();
+      await sf?.dispose();
     } catch (_) {}
     _stockfish = null;
     // binaryMissing'i açma — ikili yoksa zaten true kalır.

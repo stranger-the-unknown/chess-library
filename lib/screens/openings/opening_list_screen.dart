@@ -127,94 +127,100 @@ class _OpeningListScreenState extends State<OpeningListScreen> {
         TextEditingController(text: existing?.variation ?? '');
     final movesController =
         TextEditingController(text: existing?.sanMoves.join(' ') ?? '');
+    try {
 
-    final saved = await showDialog<bool>(
-      context: context,
-      builder: (dialogContext) => AlertDialog(
-        title: Text(
-          editing ? t('openings.editVariation') : t('openings.addOwn'),
+      final saved = await showDialog<bool>(
+        context: context,
+        builder: (dialogContext) => AlertDialog(
+          title: Text(
+            editing ? t('openings.editVariation') : t('openings.addOwn'),
+          ),
+          content: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                TextField(
+                  controller: familyController,
+                  decoration: InputDecoration(
+                    labelText: t('openings.family'),
+                    hintText: t('openings.familyHint'),
+                  ),
+                ),
+                const SizedBox(height: 10),
+                TextField(
+                  controller: nameController,
+                  decoration: InputDecoration(
+                    labelText: t('openings.variationName'),
+                    hintText: t('openings.variationHint'),
+                  ),
+                ),
+                const SizedBox(height: 10),
+                TextField(
+                  controller: movesController,
+                  maxLines: 5,
+                  minLines: 3,
+                  style: const TextStyle(fontSize: 13, fontFamily: 'monospace'),
+                  decoration: InputDecoration(
+                    labelText: t('openings.moves'),
+                    hintText: t('openings.movesHint'),
+                  ),
+                ),
+              ],
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(dialogContext, false),
+              child: Text(t('common.cancel')),
+            ),
+            ElevatedButton(
+              onPressed: () => Navigator.pop(dialogContext, true),
+              child: Text(editing ? t('common.save') : t('common.add')),
+            ),
+          ],
         ),
-        content: SingleChildScrollView(
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              TextField(
-                controller: familyController,
-                decoration: InputDecoration(
-                  labelText: t('openings.family'),
-                  hintText: t('openings.familyHint'),
-                ),
-              ),
-              const SizedBox(height: 10),
-              TextField(
-                controller: nameController,
-                decoration: InputDecoration(
-                  labelText: t('openings.variationName'),
-                  hintText: t('openings.variationHint'),
-                ),
-              ),
-              const SizedBox(height: 10),
-              TextField(
-                controller: movesController,
-                maxLines: 5,
-                minLines: 3,
-                style: const TextStyle(fontSize: 13, fontFamily: 'monospace'),
-                decoration: InputDecoration(
-                  labelText: t('openings.moves'),
-                  hintText: t('openings.movesHint'),
-                ),
-              ),
-            ],
-          ),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(dialogContext, false),
-            child: Text(t('common.cancel')),
-          ),
-          ElevatedButton(
-            onPressed: () => Navigator.pop(dialogContext, true),
-            child: Text(editing ? t('common.save') : t('common.add')),
-          ),
-        ],
-      ),
-    );
+      );
 
-    if (saved != true || !mounted) return;
+      if (saved != true || !mounted) return;
 
-    if (editing) {
-      final ok = await _service.editCustom(
-        id: existing.id,
+      if (editing) {
+        final ok = await _service.editCustom(
+          id: existing.id,
+          family: familyController.text.trim(),
+          variation: nameController.text.trim(),
+          moveText: movesController.text,
+        );
+        if (!mounted) return;
+        if (!ok) {
+          AppDialogs.snack(context, t('openings.noValidMove'));
+          return;
+        }
+        // Değişiklik listede görünüyor; ayrıca bildirim göstermiyoruz.
+        await _load();
+        return;
+      }
+
+      final opening = await _service.addFromSan(
         family: familyController.text.trim(),
         variation: nameController.text.trim(),
         moveText: movesController.text,
       );
       if (!mounted) return;
-      if (!ok) {
+      if (opening == null) {
         AppDialogs.snack(context, t('openings.noValidMove'));
         return;
       }
-      // Değişiklik listede görünüyor; ayrıca bildirim göstermiyoruz.
       await _load();
-      return;
-    }
-
-    final opening = await _service.addFromSan(
-      family: familyController.text.trim(),
-      variation: nameController.text.trim(),
-      moveText: movesController.text,
-    );
-    if (!mounted) return;
-    if (opening == null) {
-      AppDialogs.snack(context, t('openings.noValidMove'));
-      return;
-    }
-    await _load();
-    if (mounted) {
-      AppDialogs.snack(
-        context,
-        t('openings.added', {'count': opening.sanMoves.length}),
-      );
+      if (mounted) {
+        AppDialogs.snack(
+          context,
+          t('openings.added', {'count': opening.sanMoves.length}),
+        );
+      }
+    } finally {
+      familyController.dispose();
+      nameController.dispose();
+      movesController.dispose();
     }
   }
 

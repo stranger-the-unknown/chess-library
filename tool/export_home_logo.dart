@@ -90,9 +90,17 @@ Widget _homeLogo() {
       ),
     ),
     alignment: Alignment.center,
-    child: const Text(
-      '♞',
-      style: TextStyle(fontSize: 30, color: Colors.white, height: 1.1),
+    child: Transform.translate(
+      offset: const Offset(0, 5),
+      child: const Text(
+        '♞',
+        style: TextStyle(
+          fontFamily: 'NotoSansSymbols2',
+          fontSize: 30,
+          color: Colors.white,
+          height: 1.1,
+        ),
+      ),
     ),
   );
 }

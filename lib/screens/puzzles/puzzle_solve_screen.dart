@@ -11,6 +11,7 @@ import '../../models/move_entry.dart';
 import '../../models/puzzle.dart';
 import '../../services/board_image_service.dart';
 import '../../services/engine/engine_service.dart';
+import '../../services/screen_awake.dart';
 import '../../services/puzzle_service.dart';
 import '../../services/sound_service.dart';
 import '../../theme/app_theme.dart';
@@ -88,11 +89,24 @@ class _PuzzleSolveScreenState extends State<PuzzleSolveScreen> {
   /// Tahtanın PNG olarak kaydedilebilmesi için çizim sınırı.
   final GlobalKey _boardKey = GlobalKey();
 
+  /// Düşünürken ekran sönmesin; sayaç her hamlede sıfırlanıyor.
+  final ScreenAwake _awake = ScreenAwake();
+
   @override
   void initState() {
     super.initState();
+    _awake.keep();
     _index = widget.initialIndex.clamp(0, widget.puzzles.length - 1);
     _loadPuzzle();
+  }
+
+  @override
+  void dispose() {
+    _awake.release();
+    // Ekrandan çıkarken süren aramayı bırak: sonucunu kimse beklemiyor,
+    // boşuna işlemci ve pil harcıyordu. Tahta ekranında bu zaten yapılıyor.
+    EngineService.instance.stopAnalysis();
+    super.dispose();
   }
 
   // -------------------------------------------------------------------------
@@ -151,20 +165,6 @@ class _PuzzleSolveScreenState extends State<PuzzleSolveScreen> {
   /// İpucu ya da çözüm gösterilebilir mi?
   bool get _hasAnswer => _puzzle.hasSolution || _baseline != null;
 
-  String get _goalText {
-    if (_puzzle.hasSolution) {
-      return t('puzzles.goalMate', {'n': _puzzle.mateInMoves});
-    }
-    final baseline = _baseline;
-    if (baseline == null) return t('puzzles.positionAnalysing');
-    if (baseline.isGameOver) return t('puzzles.noMoveHere');
-    if (baseline.mateIn != null && baseline.mateIn! > 0) {
-      return t('puzzles.goalMate', {'n': baseline.mateIn});
-    }
-    if (baseline.scoreCp >= 250) return t('puzzles.goalWin');
-    if (baseline.scoreCp <= -250) return t('puzzles.goalDefend');
-    return t('puzzles.goalBest');
-  }
 
   // -------------------------------------------------------------------------
   // Hamle değerlendirme
@@ -172,6 +172,7 @@ class _PuzzleSolveScreenState extends State<PuzzleSolveScreen> {
 
   Future<void> _onMove(engine.ChessMove move) async {
     if (_busy) return;
+    _awake.keep();
     if (!_puzzle.hasSolution && _baseline == null) return;
 
     setState(() {
@@ -188,6 +189,9 @@ class _PuzzleSolveScreenState extends State<PuzzleSolveScreen> {
     if (!mounted) return;
 
     await _service.registerAttempt(_puzzle.id);
+    // Disk yazımı sürerken kullanıcı ekrandan çıkmış olabilir; silinmiş
+    // ekranda setState çağırmak hata veriyordu.
+    if (!mounted) return;
 
     if (!correct) {
       SoundService.instance.playWrong();
@@ -463,7 +467,10 @@ class _PuzzleSolveScreenState extends State<PuzzleSolveScreen> {
             BoardArrow(
               move.from,
               move.to,
-              Color(BoardAssets.markColor(SettingsService.instance.boardTheme)).withValues(alpha: 0.85),
+              // Motor önerisi: senin çizdiğin oktan daha sönük ve ince.
+              Color(BoardAssets.markColor(SettingsService.instance.boardTheme))
+                  .withValues(alpha: 0.5),
+              faint: true,
             ),
           );
         }
@@ -696,6 +703,13 @@ class _PuzzleSolveScreenState extends State<PuzzleSolveScreen> {
   }
 
   Widget _feedbackCard(ColorScheme scheme) {
+    // Hedef kartı kaldırıldı: "En iyi hamleyi bul", "Mat var: 2
+    // hamlede" gibi satırlar bulmacayı çözmeye bir şey katmıyor,
+    // üstelik ilkini okuyan çözümü baştan biliyordu. Doğru/yanlış/
+    // bitti/düşünüyor geri bildirimleri duruyor.
+    // Kartın yeri boşken de duruyor: kart gelip gidince tahta aşağı
+    // yukarı kaymasın. Motor şeridindeki çözümün aynısı (game_screen).
+    if (_feedback == _Feedback.none) return const SizedBox(height: 50);
     final (color, icon, text) = switch (_feedback) {
       _Feedback.correct => (
           scheme.correct,
@@ -713,11 +727,8 @@ class _PuzzleSolveScreenState extends State<PuzzleSolveScreen> {
           Icons.hourglass_top_rounded,
           _feedbackText,
         ),
-      _Feedback.none => (
-          scheme.onSurfaceVariant,
-          Icons.emoji_objects_outlined,
-          _goalText,
-        ),
+      // Ulaşılmaz: none durumunda kart yukarıda çizilmeden dönüyor.
+      _Feedback.none => (scheme.onSurfaceVariant, Icons.info_outline, ''),
     };
 
     return Container(

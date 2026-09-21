@@ -121,9 +121,22 @@ class HomeScreen extends StatelessWidget {
         ),
       ),
       alignment: Alignment.center,
-      child: const Text(
-        '♞',
-        style: TextStyle(fontSize: 30, color: Colors.white, height: 1.1),
+      // Yazı tipi açıkça veriliyor: sistem yazı tipine bırakılınca at
+      // Android'de ve Windows'ta farklı çiziliyordu. Uygulama simgesi de
+      // bu widget'tan rasterize ediliyor (tool/export_home_logo.dart).
+      // Noto'nun ♞ glifi satır kutusunda yukarıda duruyor; kareye tam
+      // ortalamak için ölçülen kadar (54 pikselde 5) aşağı alınıyor.
+      child: Transform.translate(
+        offset: const Offset(0, 5),
+        child: const Text(
+          '♞',
+          style: TextStyle(
+            fontFamily: 'NotoSansSymbols2',
+            fontSize: 30,
+            color: Colors.white,
+            height: 1.1,
+          ),
+        ),
       ),
     );
   }
@@ -618,45 +631,49 @@ class HomeScreen extends StatelessWidget {
 
   Future<void> _pastePgn(BuildContext context) async {
     final controller = TextEditingController();
-    final clipboard = await Clipboard.getData(Clipboard.kTextPlain);
-    if (clipboard?.text != null && clipboard!.text!.contains('.')) {
-      controller.text = clipboard.text!;
-    }
-    if (!context.mounted) return;
+    try {
+      final clipboard = await Clipboard.getData(Clipboard.kTextPlain);
+      if (clipboard?.text != null && clipboard!.text!.contains('.')) {
+        controller.text = clipboard.text!;
+      }
+      if (!context.mounted) return;
 
-    final pgn = await showDialog<String>(
-      context: context,
-      builder: (dialogContext) => AlertDialog(
-        title: Text(t('home.loadPgn')),
-        content: SizedBox(
-          width: 420,
-          child: TextField(
-            controller: controller,
-            maxLines: 10,
-            minLines: 6,
-            style: const TextStyle(fontSize: 12.5, fontFamily: 'monospace'),
-            decoration: InputDecoration(hintText: t('home.pgnHint')),
+      final pgn = await showDialog<String>(
+        context: context,
+        builder: (dialogContext) => AlertDialog(
+          title: Text(t('home.loadPgn')),
+          content: SizedBox(
+            width: 420,
+            child: TextField(
+              controller: controller,
+              maxLines: 10,
+              minLines: 6,
+              style: const TextStyle(fontSize: 12.5, fontFamily: 'monospace'),
+              decoration: InputDecoration(hintText: t('home.pgnHint')),
+            ),
           ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(dialogContext),
+              child: Text(t('common.cancel')),
+            ),
+            ElevatedButton(
+              onPressed: () =>
+                  Navigator.pop(dialogContext, controller.text.trim()),
+              child: Text(t('common.open')),
+            ),
+          ],
         ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(dialogContext),
-            child: Text(t('common.cancel')),
-          ),
-          ElevatedButton(
-            onPressed: () =>
-                Navigator.pop(dialogContext, controller.text.trim()),
-            child: Text(t('common.open')),
-          ),
-        ],
-      ),
-    );
+      );
 
-    if (pgn == null || !context.mounted) return;
-    if (pgn.isEmpty) {
-      AppDialogs.snack(context, t('home.pgnEmpty'));
-      return;
+      if (pgn == null || !context.mounted) return;
+      if (pgn.isEmpty) {
+        AppDialogs.snack(context, t('home.pgnEmpty'));
+        return;
+      }
+      await _handlePgnText(context, pgn, 'PGN');
+    } finally {
+      controller.dispose();
     }
-    await _handlePgnText(context, pgn, 'PGN');
   }
 }

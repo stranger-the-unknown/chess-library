@@ -127,18 +127,15 @@ void main() {
       }
     });
 
-    test('tahtanın kendi renginden yeterince uzak', () {
+    test('varsayılan renk paletin ilk rengi', () {
+      // Eskiden renk tahtanın renginden türetiliyordu (tondan en uzak
+      // aday seçiliyordu). Artık kullanıcı her tahta için paletten
+      // seçiyor; seçmediyse paletin ilk rengi geçerli.
       for (final board in BoardAssets.boards) {
-        final (_, dark) = BoardAssets.squareColors(board);
-        final boardHue = HSVColor.fromColor(Color(dark)).hue;
-        final markHue =
-            HSVColor.fromColor(Color(BoardAssets.markColor(board))).hue;
-        final raw = (markHue - boardHue).abs();
-        final distance = raw > 180 ? 360 - raw : raw;
         expect(
-          distance,
-          greaterThan(40),
-          reason: '$board üzerinde işaret rengi tahtaya çok yakın',
+          BoardAssets.markColor(board),
+          BoardAssets.accentPalette.first,
+          reason: '$board için varsayılan renk paletin ilki değil',
         );
       }
     });

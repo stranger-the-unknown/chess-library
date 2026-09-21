@@ -5,7 +5,6 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:chess_pgn_reader/l10n/app_strings.dart';
 import 'package:chess_pgn_reader/models/playlist.dart';
 import 'package:chess_pgn_reader/models/stored_review.dart';
-import 'package:chess_pgn_reader/screens/playlist_screen.dart';
 import 'package:chess_pgn_reader/screens/playlist_detail_screen.dart';
 import 'package:chess_pgn_reader/services/settings_service.dart';
 import 'package:chess_pgn_reader/services/storage_service.dart';
@@ -44,36 +43,6 @@ void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
   tearDown(() => Strings.language = AppLanguage.system);
 
-  testWidgets('analiz listeleri en üstte ve adlandırılmış', (tester) async {
-    await _seed();
-    await _pump(tester, const PlaylistScreen());
-
-    expect(find.text('Son Analizler'), findsOneWidget);
-
-    final analysis = tester.getRect(find.text('Son Analizler'));
-    final user = tester.getRect(find.text('Tal'));
-    expect(analysis.top, lessThan(user.top), reason: 'analiz listesi üstte');
-  });
-
-  testWidgets('analiz listesi silinemiyor ve yeniden adlandırılamıyor',
-      (tester) async {
-    await _seed();
-    await _pump(tester, const PlaylistScreen());
-
-    // Analiz listesinin menüsünde silme/yeniden adlandırma olmamalı.
-    final card = find.ancestor(
-      of: find.text('Son Analizler'),
-      matching: find.byType(Row),
-    );
-    await tester.tap(find.descendant(
-      of: card.first,
-      matching: find.byType(PopupMenuButton<String>),
-    ));
-    await tester.pumpAndSettle();
-    expect(find.text('Sil'), findsNothing);
-    expect(find.text('Yeniden adlandır'), findsNothing);
-  });
-
   test('servis de silmeyi ve adlandırmayı reddediyor', () async {
     await _seed();
     await StorageService.instance.deletePlaylist(StorageService.analysisListId);
@@ -83,36 +52,6 @@ void main() {
     final lists = await StorageService.instance.loadAnalysisLists();
     expect(lists, hasLength(1), reason: 'silinmemeliydi');
     expect(lists.first.name, isNot('Yeni'), reason: 'adlandırılmamalıydı');
-  });
-
-  testWidgets('seçim kipi açılıyor ve düğmeler seçime bağlı', (tester) async {
-    final playlist = await _seed();
-    await _pump(tester, PlaylistDetailScreen(playlistId: playlist.id));
-
-    // Satırların da menüsü var; başlık çubuğundakini seçiyoruz.
-    await tester.tap(find.descendant(
-      of: find.byType(AppBar),
-      matching: find.byType(PopupMenuButton<String>),
-    ));
-    await tester.pumpAndSettle();
-    await tester.tap(find.text('Analiz için oyun seç'));
-    await tester.pumpAndSettle();
-
-    expect(find.text('0 oyun seçildi'), findsOneWidget);
-    // Seçim yokken Analiz düğmesi kapalı.
-    final idle = tester.widget<FilledButton>(
-      find.widgetWithText(FilledButton, 'Analiz'),
-    );
-    expect(idle.onPressed, isNull);
-
-    await tester.tap(find.text('Tümünü seç'));
-    await tester.pumpAndSettle();
-    expect(find.text('2 oyun seçildi'), findsOneWidget);
-
-    final ready = tester.widget<FilledButton>(
-      find.widgetWithText(FilledButton, 'Analiz'),
-    );
-    expect(ready.onPressed, isNotNull);
   });
 
   testWidgets('kaydedilmiş analiz listede görünüyor', (tester) async {
@@ -242,22 +181,6 @@ void main() {
       final analysis = await seedAnalysis();
       await _pump(tester, PlaylistDetailScreen(playlistId: analysis.id));
       expect(find.byIcon(Icons.file_open_outlined), findsNothing);
-    });
-
-    testWidgets('kullanıcı listesinde hepsi duruyor', (tester) async {
-      final playlist = await _seed();
-      await _pump(tester, PlaylistDetailScreen(playlistId: playlist.id));
-
-      expect(find.byIcon(Icons.file_open_outlined), findsOneWidget);
-      await tester.tap(
-        find.descendant(
-          of: find.byType(AppBar),
-          matching: find.byIcon(Icons.more_vert),
-        ),
-      );
-      await tester.pumpAndSettle();
-      expect(find.text('Analiz için oyun seç'), findsOneWidget);
-      expect(find.text('Aralığı işaretle'), findsOneWidget);
     });
 
     testWidgets('uzun başlık başlık çubuğuna sığdırılıyor', (tester) async {

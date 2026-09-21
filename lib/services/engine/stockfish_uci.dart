@@ -30,6 +30,8 @@ class StockfishUci {
 
   /// Son uygulanan güç ayarları (gereksiz setoption'ları azaltmak için).
   int? _appliedSkill;
+  int? _appliedThreads;
+  int? _appliedHashMb;
   bool? _appliedLimitStrength;
   int? _appliedElo;
 
@@ -62,6 +64,8 @@ class StockfishUci {
           _ready = false;
           _process = null;
           _appliedSkill = null;
+          _appliedThreads = null;
+          _appliedHashMb = null;
           _appliedLimitStrength = null;
           _appliedElo = null;
           _failAllWaiters();
@@ -96,6 +100,8 @@ class StockfishUci {
       await ready2;
       _ready = true;
       _appliedSkill = null;
+      _appliedThreads = null;
+      _appliedHashMb = null;
       _appliedLimitStrength = null;
       _appliedElo = null;
       return true;
@@ -106,15 +112,52 @@ class StockfishUci {
   }
 
   /// Devam eden aramayı `stop` ile keser; bekleyen [analyze] hemen döner.
+  /// Motorun `stop`tan sonra `bestmove` göndermesi için tanınan süre.
+  static const Duration _cancelGrace = Duration(seconds: 1);
+
+  /// Süren aramayı durdurur ve kapanışını bekler.
+  ///
+  /// Eskiden bekleyen arama doğrudan `null` ile kapatılıyordu; çağıran
+  /// bunu çökme sayıp (`_recoverStockfish`) süreci yeniden kuruyordu.
+  /// Yani canlı analiz açıkken kesilen her aramada Stockfish kapanıp
+  /// açılıyordu — Android'de ~95 MB'lık ikili için pahalı.
+  ///
+  /// Motor `stop` komutundan sonra kendi `bestmove` satırını gönderir.
+  /// Onu beklemek iki işi birden görüyor: süreç ayakta kalıyor ve eski
+  /// aramanın çıktısı yeni aramaya karışmıyor. Satır gelmezse (asılı
+  /// motor) eski davranışa dönülüyor: `null`, yani "yeniden kur".
   Future<void> stopSearch() async {
+    final pending = _activeSearch;
     try {
       _write('stop');
     } catch (_) {}
-    final pending = _activeSearch;
-    if (pending != null && !pending.isCompleted) {
-      pending.complete(null);
-    }
+    if (pending == null || pending.isCompleted) return;
+    try {
+      await pending.future.timeout(
+        _cancelGrace,
+        onTimeout: () {
+          if (!pending.isCompleted) pending.complete(null);
+          return null;
+        },
+      );
+    } catch (_) {}
   }
+
+  /// Şu anda süren bir arama var mı?
+  ///
+  /// Kurtarma yolu bunu soruyor: eski aramanın hatası yüzünden yeni
+  /// aramanın sürecini öldürmemek için.
+  bool get hasActiveSearch {
+    final active = _activeSearch;
+    return active != null && !active.isCompleted;
+  }
+
+  /// Motora en son yazılan çekirdek sayısı; testler oyun/analiz ayrımını
+  /// bununla doğruluyor.
+  int? get appliedThreads => _appliedThreads;
+
+  /// Sürecin kimliği; testler sürecin aynı kaldığını bununla doğruluyor.
+  int? get processId => _process?.pid;
 
   /// UCI güç seçeneklerini `go` öncesi uygular.
   ///
@@ -159,6 +202,40 @@ class StockfishUci {
     }
   }
 
+  /// Çekirdek sayısı ve hash boyutu.
+  ///
+  /// Oyun hamlesi her platformda tek çekirdekle üretiliyor: aynı kademe
+  /// telefonda ve bilgisayarda aynı güçte olsun. Analiz (canlı analiz,
+  /// bulmaca değerlendirmesi) masaüstünde daha çok çekirdek kullanıyor;
+  /// orada motor rakip değil, araç.
+  Future<bool> applyResources({
+    required int threads,
+    required int hashMb,
+  }) async {
+    if (!await start()) return false;
+    final useThreads = threads.clamp(1, 32);
+    final useHash = hashMb.clamp(16, 1024);
+    if (_appliedThreads == useThreads && _appliedHashMb == useHash) {
+      return true;
+    }
+    try {
+      _write('setoption name Threads value $useThreads');
+      _write('setoption name Hash value $useHash');
+      final ready = _armWait((l) => l == 'readyok', const Duration(seconds: 3));
+      _write('isready');
+      if (!await ready) {
+        await _restart();
+        return isRunning;
+      }
+      _appliedThreads = useThreads;
+      _appliedHashMb = useHash;
+      return true;
+    } catch (_) {
+      await _restart();
+      return false;
+    }
+  }
+
   /// EngineLevel.skill → yaklaşık UCI_Elo (UI'da gösterilmez).
   static int eloForSkill(int skill) {
     const map = <int, int>{
@@ -179,6 +256,8 @@ class StockfishUci {
     int skillLevel = 20,
     bool limitStrength = false,
     int? elo,
+    int threads = 1,
+    int hashMb = 64,
     void Function(SearchResult partial)? onProgress,
   }) async {
     if (!await start()) return null;
@@ -193,6 +272,9 @@ class StockfishUci {
         limitStrength: limitStrength,
         elo: elo,
       )) {
+        return null;
+      }
+      if (!await applyResources(threads: threads, hashMb: hashMb)) {
         return null;
       }
 
@@ -296,6 +378,8 @@ class StockfishUci {
   Future<void> dispose() async {
     _ready = false;
     _appliedSkill = null;
+    _appliedThreads = null;
+    _appliedHashMb = null;
     _appliedLimitStrength = null;
     _appliedElo = null;
     final pending = _activeSearch;

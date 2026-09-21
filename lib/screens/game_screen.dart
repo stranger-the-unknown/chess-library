@@ -15,6 +15,7 @@ import '../models/playlist.dart';
 import '../services/board_image_service.dart';
 import '../services/engine/engine_service.dart';
 import '../services/settings_service.dart';
+import '../services/screen_awake.dart';
 import '../services/sound_service.dart';
 import '../services/storage_service.dart';
 import '../theme/app_theme.dart';
@@ -130,9 +131,14 @@ class _GameScreenState extends State<GameScreen> {
 
   late EngineLevel _level;
 
+  /// Düşünürken ekran sönmesin; sayaç her hamlede sıfırlanıyor, oyun
+  /// bitince bırakılıyor.
+  final ScreenAwake _awake = ScreenAwake();
+
   @override
   void initState() {
     super.initState();
+    _awake.keep();
     _level = EngineLevel.all[
         (widget.engineLevelIndex ?? SettingsService.instance.engineLevel)
             .clamp(0, EngineLevel.all.length - 1)];
@@ -144,6 +150,7 @@ class _GameScreenState extends State<GameScreen> {
 
   @override
   void dispose() {
+    _awake.release();
     _analysisDebounce?.cancel();
     _analysisToken++;
     // SF stop askiya almasin; fire-and-forget.
@@ -307,6 +314,15 @@ class _GameScreenState extends State<GameScreen> {
       SoundService.instance.playForSan(entry.san, opponent: opponent);
     }
 
+    // Oyun sürerken ekran açık kalsın, bitince bıraksın.
+    if (!replay) {
+      if (gameOver) {
+        _awake.release();
+      } else {
+        _awake.keep();
+      }
+    }
+
     if (!replay && gameOver) {
       setState(() => _resultText = _autoResult());
       // review removed
@@ -326,6 +342,16 @@ class _GameScreenState extends State<GameScreen> {
 
   void _afterPositionChanged() {
     if (!_analysisOn) return;
+    // Motora karşı oyunda sıra motordaysa canlı analiz başlatılmıyor.
+    // İkisi de tek bir Stockfish sürecini kullanıyor: analiz araya
+    // girince motorun aramasını kesiyordu, motor da hamlesini hiç
+    // oynamıyordu — analizi kapatıp açmak gerekiyordu. Motor hamlesini
+    // oynayınca bu yordam yeniden çağrılıyor ve analiz orada başlıyor.
+    if (widget.mode == GameMode.versusEngine &&
+        _game.sideToMove != widget.playerColor) {
+      _analysisDebounce?.cancel();
+      return;
+    }
     _analysisDebounce?.cancel();
     _analysisToken++;
     EngineService.instance.stopAnalysis();
@@ -361,6 +387,9 @@ class _GameScreenState extends State<GameScreen> {
     });
   }
 
+  /// Motor hamlesinin ekranda görünmesi için geçmesi gereken en kısa süre.
+  static const Duration _minEngineThink = Duration(milliseconds: 800);
+
   Future<void> _maybePlayEngineMove() async {
     if (widget.mode != GameMode.versusEngine) return;
     if (!mounted || _resigned) return;
@@ -370,7 +399,17 @@ class _GameScreenState extends State<GameScreen> {
 
     setState(() => _thinking = true);
     final fen = _game.fen;
+    final started = DateTime.now();
     final result = await EngineService.instance.bestMoveForLevel(fen, _level);
+    // Alt kademelerde arama derinliği 1-2 olduğu için cevap neredeyse
+    // anında geliyordu: taşın nereden nereye gittiği, bir taş alındıysa
+    // neyin alındığı görülmüyor, hamle ekranda çakıyordu. Aşağıdaki
+    // alt sınır hamleyi izlenebilir kılıyor; usta kademesi zaten daha
+    // uzun düşündüğü için ona dokunmuyor.
+    final thought = DateTime.now().difference(started);
+    if (thought < _minEngineThink) {
+      await Future<void>.delayed(_minEngineThink - thought);
+    }
     if (!mounted) return;
     setState(() => _thinking = false);
 
@@ -387,6 +426,8 @@ class _GameScreenState extends State<GameScreen> {
       _cursor = _history.length - 1;
     });
     _announce(entry, opponent: true);
+    // Sıra kullanıcıya geçti: analiz artık güvenle çalışabilir.
+    _afterPositionChanged();
   }
 
   Future<void> _takeBack() async {
@@ -696,7 +737,10 @@ class _GameScreenState extends State<GameScreen> {
           BoardArrow(
             move.from,
             move.to,
-            Color(BoardAssets.markColor(SettingsService.instance.boardTheme)).withValues(alpha: 0.85),
+            // Motor önerisi: senin çizdiğin oktan daha sönük ve ince.
+            Color(BoardAssets.markColor(SettingsService.instance.boardTheme))
+                .withValues(alpha: 0.5),
+            faint: true,
           ),
         );
       }

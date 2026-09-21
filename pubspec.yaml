@@ -46,6 +46,15 @@ flutter:
     - assets/pieces/pixel/
     - assets/pieces/mpchess/
 
+  # Ana menüdeki at (♞) sistem yazı tipinden geliyordu: Android'de Noto,
+  # Windows'ta Segoe çiziyordu ve ikisi birbirini tutmuyordu. Uygulama
+  # simgesi de o çizimden üretildiği için üçü ayrı görünüyordu. Artık
+  # Android'in kullandığı yazı tipi uygulamayla birlikte geliyor.
+  fonts:
+    - family: NotoSansSymbols2
+      fonts:
+        - asset: assets/fonts/NotoSansSymbols2-Regular.ttf
+
 flutter_launcher_icons:
   android: true
   ios: true
