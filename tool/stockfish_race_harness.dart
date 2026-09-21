@@ -1,5 +1,5 @@
 import 'dart:io';
-import '../lib/services/engine/stockfish_uci.dart';
+import 'package:chess_pgn_reader/services/engine/stockfish_uci.dart';
 
 /// Proves waiters are armed before writes: rapid start/analyze loops must not
 /// miss uciok / bestmove.

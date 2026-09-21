@@ -9,7 +9,6 @@ import 'package:flutter/services.dart';
 import '../l10n/app_strings.dart';
 import '../models/chess_engine.dart' as engine;
 import '../models/move_entry.dart';
-import '../models/stored_review.dart';
 import '../models/pgn_parser.dart';
 import '../models/playlist.dart';
 import '../services/board_image_service.dart';
@@ -54,19 +53,6 @@ class GameScreen extends StatefulWidget {
   final String? whiteName;
   final String? blackName;
 
-  /// Bu oyun bir analiz kaydıysa, kaydedilmiş inceleme.
-  final StoredReview? savedReview;
-
-  /// Oyunun kayıtlı listedeki kimliği ve listesi.
-  ///
-  /// İnceleme bitince analiz kaydı bunlarla bağlanıyor. Bir analiz
-  /// kaydından açıldığında **asıl oyunun** kimlikleri veriliyor, kaydın
-  /// kendisininki değil. Listesi olmayan oyunlarda (serbest tahta,
-  /// motora karşı oyun, PGN önizlemesi) ikisi de null olur; inceleme yine
-  /// kaydedilir, yalnızca asıl oyuna bağ kurulmaz.
-  final String? sourceGameId;
-  final String? sourcePlaylistId;
-
   const GameScreen({
     super.key,
     this.mode = GameMode.analysis,
@@ -79,9 +65,6 @@ class GameScreen extends StatefulWidget {
     this.engineLevelIndex,
     this.whiteName,
     this.blackName,
-    this.savedReview,
-    this.sourceGameId,
-    this.sourcePlaylistId,
   });
 
   @override

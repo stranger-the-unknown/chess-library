@@ -40,12 +40,7 @@ class _PlaylistScreenState extends State<PlaylistScreen> {
   }
 
   Future<void> _load() async {
-    // Analiz listeleri her zaman en üstte; silinemez ve yeniden
-    // adlandırılamazlar.
-    // Sabit Son Analizler listesi kaldırıldı.
-    final playlists = (await _storage.loadPlaylists())
-        .where((p) => !StorageService.isSystemList(p.id))
-        .toList();
+    final playlists = (await _storage.loadPlaylists()).toList();
     if (!mounted) return;
     setState(() {
       _playlists = playlists;
@@ -198,9 +193,7 @@ class _PlaylistScreenState extends State<PlaylistScreen> {
                                         CrossAxisAlignment.start,
                                     children: [
                                       Text(
-                                        StorageService.displayName(
-                                          playlist,
-                                        ),
+                                        playlist.name,
                                         style: const TextStyle(
                                           fontSize: 15.5,
                                           fontWeight: FontWeight.w600,
@@ -234,28 +227,18 @@ class _PlaylistScreenState extends State<PlaylistScreen> {
                                     if (value == 'delete') _delete(playlist);
                                   },
                                   itemBuilder: (context) => [
-                                    // Analiz listeleri silinemez ve
-                                    // yeniden adlandırılamaz; komutları
-                                    // göstermek yerine hiç sunulmuyor.
-                                    if (!StorageService.isSystemList(
-                                      playlist.id,
-                                    )) ...[
-                                      PopupMenuItem(
-                                        value: 'rename',
-                                        child: Text(t('common.rename')),
-                                      ),
-                                    ],
+                                    PopupMenuItem(
+                                      value: 'rename',
+                                      child: Text(t('common.rename')),
+                                    ),
                                     PopupMenuItem(
                                       value: 'export',
                                       child: Text(t('lists.exportPgn')),
                                     ),
-                                    if (!StorageService.isSystemList(
-                                      playlist.id,
-                                    ))
-                                      PopupMenuItem(
-                                        value: 'delete',
-                                        child: Text(t('common.delete')),
-                                      ),
+                                    PopupMenuItem(
+                                      value: 'delete',
+                                      child: Text(t('common.delete')),
+                                    ),
                                   ],
                                 ),
                               ],

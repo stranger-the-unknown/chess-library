@@ -75,3 +75,9 @@ assets/stockfish/armeabi-v7a
 
 # Stockfish as Android native lib (built from android/stockfish/; see README)
 android/app/src/main/jniLibs/**/libstockfish.so
+
+# Geliştirme sırasında kalan geçici dosyalar (depoya girmez)
+_dump/
+_xfer/
+_*.py
+_*.patch

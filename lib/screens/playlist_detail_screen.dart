@@ -2,7 +2,6 @@ import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
 
-import '../services/analysis_queue.dart';
 import '../widgets/filter_strip.dart';
 import '../widgets/responsive.dart';
 
@@ -107,13 +106,6 @@ class _PlaylistDetailScreenState extends State<PlaylistDetailScreen> {
           initialResult: game.result,
           whiteName: game.white,
           blackName: game.black,
-          savedReview: game.review,
-          // Analiz kaydından açılıyorsa yeni analizin bağı **asıl
-          // oyuna** kurulmalı; kaydın kendisine kurulursa "analiz
-          // kaydının analizi" gibi kayıtlar birikir.
-          sourceGameId: _isAnalysisList ? game.sourceGameId : game.id,
-          sourcePlaylistId:
-              _isAnalysisList ? game.sourcePlaylistId : widget.playlistId,
         ),
       ),
     );
@@ -132,14 +124,6 @@ class _PlaylistDetailScreenState extends State<PlaylistDetailScreen> {
     }
     return 8.0 * digits + 12;
   }
-
-  /// Bu ekran bir analiz listesini mi gösteriyor?
-  ///
-  /// Analiz listeleri ayrı bir anahtarda duruyor; kullanıcı listelerini
-  /// değiştiren işlemler (yeniden adlandırma, silme, taşıma, toplu
-  /// okundu, PGN ekleme) orada hiçbir şey yapmıyor. Sessizce çalışmayan
-  /// düğme göstermek yerine hiç gösterilmiyorlar.
-  bool get _isAnalysisList => StorageService.isSystemList(widget.playlistId);
 
   Future<void> _rename(SavedGame game) async {
     final name = await AppDialogs.prompt(
@@ -529,9 +513,7 @@ class _PlaylistDetailScreenState extends State<PlaylistDetailScreen> {
           fit: BoxFit.scaleDown,
           alignment: AlignmentDirectional.centerStart,
           child: Text(
-            playlist == null
-                ? t('game.list')
-                : StorageService.displayName(playlist),
+            playlist == null ? t('game.list') : playlist.name,
           ),
         ),
         actions: [
@@ -546,7 +528,6 @@ class _PlaylistDetailScreenState extends State<PlaylistDetailScreen> {
             ),
             onPressed: () => setState(() => _descending = !_descending),
           ),
-          if (!_isAnalysisList)
             IconButton(
               tooltip: t('pgn.importIntoList'),
               icon: const Icon(Icons.file_open_outlined),
@@ -567,7 +548,7 @@ class _PlaylistDetailScreenState extends State<PlaylistDetailScreen> {
               
             },
             itemBuilder: (context) => [
-              if (!_isAnalysisList) ...[
+              ...[
                 PopupMenuItem(
                   value: 'allRead',
                   child: Text(t('lists.markAllRead')),
@@ -824,19 +805,13 @@ class _PlaylistDetailScreenState extends State<PlaylistDetailScreen> {
           mainAxisSize: MainAxisSize.min,
           children: [
             Icon(
-              // Analiz listesi boşken kullanıcıya oyun kaydetmesini
-              // söylemenin anlamı yok; oraya oyun ancak analizle giriyor.
-              StorageService.isSystemList(widget.playlistId)
-                  ? Icons.query_stats_outlined
-                  : Icons.sports_esports_outlined,
+              Icons.sports_esports_outlined,
               size: 46,
               color: scheme.onSurfaceVariant,
             ),
             const SizedBox(height: 14),
             Text(
-              StorageService.isSystemList(widget.playlistId)
-                  ? t('analysis.emptyList')
-                  : t('lists.emptyGames'),
+              t('lists.emptyGames'),
               textAlign: TextAlign.center,
               style: TextStyle(color: scheme.onSurfaceVariant, height: 1.4),
             ),
@@ -1033,7 +1008,7 @@ class _PlaylistDetailScreenState extends State<PlaylistDetailScreen> {
                           : t('common.favoriteAdd'),
                     ),
                   ),
-                  if (!_isAnalysisList) ...[
+                  ...[
                     PopupMenuItem(
                       value: 'rename',
                       child: Text(t('common.rename')),
@@ -1049,7 +1024,7 @@ class _PlaylistDetailScreenState extends State<PlaylistDetailScreen> {
                     child: Text(t('lists.gameInfo')),
                   ),
                   PopupMenuItem(value: 'pgn', child: Text(t('game.copyPgn'))),
-                  if (!_isAnalysisList) ...[
+                  ...[
                     PopupMenuItem(
                       value: 'move',
                       child: Text(t('lists.moveToList')),

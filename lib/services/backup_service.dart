@@ -107,7 +107,9 @@ class BackupService {
   /// değerlendirmesi yedeği gereksiz şişirirdi ve başka cihazda yeniden
   /// üretilebilir. Geri yüklerken de dokunulmuyor, yoksa cihazdaki
   /// analizler yedekteki eskisiyle ezilirdi.
-  static const Set<String> _notBackedUp = {StorageService.analysisKey};
+  /// 9.0.0'da kaldırılan analiz listelerinin anahtarı; eski bir yedek
+  /// geri yüklenince o veri diriltilmesin diye dışarıda bırakılıyor.
+  static const Set<String> _notBackedUp = {'analysis_lists_v1'};
 
   Future<String> exportAll({ValueChanged<double>? onProgress}) async {
     onProgress?.call(0);

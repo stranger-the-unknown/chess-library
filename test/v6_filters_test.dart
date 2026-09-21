@@ -7,7 +7,6 @@ import 'package:chess_pgn_reader/models/game_filter.dart';
 import 'package:chess_pgn_reader/models/move_count.dart';
 import 'package:chess_pgn_reader/models/pgn_parser.dart';
 import 'package:chess_pgn_reader/models/playlist.dart';
-import 'package:chess_pgn_reader/models/stored_review.dart';
 import 'package:chess_pgn_reader/screens/playlist_detail_screen.dart';
 import 'package:chess_pgn_reader/services/settings_service.dart';
 import 'package:chess_pgn_reader/services/storage_service.dart';
@@ -425,73 +424,6 @@ void main() {
       await tester.tap(find.byTooltip('Filtreyi temizle'));
       await tester.pumpAndSettle();
       expect(find.text('Aronian'), findsOneWidget);
-    });
-
-    testWidgets('analiz listesinde de çalışıyor', (tester) async {
-      // Analiz kaydı oyuncuları ve sonucu da taşıyor; süzgeç orada da
-      // gerçekten eliyor. Listede iş görmeyen komutlar kaldırılmıştı,
-      // bu onlardan değil.
-      await _seed();
-      await StorageService.instance.addAnalysis(
-        source: _carlsenNepo,
-        review: StoredReview(
-          deep: false,
-          at: DateTime.now(),
-          whiteAccuracy: 80,
-          blackAccuracy: 70,
-          moves: const [],
-        ),
-      );
-      await StorageService.instance.addAnalysis(
-        source: _aronianCarlsen,
-        review: StoredReview(
-          deep: false,
-          at: DateTime.now(),
-          whiteAccuracy: 60,
-          blackAccuracy: 90,
-          moves: const [],
-        ),
-      );
-      final analysis = (await StorageService.instance.loadAnalysisLists()).first;
-
-      tester.view.devicePixelRatio = 1;
-      tester.view.physicalSize = const Size(600, 1200);
-      addTearDown(() {
-        tester.view.resetPhysicalSize();
-        tester.view.resetDevicePixelRatio();
-      });
-      await tester.pumpWidget(
-        MaterialApp(
-          home: KeyedSubtree(
-            key: UniqueKey(),
-            child: PlaylistDetailScreen(playlistId: analysis.id),
-          ),
-        ),
-      );
-      await tester.pumpAndSettle();
-      expect(find.text('Aronian'), findsOneWidget);
-
-      await tester.tap(
-        find.descendant(
-          of: find.byType(AppBar),
-          matching: find.byType(PopupMenuButton<String>),
-        ),
-      );
-      await tester.pumpAndSettle();
-      await tester.tap(find.text('Oyun filtrele').last);
-      await tester.pumpAndSettle();
-      await tester.enterText(
-        find.ancestor(
-          of: find.text('Beyaz oyuncu'),
-          matching: find.byType(TextField),
-        ),
-        'carlsen',
-      );
-      await tester.tap(find.widgetWithText(FilledButton, 'Filtrele'));
-      await tester.pumpAndSettle();
-
-      expect(find.text('Aronian'), findsNothing);
-      expect(find.text('Nepomniachtchi'), findsOneWidget);
     });
 
     testWidgets('dar telefonda taşmıyor', (tester) async {

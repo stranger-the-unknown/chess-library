@@ -7,7 +7,6 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 import 'package:chess_pgn_reader/l10n/app_strings.dart';
 import 'package:chess_pgn_reader/models/pgn_parser.dart';
-import 'package:chess_pgn_reader/models/playlist.dart';
 import 'package:chess_pgn_reader/screens/home_screen.dart';
 import 'package:chess_pgn_reader/screens/openings/opening_list_screen.dart';
 import 'package:chess_pgn_reader/models/chess_engine.dart' as engine;
@@ -16,7 +15,6 @@ import 'package:chess_pgn_reader/screens/game_screen.dart';
 import 'package:chess_pgn_reader/screens/pgn_import_screen.dart';
 import 'package:chess_pgn_reader/screens/playlist_detail_screen.dart';
 import 'package:chess_pgn_reader/screens/settings_screen.dart';
-import 'package:chess_pgn_reader/services/analysis_queue.dart';
 import 'package:chess_pgn_reader/services/engine/engine_service.dart';
 import 'package:chess_pgn_reader/services/opening_service.dart';
 import 'package:chess_pgn_reader/services/puzzle_service.dart';
@@ -68,60 +66,6 @@ void main() {
         TestWidgetsFlutterBinding.instance.platformDispatcher.views.first;
     view.resetPhysicalSize();
     view.resetDevicePixelRatio();
-  });
-
-  group('Analiz sırası', () {
-    // Analiz listesine her kayıt başa ekleniyor. 1., 2., 3. oyunu seçen
-    // kullanıcı analiz listesinde de 1., 2., 3. görmeli; bunun için
-    // sondan başlamak gerekiyor.
-    SavedGame game(String name) => SavedGame(
-          name: name,
-          uciMoves: const ['e2e4'],
-          createdAt: DateTime.now(),
-        );
-
-    test('numarası büyük olan önce analiz ediliyor', () {
-      final games = [game('Bir'), game('İki'), game('Üç')];
-      final numbers = {
-        games[0].id: 1,
-        games[1].id: 2,
-        games[2].id: 3,
-      };
-
-      final order = analysisOrder(games, numbers);
-      expect(order.map((g) => g.name), ['Üç', 'İki', 'Bir']);
-    });
-
-    test('seçim sırası değil, liste numarası belirliyor', () {
-      final games = [game('Bir'), game('İki'), game('Üç')];
-      final numbers = {
-        games[0].id: 7,
-        games[1].id: 2,
-        games[2].id: 5,
-      };
-
-      // Kullanıcının seçme sırası karışık olsun.
-      final order = analysisOrder([games[1], games[2], games[0]], numbers);
-      expect(order.map((g) => g.name), ['Bir', 'Üç', 'İki']);
-    });
-
-    test('kaynak liste değiştirilmiyor', () {
-      final games = [game('Bir'), game('İki')];
-      final numbers = {games[0].id: 1, games[1].id: 2};
-
-      analysisOrder(games, numbers);
-      expect(games.map((g) => g.name), ['Bir', 'İki']);
-    });
-
-    test('numarası olmayan oyun sona düşüyor', () {
-      final games = [game('Numarasız'), game('Bir')];
-      final numbers = {games[1].id: 1};
-
-      expect(
-        analysisOrder(games, numbers).map((g) => g.name),
-        ['Bir', 'Numarasız'],
-      );
-    });
   });
 
   group('PGN alırken eksik hamleli oyunlar', () {

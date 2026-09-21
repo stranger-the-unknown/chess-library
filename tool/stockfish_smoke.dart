@@ -1,5 +1,5 @@
 import 'dart:io';
-import '../lib/services/engine/stockfish_uci.dart';
+import 'package:chess_pgn_reader/services/engine/stockfish_uci.dart';
 
 Future<void> main() async {
   final path = await StockfishUci.resolveBinaryPath();
