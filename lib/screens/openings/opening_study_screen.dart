@@ -262,7 +262,7 @@ class _OpeningStudyScreenState extends State<OpeningStudyScreen> {
             next.to,
             // İpucu oku da makineden geliyor: sönük ve ince.
             Color(BoardAssets.markColor(SettingsService.instance.boardTheme))
-                .withValues(alpha: 0.5),
+                .withValues(alpha: 0.7),
             faint: true,
           ),
         );

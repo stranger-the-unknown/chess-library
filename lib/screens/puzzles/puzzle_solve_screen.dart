@@ -469,7 +469,7 @@ class _PuzzleSolveScreenState extends State<PuzzleSolveScreen> {
               move.to,
               // Motor önerisi: senin çizdiğin oktan daha sönük ve ince.
               Color(BoardAssets.markColor(SettingsService.instance.boardTheme))
-                  .withValues(alpha: 0.5),
+                  .withValues(alpha: 0.7),
               faint: true,
             ),
           );
