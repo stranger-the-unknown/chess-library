@@ -245,8 +245,8 @@ Yani `ECO|aile|varyant|hamleler` ya da ECO'suz üç alan.
 **Alıştırma** — Hamleleri sen oynarsın, yanlışta uyarı alırsın. Hatasız iki
 tamamlamada varyant "öğrenildi" sayılır.
 
-Her varyantta ipucu, not, favori, "bu konumdan motora karşı oyna" ve
-"analiz tahtasında aç" seçenekleri vardır.
+Her varyantta not, favori, "bu konumdan motora karşı oyna" ve "analiz
+tahtasında aç" seçenekleri vardır.
 
 ---
 

@@ -46,6 +46,29 @@ Future<void> _pump(WidgetTester tester, Widget screen, Size size) async {
   await tester.pump(const Duration(milliseconds: 300));
 }
 
+/// Masaüstü yazı ölçeğiyle kurar.
+///
+/// Ölçeği uygulamada `ChessApp`'in `builder`'ı veriyor; testler ekranı
+/// doğrudan `MaterialApp` içine koyduğu için o katman devreye girmiyordu.
+/// Yani %15 büyümüş yazılarla oluşan bir taşma testlerden sessizce
+/// geçerdi — sabit yükseklikli şeritler ve 340 piksellik yan panel
+/// düşünülürse en muhtemel taşma yeri tam orası.
+Future<void> _pumpScaled(WidgetTester tester, Widget screen, Size size) async {
+  tester.view.devicePixelRatio = 1;
+  tester.view.physicalSize = size;
+  await tester.pumpWidget(MaterialApp(
+    builder: (context, child) => MediaQuery(
+      data: MediaQuery.of(context).copyWith(
+        textScaler: const TextScaler.linear(Layout.desktopTextScale),
+      ),
+      child: child!,
+    ),
+    home: screen,
+  ));
+  await tester.pump();
+  await tester.pump(const Duration(milliseconds: 300));
+}
+
 double _boardSide(WidgetTester tester) =>
     tester.getSize(find.byType(ChessBoardWidget)).width;
 
@@ -160,6 +183,48 @@ void main() {
 
     expect(listeden, sade,
         reason: 'sonuç afişi tahtayı küçültmemeli: $sade -> $listeden');
+  });
+
+  testWidgets('masaüstü yazı ölçeğinde hiçbir ekran taşmıyor',
+      (tester) async {
+    const ekran = Size(1536, 816);
+
+    await _pumpScaled(tester, const GameScreen(uciMoves: _oyun), ekran);
+    expect(tester.takeException(), isNull, reason: 'oyun ekranı taşmamalı');
+
+    await _pumpScaled(
+      tester,
+      PuzzleSolveScreen(
+        collection: PuzzleCollection(id: 'c', name: 'Deneme'),
+        puzzles: [
+          Puzzle(
+            id: 'c#0',
+            fen: '6k1/5ppp/8/8/8/8/5PPP/R5K1 w - - 0 1',
+            title: 'Mat',
+            solution: const ['a1a8'],
+          ),
+        ],
+        initialIndex: 0,
+      ),
+      ekran,
+    );
+    expect(tester.takeException(), isNull, reason: 'bulmaca taşmamalı');
+
+    await _pumpScaled(
+      tester,
+      OpeningStudyScreen(
+        opening: Opening(
+          id: 'o1',
+          eco: 'B20',
+          family: 'Sicilya',
+          variation: 'Ana hat',
+          uciMoves: const ['e2e4', 'c7c5'],
+          sanMoves: const ['e4', 'c5'],
+        ),
+      ),
+      ekran,
+    );
+    expect(tester.takeException(), isNull, reason: 'açılış taşmamalı');
   });
 
   testWidgets('bulmaca geniş pencerede iki sütuna ayrılıyor', (tester) async {

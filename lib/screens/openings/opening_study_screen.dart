@@ -13,8 +13,9 @@ import '../../theme/app_theme.dart';
 import '../../services/board_image_service.dart';
 import '../../services/settings_service.dart';
 import '../../widgets/app_dialogs.dart';
+import '../../models/move_entry.dart';
 import '../../widgets/chess_board_widget.dart';
-import '../../widgets/move_scroll.dart';
+import '../../widgets/move_list.dart';
 import '../game_screen.dart';
 
 enum StudyMode {
@@ -40,7 +41,6 @@ class _OpeningStudyScreenState extends State<OpeningStudyScreen> {
 
   /// Hamle şeridini seçili hamlede tutar; kural tahtanın altındaki
   /// şeritle aynı yerde duruyor.
-  final MoveScroller _scroller = MoveScroller();
   final GlobalKey _boardImageKey = GlobalKey();
 
   late engine.ChessGame _game;
@@ -48,7 +48,6 @@ class _OpeningStudyScreenState extends State<OpeningStudyScreen> {
   StudyMode _mode = StudyMode.watch;
   bool _flipped = false;
   bool _autoPlaying = false;
-  bool _showHint = false;
   bool _mistakeMade = false;
   String? _message;
   bool _messageIsError = false;
@@ -56,10 +55,18 @@ class _OpeningStudyScreenState extends State<OpeningStudyScreen> {
   bool _learned = false;
   Timer? _autoTimer;
 
+  /// Hamleler, ortak listenin beklediği biçimde.
+  late final List<MoveEntry> _entries;
+
   @override
   void initState() {
     super.initState();
     _game = engine.ChessGame();
+    // Hamle listesi uygulamanın her yerinde aynı widget: oyun ve bulmaca
+    // ekranlarıyla aynı hizalama, aynı yazı stili. Eskiden bu ekran kendi
+    // şeridini çiziyordu ve hamleler sola yaslı, numaralar farklı
+    // puntodaydı.
+    _entries = MoveEntry.fromUciList(widget.opening.uciMoves);
     _loadProgress();
   }
 
@@ -75,7 +82,6 @@ class _OpeningStudyScreenState extends State<OpeningStudyScreen> {
   @override
   void dispose() {
     _autoTimer?.cancel();
-    _scroller.dispose();
     super.dispose();
   }
 
@@ -108,13 +114,6 @@ class _OpeningStudyScreenState extends State<OpeningStudyScreen> {
         .moveFromUci(widget.opening.uciMoves[_cursor]);
   }
 
-  /// Sıradaki (henüz oynanmamış) hamle.
-  engine.ChessMove? get _nextMove {
-    final index = _cursor + 1;
-    if (index >= widget.opening.uciMoves.length) return null;
-    return _game.moveFromUci(widget.opening.uciMoves[index]);
-  }
-
   /// Hamlenin SAN metni; kayıt bozuksa boş metin.
   ///
   /// `sanMoves` ile `uciMoves` birlikte yazılıyor, ama elle düzenlenmiş
@@ -131,7 +130,6 @@ class _OpeningStudyScreenState extends State<OpeningStudyScreen> {
     setState(() {
       _cursor = clamped;
       _game = _positionAt(clamped);
-      _showHint = false;
     });
     if (forward && clamped >= 0 && !silent) {
       SoundService.instance.playForSan(
@@ -306,22 +304,11 @@ class _OpeningStudyScreenState extends State<OpeningStudyScreen> {
     final scheme = Theme.of(context).colorScheme;
     final opening = widget.opening;
 
+    // İpucu oku kaldırıldı: "Göster" zaten sıradaki hamleyi oynuyor ve
+    // bu ekranda hiçbir şeyi bitirmiyor, yani ikisi neredeyse aynı işi
+    // yapıyordu. (Bulmacada durum farklı: orada "Çözüm" bulmacayı
+    // bitirdiği için ipucu ayrı bir işe yarıyor.)
     final arrows = <BoardArrow>[];
-    if (_showHint) {
-      final next = _nextMove;
-      if (next != null) {
-        arrows.add(
-          BoardArrow(
-            next.from,
-            next.to,
-            // İpucu oku da makineden geliyor: sönük ve ince.
-            Color(BoardAssets.markColor(SettingsService.instance.boardTheme))
-                .withValues(alpha: 0.7),
-            faint: true,
-          ),
-        );
-      }
-    }
 
     // Alıştırmada kullanıcı yalnızca sırası gelen tarafı oynar.
     final practiceSide = _flipped ? engine.Color.black : engine.Color.white;
@@ -532,7 +519,9 @@ class _OpeningStudyScreenState extends State<OpeningStudyScreen> {
             constraints.maxWidth - Layout.sidePanelWidth - _boardGutter;
         var side = Layout.boardSide(
               available,
-              constraints.maxHeight - _wideChromeHeight,
+              constraints.maxHeight -
+                  _wideChromeHeight -
+                  Layout.wideOuterMargin * 2,
               cap,
             ) *
             scale;
@@ -587,7 +576,7 @@ class _OpeningStudyScreenState extends State<OpeningStudyScreen> {
           Divider(height: 1, color: scheme.outlineVariant),
           Expanded(child: _moveStrip(scheme, vertical: true)),
           Divider(height: 1, color: scheme.outlineVariant),
-          _controls(scheme),
+          _controls(scheme, panel: true),
         ],
       ),
     );
@@ -686,105 +675,42 @@ class _OpeningStudyScreenState extends State<OpeningStudyScreen> {
   }
 
   Widget _moveStrip(ColorScheme scheme, {required bool vertical}) {
-    final moves = widget.opening.sanMoves;
-    // Alıştırmada henüz gelmemiş hamleler gizlenir.
-    final revealed = _mode == StudyMode.practice ? _cursor + 1 : moves.length;
-
-    // Seçili hamle değiştiyse şerit oraya kayar; aynı hamlede tekrar
-    // çağrılması bir şey yapmaz, kullanıcının elle kaydırması bozulmaz.
-    _scroller.follow(
-      index: _cursor,
-      rowCount: (moves.length / 2).ceil(),
+    // Uygulamanın her yerindeki hamle listesiyle aynı widget: aynı
+    // hizalama, aynı yazı stili, aynı numara biçimi. Bu ekran eskiden
+    // kendi şeridini çiziyordu ve hamleler sola yaslı, numaralar farklı
+    // puntoda kalıyordu.
+    final list = MoveList(
+      moves: _entries,
+      currentIndex: _cursor,
+      // Hamleye dokunup o konuma gitmek yalnızca izleme kipinde anlamlı.
+      onMoveTap: _mode == StudyMode.watch ? _goTo : (_) {},
+      vertical: vertical,
+      // Alıştırmada henüz gelmemiş hamleler gizleniyor.
+      revealedCount:
+          _mode == StudyMode.practice ? _cursor + 1 : _entries.length,
     );
-
-    // Dikeyde satırlar zaten hamle çiftleri; yan panelde bu doğrudan
-    // bir hamle listesi oluyor. Kendi arka planı yok: panelinki var.
+    if (vertical) return list;
     return Container(
-      height: vertical ? null : 46,
-      margin: vertical
-          ? EdgeInsets.zero
-          : const EdgeInsets.fromLTRB(12, 8, 12, 0),
+      height: 46,
+      margin: const EdgeInsets.fromLTRB(12, 8, 12, 0),
       decoration: BoxDecoration(
-        color: vertical ? Colors.transparent : scheme.surfaceContainer,
+        color: scheme.surfaceContainer,
         borderRadius: BorderRadius.circular(12),
       ),
-      child: ListView.builder(
-        controller: _scroller.controller,
-        scrollDirection: vertical ? Axis.vertical : Axis.horizontal,
-        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-        itemCount: (moves.length / 2).ceil(),
-        itemBuilder: (context, index) {
-          final first = index * 2;
-          Widget chip(int i) {
-            final hidden = i >= revealed;
-            final isCurrent = i == _cursor;
-            return MouseRegion(
-              cursor: _mode == StudyMode.watch
-                  ? SystemMouseCursors.click
-                  : MouseCursor.defer,
-              child: GestureDetector(
-                onTap: _mode == StudyMode.watch ? () => _goTo(i) : null,
-                child: Container(
-                  key: _scroller.keyFor(i),
-                  margin: const EdgeInsets.symmetric(horizontal: 1),
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 8,
-                    vertical: 5,
-                  ),
-                  decoration: BoxDecoration(
-                    color: isCurrent ? scheme.primary : Colors.transparent,
-                    borderRadius: BorderRadius.circular(7),
-                  ),
-                  child: Text(
-                    hidden ? '···' : moves[i],
-                    style: TextStyle(
-                      fontSize: 13.5,
-                      fontWeight: isCurrent ? FontWeight.w700 : FontWeight.w500,
-                      color: isCurrent
-                          ? scheme.onPrimary
-                          : (hidden
-                              ? scheme.onSurfaceVariant.withValues(alpha: 0.5)
-                              : scheme.onSurface),
-                    ),
-                  ),
-                ),
-              ),
-            );
-          }
-
-          return Row(
-            children: [
-              Padding(
-                padding: const EdgeInsets.only(left: 4, right: 3),
-                child: Text(
-                  '${index + 1}.',
-                  style: TextStyle(
-                    fontSize: 12,
-                    color: scheme.onSurfaceVariant,
-                  ),
-                ),
-              ),
-              chip(first),
-              if (first + 1 < moves.length) chip(first + 1),
-            ],
-          );
-        },
-      ),
+      child: list,
     );
   }
 
-  Widget _controls(ColorScheme scheme) {
+  Widget _controls(ColorScheme scheme, {bool panel = false}) {
     final atEnd = _cursor >= widget.opening.uciMoves.length - 1;
 
-    return Container(
-      margin: const EdgeInsets.fromLTRB(12, 8, 12, 12),
-      padding: const EdgeInsets.symmetric(vertical: 6),
-      decoration: BoxDecoration(
-        color: scheme.surfaceContainer,
-        borderRadius: BorderRadius.circular(18),
-      ),
-      child: Column(
-        children: [
+    // Yan panelde kendi kartı yok.
+    //
+    // Panelin zaten bir yüzeyi var; içine ikinci bir kart koymak kenar
+    // boşluğu yüzünden bloğu panelin ayraçlarıyla hizasız bırakıyor ve
+    // üst payı (8) alt paydan (12) ince olduğu için aşağı itiyordu.
+    final content = Column(
+      children: [
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 12),
             child: SegmentedButton<StudyMode>(
@@ -846,12 +772,6 @@ class _OpeningStudyScreenState extends State<OpeningStudyScreen> {
               mainAxisAlignment: MainAxisAlignment.spaceEvenly,
               children: [
                 TextButton.icon(
-                  onPressed:
-                      atEnd ? null : () => setState(() => _showHint = true),
-                  icon: const Icon(Icons.lightbulb_outline_rounded, size: 19),
-                  label: Text(t('common.hint')),
-                ),
-                TextButton.icon(
                   onPressed: _reset,
                   icon: const Icon(Icons.refresh_rounded, size: 19),
                   label: Text(t('common.restart')),
@@ -863,8 +783,23 @@ class _OpeningStudyScreenState extends State<OpeningStudyScreen> {
                 ),
               ],
             ),
-        ],
+      ],
+    );
+
+    if (panel) {
+      return Padding(
+        padding: const EdgeInsets.symmetric(vertical: 4),
+        child: content,
+      );
+    }
+    return Container(
+      margin: const EdgeInsets.fromLTRB(12, 8, 12, 12),
+      padding: const EdgeInsets.symmetric(vertical: 6),
+      decoration: BoxDecoration(
+        color: scheme.surfaceContainer,
+        borderRadius: BorderRadius.circular(18),
       ),
+      child: content,
     );
   }
 }

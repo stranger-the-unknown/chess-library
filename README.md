@@ -256,8 +256,8 @@ the ECO code.
 **Practice** — You play the moves and are warned when one is wrong. Two
 clean runs mark the line as learned.
 
-Every line also offers a hint, a note, a favorite mark, "play the engine
-from here" and "open in the analysis board".
+Every line also offers a note, a favorite mark, "play the engine from
+here" and "open in the analysis board".
 
 ---
 

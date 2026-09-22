@@ -607,31 +607,6 @@ class _GameScreenState extends State<GameScreen> {
     if (widget.mode == GameMode.versusEngine) _maybePlayEngineMove();
   }
 
-  Future<void> _showHint() async {
-    // İpucu da canlı analizle aynı jetonu kullanıyor: ikisi tek bir
-    // Stockfish'i paylaşıyor ve eskiden geç gelen bir ipucu sonucu daha
-    // yeni bir analizin üstüne yazabiliyordu.
-    final token = ++_analysisToken;
-    _analysisDebounce?.cancel();
-    EngineService.instance.stopAnalysis();
-    setState(() => _thinking = true);
-    final side = _game.sideToMove;
-    final result = await EngineService.instance.hint(
-      _game.fen,
-      depth: 12,
-      movetimeMs: 1200,
-    );
-    if (!mounted || token != _analysisToken) return;
-    if (result.cancelled) return;
-    final sign = side == engine.Color.white ? 1 : -1;
-    setState(() {
-      _thinking = false;
-      _analysis = result;
-      _evalScoreCp = result.scoreCp * sign;
-      _analysisOn = true;
-    });
-  }
-
   // -------------------------------------------------------------------------
   // Menü işlemleri
   // -------------------------------------------------------------------------
@@ -1265,7 +1240,9 @@ class _GameScreenState extends State<GameScreen> {
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
               style: TextStyle(
-                fontWeight: toMove ? FontWeight.w800 : FontWeight.w500,
+                // Her iki ad da kalın: sıranın kimde olduğunu yazı
+                // kalınlığının değişmesi değil, rengi söylüyor.
+                fontWeight: FontWeight.w700,
                 color: toMove ? scheme.onSurface : scheme.onSurfaceVariant,
                 fontSize: 13,
               ),
@@ -1402,7 +1379,9 @@ class _GameScreenState extends State<GameScreen> {
             constraints.maxWidth - Layout.sidePanelWidth - _boardGutter;
         var side = Layout.boardSide(
               available,
-              constraints.maxHeight - _wideChromeHeight,
+              constraints.maxHeight -
+                  _wideChromeHeight -
+                  Layout.wideOuterMargin * 2,
               cap,
             ) *
             scale;
@@ -1759,11 +1738,6 @@ class _GameScreenState extends State<GameScreen> {
                       ? () => _goTo(_history.length - 1)
                       : null,
                   t('game.toEnd'),
-                ),
-                _navButton(
-                  Icons.lightbulb_outline_rounded,
-                  _thinking ? null : _showHint,
-                  t('common.hint'),
                 ),
               ],
             ),

@@ -134,7 +134,7 @@ void main() {
 
     expect(kucukSecili, buyukSecili,
         reason: 'cihazda kayıtlı seçim tahtayı değiştirmemeli');
-    expect(kucukSecili, greaterThanOrEqualTo(685),
+    expect(kucukSecili, greaterThanOrEqualTo(650),
         reason: 'tahta sığanın tamamı olmalı: $kucukSecili');
   });
 
@@ -152,9 +152,11 @@ void main() {
         reason: 'Küçük -> Orta görünür olmalı: $kucuk -> $orta');
     expect(buyuk - orta, greaterThan(60),
         reason: 'Orta -> Büyük görünür olmalı: $orta -> $buyuk');
-    // Büyük, pencerenin verebildiğinin tamamı olmalı: bugünkü 690'dan
-    // küçük bir tahta sunmak geriye gidiş olurdu.
-    expect(buyuk, greaterThanOrEqualTo(685),
+    // Büyük, pencerenin verebildiğinin tamamı olmalı. Tamamı derken
+    // grubun pencere kenarlarına bıraktığı pay (Layout.wideOuterMargin,
+    // iki yandan 32 piksel) düşülmüş hâli: onsuz alttaki oyuncu adı
+    // ekranın en dibine yapışıyordu.
+    expect(buyuk, greaterThanOrEqualTo(650),
         reason: 'Büyük sığanın tamamını almalı: $buyuk');
   });
 

@@ -20,6 +20,12 @@ class MoveList extends StatefulWidget {
   /// Nf6" yazması gerekiyordu.
   final bool blackFirst;
 
+  /// Bu sayıdan sonraki hamleler gizli ("···") gösterilir.
+  ///
+  /// Açılış alıştırmasında henüz sıra gelmemiş hamleler açığa çıkmasın
+  /// diye. `null` ise hepsi görünür.
+  final int? revealedCount;
+
   const MoveList({
     super.key,
     required this.moves,
@@ -27,6 +33,7 @@ class MoveList extends StatefulWidget {
     required this.onMoveTap,
     this.vertical = false,
     this.blackFirst = false,
+    this.revealedCount,
   });
 
   @override
@@ -115,6 +122,18 @@ class _MoveListState extends State<MoveList> {
     );
   }
 
+  /// Dikey listede bir hamlenin sütun genişliği.
+  ///
+  /// En uzun SAN'ları (`exd8=Q+`, `O-O-O+`) masaüstü yazı ölçeğiyle de
+  /// alacak kadar geniş, ama iki hamleyi yan yana tutacak kadar dar.
+  ///
+  /// Değer ölçülerek seçildi, ama bir uyarıyla: Flutter testleri gerçek
+  /// yazı tipini kullanmıyor, her harfi punto kadar **kare** olan bir
+  /// test yazı tipi kullanıyor. Orada `exd8=Q+` 133 piksel çıkıyor,
+  /// gerçek yazı tipinde ~86. Bu yüzden pay bilerek geniş bırakıldı;
+  /// testten okunan sayıya göre daraltmak yanıltıcı olurdu.
+  static const double _moveColumnWidth = 104;
+
   Widget _buildVertical(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
     final pairs = _rowCount;
@@ -140,13 +159,18 @@ class _MoveListState extends State<MoveList> {
                   ),
                 ),
               ),
-              Expanded(
+              // Sabit genişlik, `Expanded` değil. `Expanded` kalan yeri
+              // ikiye bölüyordu: hamleler ~40 piksel olduğu için beyazla
+              // siyahın arasında yüz pikselden fazla boşluk kalıyordu.
+              SizedBox(
+                width: _moveColumnWidth,
                 child: Align(
                   alignment: Alignment.centerLeft,
                   child: first < 0 ? _skipped(context) : _chip(context, first),
                 ),
               ),
-              Expanded(
+              SizedBox(
+                width: _moveColumnWidth,
                 child: Align(
                   alignment: Alignment.centerLeft,
                   child: first + 1 < widget.moves.length
@@ -176,6 +200,8 @@ class _MoveListState extends State<MoveList> {
   Widget _chip(BuildContext context, int index) {
     final scheme = Theme.of(context).colorScheme;
     final isCurrent = index == widget.currentIndex;
+    final revealed = widget.revealedCount;
+    final hidden = revealed != null && index >= revealed;
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 1),
       // Kendi `Material`'ı olmadan `InkWell`, en yakın üstteki Material'a
@@ -191,7 +217,7 @@ class _MoveListState extends State<MoveList> {
           mouseCursor: kClickable,
           key: _scroller.keyFor(index),
           borderRadius: BorderRadius.circular(8),
-          onTap: () => widget.onMoveTap(index),
+          onTap: hidden ? null : () => widget.onMoveTap(index),
           child: AnimatedContainer(
             duration: const Duration(milliseconds: 140),
             padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 6),
@@ -200,9 +226,11 @@ class _MoveListState extends State<MoveList> {
               borderRadius: BorderRadius.circular(8),
             ),
             child: Text(
-              widget.moves[index].san,
+              hidden ? '···' : widget.moves[index].san,
               style: TextStyle(
-                color: isCurrent ? scheme.onPrimary : scheme.onSurface,
+                color: hidden
+                    ? scheme.onSurfaceVariant.withValues(alpha: 0.5)
+                    : (isCurrent ? scheme.onPrimary : scheme.onSurface),
                 fontWeight: isCurrent ? FontWeight.w700 : FontWeight.w500,
                 fontSize: 14,
               ),

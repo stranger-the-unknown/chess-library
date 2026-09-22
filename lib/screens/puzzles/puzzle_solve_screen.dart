@@ -839,7 +839,9 @@ class _PuzzleSolveScreenState extends State<PuzzleSolveScreen> {
             constraints.maxWidth - Layout.sidePanelWidth - _boardGutter;
         var side = Layout.boardSide(
               available,
-              constraints.maxHeight - _wideChromeHeight,
+              constraints.maxHeight -
+                  _wideChromeHeight -
+                  Layout.wideOuterMargin * 2,
               cap,
             ) *
             scale;
@@ -894,7 +896,7 @@ class _PuzzleSolveScreenState extends State<PuzzleSolveScreen> {
           Divider(height: 1, color: scheme.outlineVariant),
           Expanded(child: _moveStrip(vertical: true)),
           Divider(height: 1, color: scheme.outlineVariant),
-          _actions(scheme),
+          _actions(scheme, panel: true),
         ],
       ),
     );
@@ -1032,16 +1034,16 @@ class _PuzzleSolveScreenState extends State<PuzzleSolveScreen> {
     );
   }
 
-  Widget _actions(ColorScheme scheme) {
-    return Container(
-      margin: const EdgeInsets.fromLTRB(12, 4, 12, 12),
-      padding: const EdgeInsets.symmetric(vertical: 6),
-      decoration: BoxDecoration(
-        color: scheme.surfaceContainer,
-        borderRadius: BorderRadius.circular(18),
-      ),
-      child: Column(
-        children: [
+  Widget _actions(ColorScheme scheme, {bool panel = false}) {
+    // Yan panelde kendi kartı yok.
+    //
+    // Panelin zaten bir yüzeyi var; içine ikinci bir kart koymak iki
+    // şeyi bozuyordu. Kartın 12'şer piksellik kenar boşluğu içerideki
+    // ayracı da içeri kaçırıyor, yani panelin tamamı boyunca uzayan
+    // üstteki ayraçla hizalanmıyordu. Üst payın (4) alt paydan (12)
+    // ince olması da bloğu aşağı itiyordu.
+    final content = Column(
+      children: [
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceEvenly,
             children: [
@@ -1095,10 +1097,24 @@ class _PuzzleSolveScreenState extends State<PuzzleSolveScreen> {
                   label: Text(t('common.next')),
                 ),
               ),
-            ],
-          ),
-        ],
+          ],
+        ),
+      ],
+    );
+
+    // Panelde dikey pay yok: satır iki ayracın arasına tam oturuyor.
+    // 4 piksellik pay varken düğmenin üstüne gelince çıkan vurgu alttaki
+    // çizgiye değiyor ama üsttekine değmiyordu; düğme hizasız duruyor
+    // gibi görünüyordu.
+    if (panel) return content;
+    return Container(
+      margin: const EdgeInsets.fromLTRB(12, 4, 12, 12),
+      padding: const EdgeInsets.symmetric(vertical: 6),
+      decoration: BoxDecoration(
+        color: scheme.surfaceContainer,
+        borderRadius: BorderRadius.circular(18),
       ),
+      child: content,
     );
   }
 
@@ -1110,7 +1126,7 @@ class _PuzzleSolveScreenState extends State<PuzzleSolveScreen> {
       child: TextButton.icon(
         onPressed: onPressed,
         style: TextButton.styleFrom(
-          padding: const EdgeInsets.symmetric(horizontal: 8),
+          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
           visualDensity: VisualDensity.compact,
         ),
         icon: Icon(icon, size: 19),

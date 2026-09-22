@@ -66,6 +66,14 @@ class Layout {
   /// taşırırdı.
   static const double desktopTextScale = 1.15;
 
+  /// Yan yerleşimde grubun pencere kenarlarına bırakacağı pay
+  /// (üstte ve altta ayrı ayrı).
+  ///
+  /// Olmadan grup pencereyi tam dolduruyordu: en büyük tahtada alttaki
+  /// oyuncu adı ekranın en dibine yapışıyor, bulmaca ve açılış
+  /// ekranlarında tahtanın altında hiç boşluk kalmıyordu.
+  static const double wideOuterMargin = 16;
+
   /// Tahta ile yan panel arasındaki boşluk.
   ///
   /// Tahtanın oranı: küçük tahtada küçük, büyük tahtada büyük kalsın.
