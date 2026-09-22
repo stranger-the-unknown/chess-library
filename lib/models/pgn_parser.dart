@@ -34,6 +34,13 @@ class PgnParser {
   /// ortaya bambaşka bir parti çıkabiliyor. Eskiden bu sessizdi.
   bool startFenRejected = false;
 
+  /// Bir `{` yorumu ya da `(` varyantı kapanmadan dosya bitti mi?
+  ///
+  /// Böyle bir oyunda açılan parantezden sonrası yorum sayılıyor, yani
+  /// geri kalan hamleler okunmuyor. Eskiden bu sessizdi: oyun tek hamleyle
+  /// ve hiçbir uyarı olmadan geliyordu.
+  bool unclosedAnnotation = false;
+
   PgnParser() {
     game = engine.ChessGame();
   }
@@ -43,6 +50,7 @@ class PgnParser {
     headers.clear();
     skippedTokens.clear();
     startFenRejected = false;
+    unclosedAnnotation = false;
     startFen = null;
     gameResult = null;
 
@@ -160,7 +168,7 @@ class PgnParser {
   /// Çevrimiçi PGN'lerde saat ve değerlendirme `{[%clk 0:10:00]}`
   /// biçiminde gelir; düz regex iç içe parantezde artan `}` bırakıyordu
   /// ve hamleler okunamıyordu.
-  static String _stripBraces(String input) {
+  String _stripBraces(String input) {
     final buffer = StringBuffer();
     int depth = 0;
     for (final rune in input.runes) {
@@ -173,6 +181,7 @@ class PgnParser {
         buffer.write(char);
       }
     }
+    if (depth > 0) unclosedAnnotation = true;
     return buffer.toString();
   }
 
@@ -190,6 +199,7 @@ class PgnParser {
         buffer.write(char);
       }
     }
+    if (depth > 0) unclosedAnnotation = true;
     return buffer.toString();
   }
 
@@ -352,13 +362,40 @@ class PgnParser {
   }
 
   /// Dosyadaki tüm oyunları çözümler. Okunamayan oyunlar atlanır.
-  static List<PgnGame> parseAll(String text) {
+  ///
+  /// Desteklenmeyen varyantlar (Chess960 vb.) alınmıyor; kaç tane
+  /// olduklarını [onSkippedVariants] bildiriyor.
+  static List<PgnGame> parseAll(
+    String text, {
+    void Function(int count)? onSkippedVariants,
+  }) {
     final games = <PgnGame>[];
+    var variants = 0;
     for (final chunk in splitGames(text)) {
+      if (_isUnsupportedVariant(chunk)) {
+        variants++;
+        continue;
+      }
       final game = _parseOne(chunk);
       if (game != null) games.add(game);
     }
+    if (variants > 0) onSkippedVariants?.call(variants);
     return games;
+  }
+
+  /// Oyun standart satranç dışında bir varyant mı?
+  ///
+  /// Chess960'ta başlangıç dizilişi ve rok kuralları farklı: hamleler
+  /// standart kurallarla okunamıyordu ve oyun hiç uyarı olmadan
+  /// kayboluyordu (ya da daha kötüsü, rok atlanıp bambaşka bir parti
+  /// olarak alınıyordu). Artık açıkça sayılıp bildiriliyor.
+  static bool _isUnsupportedVariant(String chunk) {
+    final match = RegExp(r'\[\s*Variant\s+"([^"]*)"\s*\]').firstMatch(chunk);
+    if (match == null) return false;
+    final variant = match.group(1)!.trim().toLowerCase();
+    return variant.isNotEmpty &&
+        variant != 'standard' &&
+        variant != 'from position';
   }
 
   /// [parseAll] ile aynı işi yapar, ama arada olay döngüsüne dönerek
@@ -367,13 +404,19 @@ class PgnParser {
   static Future<List<PgnGame>> parseAllAsync(
     String text, {
     void Function(int done, int total)? onProgress,
+    void Function(int count)? onSkippedVariants,
   }) async {
     final chunks = splitGames(text);
     final games = <PgnGame>[];
+    var variants = 0;
 
     for (int i = 0; i < chunks.length; i++) {
-      final game = _parseOne(chunks[i]);
-      if (game != null) games.add(game);
+      if (_isUnsupportedVariant(chunks[i])) {
+        variants++;
+      } else {
+        final game = _parseOne(chunks[i]);
+        if (game != null) games.add(game);
+      }
 
       // Her birkaç oyunda bir kareyi çizmeye izin ver.
       if (i % 5 == 4 || i == chunks.length - 1) {
@@ -381,6 +424,7 @@ class PgnParser {
         await Future<void>.delayed(Duration.zero);
       }
     }
+    if (variants > 0) onSkippedVariants?.call(variants);
     return games;
   }
 
@@ -394,6 +438,7 @@ class PgnParser {
       result: parser.gameResult,
       skippedCount: parser.skippedTokens.length,
       fenRejected: parser.startFenRejected,
+      unclosed: parser.unclosedAnnotation,
     );
   }
 
@@ -499,8 +544,25 @@ class PgnGame {
   /// Başlıktaki konum okunamadı; hamleler standart açılıştan oynandı.
   final bool fenRejected;
 
+  /// Kapanmamış bir yorum ya da varyant yüzünden devamı okunamadı.
+  final bool unclosed;
+
   /// Oyun olduğu gibi okunabildi mi?
-  bool get isClean => skippedCount == 0 && !fenRejected;
+  bool get isClean => skippedCount == 0 && !fenRejected && !unclosed;
+
+  /// Oyun eksik okunduysa kullanıcıya söylenecek metin; temizse `null`.
+  ///
+  /// Çoklu içe aktarmada bunlar listede rozet olarak görünüyor. Tek
+  /// oyunluk dosya ise doğrudan tahtaya gidiyordu ve hiçbiri
+  /// söylenmiyordu; tahta ekranı artık bu metni gösteriyor.
+  String? get warningText {
+    final notes = <String>[
+      if (skippedCount > 0) t('pgn.partial', {'count': skippedCount}),
+      if (fenRejected) t('pgn.fenIgnored'),
+      if (unclosed) t('pgn.unclosed'),
+    ];
+    return notes.isEmpty ? null : notes.join('  ·  ');
+  }
 
   const PgnGame({
     required this.headers,
@@ -509,6 +571,7 @@ class PgnGame {
     this.result,
     this.skippedCount = 0,
     this.fenRejected = false,
+    this.unclosed = false,
   });
 
   String get white => _headerOrUnknown('White');

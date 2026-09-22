@@ -61,7 +61,10 @@ that begin with a `[FEN]` tag are read. Comments, variations and NAG marks
 are parsed out so the main line stays intact: the file opens without
 trouble, but none of that is stored or shown in the app. Games that carry
 a position but no moves are skipped. Long files show a progress bar and
-the app stays responsive.
+the app stays responsive. If a comment or variation is never closed, the
+game is marked, since nothing after that point could be read. Games of
+chess variants such as Chess960 are not imported, and the app says how
+many were skipped.
 
 **Free board** — An analysis board where you play both sides.
 
@@ -314,15 +317,19 @@ openings — so you notice a wrong file before any data is deleted. Then
 you are offered two modes:
 
 - **Merge** — The backup is added on top of what is here. Where the same
-  record exists on both sides the one from the backup wins, and the
-  settings on this device are left alone.
+  game list or puzzle collection exists on both sides, the backup's copy
+  replaces it **as a whole**: games added to that list after the backup
+  are lost. The settings on this device are left alone.
 - **Replace** — The data on this device is deleted and the backup takes
   its place. It is for making two devices identical, and asks for an
   extra confirmation.
 
 A checksum is written into the file, so a backup that downloaded
 half-way or was damaged is caught before it is loaded. If something goes
-wrong while writing, the old data is put back.
+wrong while writing, the old data is put back. Before a restore starts, a
+copy of the data on the device is kept: if the restore is cut short (the
+window was closed, the phone turned off), the next start puts the data
+back the way it was before the restore and says so.
 
 **Uninstalling the app removes its data.** Android is not asked to keep a
 copy in the cloud and the data is not carried over to a new phone, so a
@@ -377,6 +384,10 @@ a Start menu shortcut and can be removed from the Control Panel.
 If you would rather not install anything, use the portable version: copy
 **the whole** folder you were given and run `ChessLibrary.exe` inside it.
 The app will not start without the DLLs and the `data` folder next to it.
+
+The app runs in a single window: starting it again while it is open
+brings that window to the front. Closing the window while a game with
+unsaved moves is open asks first, like the back button does.
 
 > Windows may show a "Windows protected your PC" warning the first time:
 > the app is not signed with a code signing certificate. Get past it with

@@ -210,6 +210,17 @@ Win32Window::MessageHandler(HWND hwnd,
       return 0;
     }
 
+    case WM_GETMINMAXINFO: {
+      // Pencere işe yaramayacak kadar küçültülemesin. Sınır mantıksal
+      // piksel; ekranın ölçeğine göre büyütülüyor. Dar ve uzun bir
+      // pencere (telefon düzeni) bilerek serbest.
+      auto info = reinterpret_cast<MINMAXINFO*>(lparam);
+      const double scale = FlutterDesktopGetDpiForHWND(hwnd) / 96.0;
+      info->ptMinTrackSize.x = static_cast<LONG>(360 * scale);
+      info->ptMinTrackSize.y = static_cast<LONG>(400 * scale);
+      return 0;
+    }
+
     case WM_ACTIVATE:
       if (child_content_ != nullptr) {
         SetFocus(child_content_);

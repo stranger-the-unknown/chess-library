@@ -14,6 +14,7 @@ import '../models/pgn_parser.dart';
 import '../models/playlist.dart';
 import '../services/board_image_service.dart';
 import '../services/engine/engine_service.dart';
+import '../services/unsaved_work.dart';
 import '../services/settings_service.dart';
 import '../services/screen_awake.dart';
 import '../services/sound_service.dart';
@@ -66,7 +67,15 @@ class GameScreen extends StatefulWidget {
     this.engineLevelIndex,
     this.whiteName,
     this.blackName,
+    this.initialWarning,
   });
+
+  /// Açılışta gösterilecek uyarı (ör. eksik okunan PGN).
+  ///
+  /// Tek oyunluk bir PGN dosyası ayrıştırıldıktan sonra buraya hamle
+  /// listesi olarak geliyor; atlanan hamle, okunamayan FEN ya da
+  /// kapanmamış yorum bilgisi yolda kayboluyordu.
+  final String? initialWarning;
 
   @override
   State<GameScreen> createState() => _GameScreenState();
@@ -187,10 +196,16 @@ class _GameScreenState extends State<GameScreen> {
         widget.mode == GameMode.versusEngine;
     _resultText = widget.initialResult;
     _loadInitialPosition();
+    // Pencere kapatılırken (Windows) kaydedilmemiş hamle var mı diye
+    // uygulama düzeyinde sorulabilsin.
+    UnsavedWork.register(_hasUnsavedWork);
   }
+
+  bool _hasUnsavedWork() => _unsaved;
 
   @override
   void dispose() {
+    UnsavedWork.unregister(_hasUnsavedWork);
     _awake.release();
     _analysisDebounce?.cancel();
     _analysisToken++;
@@ -233,6 +248,7 @@ class _GameScreenState extends State<GameScreen> {
         final notes = <String>[
           if (_warning != null) _warning!,
           if (parser.startFenRejected) t('game.pgnFenIgnored'),
+          if (parser.unclosedAnnotation) t('pgn.unclosed'),
           if (parser.moves.isEmpty) t('game.pgnNoMoves'),
         ];
         if (notes.isNotEmpty) _warning = notes.join('  ·  ');
@@ -243,6 +259,12 @@ class _GameScreenState extends State<GameScreen> {
       _history
         ..clear()
         ..addAll(MoveEntry.fromUciList(widget.uciMoves!, startFen: _startFen));
+    }
+    final initialWarning = widget.initialWarning;
+    if (initialWarning != null) {
+      _warning = _warning == null
+          ? initialWarning
+          : '$_warning  ·  $initialWarning';
     }
 
     _cursor = -1;

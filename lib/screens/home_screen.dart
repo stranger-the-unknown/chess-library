@@ -592,18 +592,23 @@ class HomeScreen extends StatelessWidget {
     String text,
     String suggestedName,
   ) async {
+    var variants = 0;
     final games = await AppDialogs.runWithProgress<List<PgnGame>>(
       context,
       message: t('pgn.reading'),
       task: (report) => PgnParser.parseAllAsync(
         text,
         onProgress: (done, total) => report(total == 0 ? 0 : done / total),
+        onSkippedVariants: (count) => variants = count,
       ),
     );
     if (!context.mounted) return;
 
+    if (variants > 0) {
+      AppDialogs.snack(context, t('pgn.variantSkipped', {'count': variants}));
+    }
     if (games.isEmpty) {
-      AppDialogs.snack(context, t('pgn.noGames'));
+      if (variants == 0) AppDialogs.snack(context, t('pgn.noGames'));
       return;
     }
     if (games.length == 1) {
@@ -618,6 +623,7 @@ class HomeScreen extends StatelessWidget {
             initialResult: game.result,
             whiteName: game.white == '?' ? null : game.white,
             blackName: game.black == '?' ? null : game.black,
+            initialWarning: game.warningText,
           ),
         ),
       );

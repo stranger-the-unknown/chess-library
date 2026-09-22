@@ -2,7 +2,9 @@
 #define RUNNER_FLUTTER_WINDOW_H_
 
 #include <flutter/dart_project.h>
+#include <flutter/encodable_value.h>
 #include <flutter/flutter_view_controller.h>
+#include <flutter/method_channel.h>
 
 #include <memory>
 
@@ -28,6 +30,28 @@ class FlutterWindow : public Win32Window {
 
   // The Flutter instance hosted by this window.
   std::unique_ptr<flutter::FlutterViewController> flutter_controller_;
+
+  // Pencere kapatılırken Dart'a kaydedilmemiş iş olup olmadığını sorar.
+  //
+  // Flutter motoru kapatma isteğini yalnızca sürecin son üst düzey
+  // penceresi kapanırken Dart'a iletiyor; ses eklentisinin gizli
+  // "MediaPlayer SMTC" pencereleri yüzünden bu uygulamada hiç
+  // iletmiyordu ve kaydedilmemiş oyun sormadan kayboluyordu. İstek
+  // burada, motordan önce yakalanıyor.
+  void RequestClose(HWND hwnd);
+
+  // Dart onay verdi: pencereyi mesaj kuyruğu üzerinden kapat. Motorun
+  // kendi geri çağrısının içinde pencereyi (ve motoru) yok etmemek için.
+  void ApproveClose(HWND hwnd);
+
+  std::unique_ptr<flutter::MethodChannel<flutter::EncodableValue>>
+      window_channel_;
+
+  // Soru ekranda; yeni kapatma istekleri yalnızca pencereyi öne getirir.
+  bool close_pending_ = false;
+
+  // Kapatma onaylandı; sıradaki WM_CLOSE pencereyi gerçekten kapatır.
+  bool close_approved_ = false;
 };
 
 #endif  // RUNNER_FLUTTER_WINDOW_H_

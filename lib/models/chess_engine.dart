@@ -1303,13 +1303,6 @@ class ChessGame {
     return buffer.toString();
   }
 
-  /// Üç kez tekrar tespiti için kullanılan konum anahtarı: FEN'in ilk dört
-  /// alanı (taşlar, sıra, rok hakları, en passant).
-  String get positionKey {
-    final parts = fen.split(' ');
-    return parts.take(4).join(' ');
-  }
-
   /// FEN'i bu oyuna yükler. Biçim bozuksa [FormatException] fırlatır.
   void loadFen(String fenString) {
     final parts = fenString.trim().split(RegExp(r'\s+'));
@@ -1370,12 +1363,48 @@ class ChessGame {
       }
     }
 
-    halfmoveClock = parts.length > 4 ? (int.tryParse(parts[4]) ?? 0) : 0;
-    fullmoveNumber = parts.length > 5 ? (int.tryParse(parts[5]) ?? 1) : 1;
+    // Sayaçlar sınırlanıyor: negatif yarım hamle sayacı ya da 0. hamle
+    // FEN'de geçersiz, ama okunuyor ve dışa aktarılan PGN'e taşınıyordu.
+    halfmoveClock =
+        (parts.length > 4 ? (int.tryParse(parts[4]) ?? 0) : 0).clamp(0, 1 << 20);
+    fullmoveNumber =
+        (parts.length > 5 ? (int.tryParse(parts[5]) ?? 1) : 1).clamp(1, 1 << 20);
 
     // Tahtada karşılığı olmayan rok haklarını temizle; aksi hâlde motor
     // var olmayan bir kaleyle rok üretmeye çalışır.
     normalizeCastlingRights();
+    normalizeEnPassant();
+  }
+
+  /// Tahtayla tutarsız geçerken alma karesini düşürür.
+  ///
+  /// Kare yalnızca biçim olarak denetleniyordu. `4k3/8/8/3P4/8/8/8/4K3 w -
+  /// e6` gibi e5'te siyah piyon olmayan bir FEN'de motor d5-e6 "alma"sını
+  /// üretiyordu: boş kareye çapraz piyon hamlesi. Stockfish böyle bir
+  /// kareyi yok saydığı için uygulama ile motorun yasal hamle görüşü de
+  /// ayrışıyordu. Elle düzenlenmiş FEN, PGN başlığı ya da bulmaca
+  /// dosyasından gelebilir.
+  ///
+  /// Kare, sırası gelen tarafa göre doğru sırada olmalı; kendisi ve
+  /// piyonun çıktığı kare boş, arkasında da az önce iki kare ilerlemiş
+  /// rakip piyon durmalı. Değilse sessizce düşürülüyor (rok haklarında
+  /// da böyle yapılıyor).
+  void normalizeEnPassant() {
+    final target = enPassantTarget;
+    if (target == null) return;
+    final square = Position.fromIndex(target);
+    final whiteToMove = sideToMove == Color.white;
+    final targetRow = whiteToMove ? 2 : 5; // 6. / 3. sıra
+    final pawnRow = whiteToMove ? 3 : 4; // piyonun durduğu sıra
+    final originRow = whiteToMove ? 1 : 6; // piyonun çıktığı sıra
+    final pawn = board[pawnRow * 8 + square.col];
+    final consistent = square.row == targetRow &&
+        board[target] == null &&
+        board[originRow * 8 + square.col] == null &&
+        pawn != null &&
+        pawn.type == PieceType.pawn &&
+        pawn.color == (whiteToMove ? Color.black : Color.white);
+    if (!consistent) enPassantTarget = null;
   }
 
   /// Şah ya da kale başlangıç karesinde değilse ilgili rok hakkını kaldırır.

@@ -7,6 +7,15 @@
         android:allowBackup="false"
         android:fullBackupContent="false"
         android:dataExtractionRules="@xml/data_extraction_rules">
+        <!-- Android 16, API 36'yı hedefleyen uygulamalarda en kısa kenarı
+             600 dp ve üstü olan ekranlarda (tabletler) yönelim kilidini yok
+             sayıyor. Uygulama telefonu dikeye, tableti yataya kilitliyor
+             (lib/main.dart, _lockOrientation); bu özellik olmadan tablet
+             dönüyor ve yerleşim istenmeyen düzene düşüyordu. Yalnızca
+             targetSdk 36 iken geçerli: build.gradle.kts'teki notlara bakın. -->
+        <property
+            android:name="android.window.PROPERTY_COMPAT_ALLOW_RESTRICTED_RESIZABILITY"
+            android:value="true" />
         <activity
             android:name=".MainActivity"
             android:exported="true"

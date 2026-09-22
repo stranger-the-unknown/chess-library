@@ -230,17 +230,22 @@ class _PlaylistDetailScreenState extends State<PlaylistDetailScreen> {
 
     final content = picked.content;
     final suggested = picked.suggestedListName;
+    var variants = 0;
     final games = await AppDialogs.runWithProgress<List<PgnGame>>(
       context,
       message: t('pgn.reading'),
       task: (report) => PgnParser.parseAllAsync(
         content,
         onProgress: (done, total) => report(total == 0 ? 0 : done / total),
+        onSkippedVariants: (count) => variants = count,
       ),
     );
     if (!mounted) return;
+    if (variants > 0) {
+      AppDialogs.snack(context, t('pgn.variantSkipped', {'count': variants}));
+    }
     if (games.isEmpty) {
-      AppDialogs.snack(context, t('pgn.noGames'));
+      if (variants == 0) AppDialogs.snack(context, t('pgn.noGames'));
       return;
     }
 

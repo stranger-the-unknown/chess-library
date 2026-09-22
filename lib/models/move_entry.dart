@@ -29,7 +29,12 @@ class MoveEntry {
     // ile tahta ayrışıyordu. Çağıranların hepsi yasal hamle veriyor;
     // burada yakalanan bir hata varsa o çağıran bozuktur.
     final played = position.makeMove(move);
-    assert(played, 'yasadışı hamle oynatılmaya çalışıldı: ${move.uci}');
+    // `assert` yetmiyordu: sürüm derlemesinde kalkıyor ve kayıt tahtaya
+    // uymadığı hâlde listeye giriyordu. Tahta bu durumda değişmemiş
+    // oluyor; hata atıp kaydı hiç üretmemek ikisini tutarlı bırakıyor.
+    if (!played) {
+      throw StateError('yasadışı hamle oynatılmaya çalışıldı: ${move.uci}');
+    }
     return MoveEntry(move: move, san: san, fenAfter: position.fen);
   }
 

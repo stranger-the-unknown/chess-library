@@ -134,9 +134,12 @@ class Strings {
     'backup.replace': 'Değiştir',
     'backup.replaceHint': 'Bu cihazdaki veriler silinir, yerine yedektekiler gelir. İki cihazı birebir aynı yapmak için.',
     'backup.merge': 'Birleştir',
-    'backup.mergeHint': 'Yedektekiler eklenir; aynı kayıt varsa yedekteki geçerli olur. Ayarlara dokunulmaz.',
+    'backup.mergeHint':
+        'Yedektekiler eklenir. Aynı oyun listesi ya da bulmaca koleksiyonu iki tarafta da varsa yedekteki bütünüyle geçerli olur: yedekten sonra ona eklenenler kaybolur. Ayarlara dokunulmaz.',
     'backup.replaceWarning': 'Bu cihazdaki bütün veriler silinecek ve yerine yedektekiler yüklenecek. Sürdürülsün mü?',
     'backup.nothingChanged': 'Veriler olduğu gibi kaldı.',
+    'backup.interruptedRestored':
+        'Önceki geri yükleme yarıda kalmıştı. Veriler geri yüklemeden önceki hâline döndürüldü; istersen yedeği yeniden yükleyebilirsin.',
     'openings.noValidMove': 'Geçerli hamle bulunamadı.',
     'openings.editVariation': 'Varyantı düzenle',
     'openings.importFile': 'Metin dosyasından al',
@@ -244,6 +247,9 @@ class Strings {
     'pgn.partial': '{count} hamle okunamadı',
     'pgn.hidePartial': 'Eksik hamleli {count} oyunu gizle',
     'pgn.preview': 'Oyunu aç',
+    'pgn.unclosed': 'Kapanmamış yorum ya da varyant: devamı okunamadı',
+    'pgn.variantSkipped':
+        '{count} oyun alınmadı: Chess960 gibi varyantlar desteklenmiyor.',
     'pgn.noGames': 'Dosyada okunabilir oyun bulunamadı.',
     'pgn.readError': 'Dosya okunamadı.',
     'pgn.importIntoList': 'PGN dosyası ekle',
@@ -378,6 +384,8 @@ class Strings {
         'Kaydedilemedi: cihazda yer kalmamış olabilir.',
     'data.corruptFound':
         'Bozuk bir kayıt bulundu ve bir kenara alındı; o bölüm boş açıldı.',
+    'data.prefsRecovered':
+        'Kayıtlı veriler okunamadı (dosya yarım yazılmış olabilir), uygulama boş açıldı. Bozuk dosya şu adla saklandı: {file}. Yedeğin varsa Ayarlar > Veri > Yedekten geri yükle ile geri getirebilirsin.',
     'lists.filterGames': 'Oyun filtrele',
     'lists.filterHint': 'Boş bıraktığın alan aranmaz.',
     'lists.filterWhite': 'Beyaz oyuncu',
@@ -666,9 +674,12 @@ class Strings {
     'backup.replace': 'Replace',
     'backup.replaceHint': 'Data on this device is deleted and the backup takes its place. Use this to make two devices identical.',
     'backup.merge': 'Merge',
-    'backup.mergeHint': 'The backup is added on top; where a record exists in both, the backup wins. Settings are left alone.',
+    'backup.mergeHint':
+        'The backup is added. Where the same game list or puzzle collection exists on both sides, the copy from the backup replaces it as a whole: anything added to it after the backup is lost. Settings are left alone.',
     'backup.replaceWarning': 'All data on this device will be deleted and replaced with the backup. Continue?',
     'backup.nothingChanged': 'Your data was left unchanged.',
+    'backup.interruptedRestored':
+        'The last restore was interrupted. Your data was put back the way it was before the restore; you can load the backup again.',
     'openings.noValidMove': 'No legal move was found.',
     'openings.editVariation': 'Edit line',
     'openings.importFile': 'Import from text file',
@@ -770,6 +781,9 @@ class Strings {
     'pgn.partial': '{count} moves could not be read',
     'pgn.hidePartial': 'Hide {count} games with unreadable moves',
     'pgn.preview': 'Open game',
+    'pgn.unclosed': 'Unclosed comment or variation: the rest could not be read',
+    'pgn.variantSkipped':
+        '{count} game(s) skipped: variants such as Chess960 are not supported.',
     'pgn.noGames': 'No readable game was found in the file.',
     'pgn.readError': 'The file could not be read.',
     'pgn.importIntoList': 'Import a PGN file',
@@ -898,6 +912,8 @@ class Strings {
         'Could not save: the device may be out of space.',
     'data.corruptFound':
         'A damaged record was found and set aside; that section opened empty.',
+    'data.prefsRecovered':
+        'Your saved data could not be read (the file may have been half written), so the app opened empty. The damaged file was kept as: {file}. If you have a backup, use Settings > Data > Restore from backup.',
     'lists.filterGames': 'Filter games',
     'lists.filterHint': 'A field you leave empty is not used.',
     'lists.filterWhite': 'White player',

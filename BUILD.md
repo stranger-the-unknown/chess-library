@@ -4,8 +4,13 @@ Flutter 3.47 veya üzeri gerekir.
 
 ```bash
 flutter pub get
-flutter test          # 397 test
+flutter test          # 424 test (3'ü yalnızca POSIX'te koşar)
 ```
+
+`flutter clean` sonrasında testlerin bir kısmı
+`shaders/ink_sparkle.frag ... Found stages: Vulkan` hatasıyla düşerse
+bu bir uygulama hatası değil, Flutter'ın test önbelleği: `build/unit_test_assets`
+klasörünü silip testleri yeniden çalıştırın.
 
 ## Android
 

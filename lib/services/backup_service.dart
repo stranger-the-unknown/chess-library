@@ -1,6 +1,8 @@
 import 'dart:convert';
+import 'dart:io';
 
 import 'package:flutter/foundation.dart';
+import 'package:path_provider/path_provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import '../l10n/app_strings.dart';
@@ -129,17 +131,21 @@ class BackupService {
     }
     onProgress?.call(0.6);
 
-    final counts = countsOf(data);
-    final payload = jsonEncode(data);
-    onProgress?.call(0.8);
+    final text = _encodeDocument(data);
+    onProgress?.call(1);
+    return text;
+  }
 
+  /// [data]yı yedek dosyası biçiminde metne çevirir.
+  String _encodeDocument(Map<String, Object?> data) {
+    final payload = jsonEncode(data);
     final document = <String, Object?>{
       'app': magic,
       'format': formatVersion,
       'appVersion': appVersionName,
       'platform': defaultTargetPlatform.name,
       'exportedAt': DateTime.now().toIso8601String(),
-      'counts': counts,
+      'counts': countsOf(data),
       // Dosyanın yarım yazılması ya da aktarımda bozulması sessizce
       // yanlış veri yüklenmesine yol açardı; bu damga onu yakalar.
       'checksum': checksum(payload),
@@ -147,9 +153,7 @@ class BackupService {
     };
     // Girintili yazım dosyayı büyütüyordu; binlerce oyunluk bir
     // kütüphanede fark ciddi. Okuyan taraf için bir şey değişmiyor.
-    final text = jsonEncode(document);
-    onProgress?.call(1);
-    return text;
+    return jsonEncode(document);
   }
 
   // -------------------------------------------------------------------
@@ -205,9 +209,16 @@ class BackupService {
 
   /// [read] ile çözümlenmiş veriyi diske yazar.
   ///
-  /// Yazmadan **önce** var olan verinin kopyası bellekte tutulur; yazma
-  /// yarıda kalırsa eski hâle dönülür. Böylece başarısız bir içe
+  /// Yazmadan **önce** var olan verinin tam kopyası diske yazılır
+  /// (bkz. [recoverInterruptedRestore]); kopya yazılamazsa geri yükleme
+  /// hiç başlamaz. Yazma hata verirse eski hâle hemen dönülür. Süreç
+  /// yarıda ölürse (pencere kapatıldı, sistem uygulamayı öldürdü) dönüş
+  /// bir sonraki açılışta o kopyadan yapılır. Böylece başarısız bir içe
   /// aktarma kullanıcının verisini yarım bırakmaz.
+  ///
+  /// Değiştir kipinde yeni değerler **önce** yazılıyor, yedekte olmayan
+  /// anahtarlar en son siliniyor. Eskiden önce her şey siliniyordu;
+  /// arada kesilen bir geri yükleme cihazı neredeyse boş bırakıyordu.
   Future<void> apply(
     Map<String, Object?> data, {
     ImportMode mode = ImportMode.replace,
@@ -218,16 +229,10 @@ class BackupService {
     final previous = <String, Object?>{
       for (final key in prefs.getKeys()) key: prefs.get(key),
     };
+    final snapshot = await _writeSnapshot(previous);
+    onProgress?.call(0.1);
 
     try {
-      if (mode == ImportMode.replace) {
-        for (final key in previous.keys) {
-          if (_notBackedUp.contains(key)) continue;
-          await prefs.remove(key);
-        }
-      }
-      onProgress?.call(0.1);
-
       final entries = data.entries.toList();
       for (int i = 0; i < entries.length; i++) {
         Object? value = entries[i].value;
@@ -241,18 +246,23 @@ class BackupService {
         if (!await _write(prefs, entries[i].key, value)) {
           throw const FormatException('writeFailed');
         }
+        await debugAfterWrite?.call(i + 1);
         if (i % 4 == 3) {
-          onProgress?.call(0.1 + 0.85 * (i + 1) / entries.length);
+          onProgress?.call(0.1 + 0.8 * (i + 1) / entries.length);
           await Future<void>.delayed(Duration.zero);
         }
       }
-    } catch (_) {
-      // Geri al: yazılanları temizleyip eski değerleri koy.
-      for (final key in prefs.getKeys().toList()) {
-        await prefs.remove(key);
+      if (mode == ImportMode.replace) {
+        for (final key in previous.keys) {
+          if (_notBackedUp.contains(key) || data.containsKey(key)) continue;
+          await prefs.remove(key);
+        }
       }
-      for (final entry in previous.entries) {
-        await _write(prefs, entry.key, entry.value);
+    } catch (_) {
+      // Eski hâle dön. Dönüş de tamamlanamazsa kopya kalır, açılışta
+      // yeniden denenir.
+      if (await _restoreExactly(prefs, previous)) {
+        await _deleteSnapshot(snapshot);
       }
       await reloadServices();
       rethrow;
@@ -260,7 +270,101 @@ class BackupService {
 
     onProgress?.call(0.95);
     await reloadServices();
+    await _deleteSnapshot(snapshot);
     onProgress?.call(1);
+  }
+
+  /// Yarıda kalmış bir geri yüklemeyi açılışta geri alır.
+  ///
+  /// [apply] başlamadan önce yazdığı kopyayı ancak iş bitince siliyor;
+  /// açılışta kopya duruyorsa süreç geri yükleme sırasında ölmüş
+  /// demektir ve disk yarı eski, yarı yeni bir hâldedir. Veri geri
+  /// yüklemeden önceki hâline döndürülür; kullanıcı yedeği yeniden
+  /// yükleyebilir. Bir şey yapıldıysa `true` döner.
+  Future<bool> recoverInterruptedRestore() async {
+    final File file;
+    try {
+      file = await _snapshotFile();
+      if (!await file.exists()) return false;
+    } catch (_) {
+      return false;
+    }
+    final Map<String, Object?> previous;
+    try {
+      final (_, data) = await read(await file.readAsString());
+      previous = data;
+    } catch (_) {
+      // Kopya yarım ya da boş: geri yükleme veriye dokunmadan önce
+      // kesilmiş (kopya tamamlanmadan hiçbir şey yazılmıyor).
+      await _deleteSnapshot(file);
+      return false;
+    }
+    final prefs = await SharedPreferences.getInstance();
+    if (!await _restoreExactly(prefs, previous)) return false;
+    await reloadServices();
+    await _deleteSnapshot(file);
+    return true;
+  }
+
+  /// Geri yükleme öncesi kopyanın bulunduğu klasör. Testler değiştirir.
+  @visibleForTesting
+  static Future<Directory> Function() snapshotDirectory =
+      getApplicationSupportDirectory;
+
+  /// Her yazmadan sonra çağrılır; testler süreci o noktada "öldürür".
+  @visibleForTesting
+  static Future<void> Function(int written)? debugAfterWrite;
+
+  Future<File> _snapshotFile() async {
+    final dir = await snapshotDirectory();
+    return File('${dir.path}${Platform.pathSeparator}restore-snapshot.json');
+  }
+
+  /// Var olan veriyi geri yüklemeden önce diske yazar.
+  ///
+  /// Önce geçici dosyaya yazılıp sonra yeniden adlandırılıyor: yarım
+  /// yazılmış bir kopya asıl adla hiç görünmez. Yazılamazsa (disk dolu)
+  /// geri yükleme reddedilir; güvencesiz başlamaktansa hiç başlamamak.
+  Future<File> _writeSnapshot(Map<String, Object?> previous) async {
+    try {
+      final file = await _snapshotFile();
+      await file.parent.create(recursive: true);
+      final temp = File('${file.path}.tmp');
+      await temp.writeAsString(_encodeDocument(previous), flush: true);
+      return await temp.rename(file.path);
+    } catch (_) {
+      throw const FormatException('writeFailed');
+    }
+  }
+
+  /// Kopyayı kaldırır. Silinemezse (Windows'ta dosya kısa süre kilitli
+  /// kalabiliyor) boşaltılır: boş kopya açılışta geri alınmaz, yani
+  /// başarılı bir geri yükleme sonradan bozulmaz.
+  Future<void> _deleteSnapshot(File file) async {
+    try {
+      await file.delete();
+      return;
+    } catch (_) {}
+    try {
+      await file.writeAsString('', flush: true);
+    } catch (_) {}
+  }
+
+  /// Deponun içeriğini tam olarak [previous] yapar: önce değerler
+  /// yazılır, sonra fazlalık anahtarlar silinir. Her şey yazılabildiyse
+  /// `true` döner.
+  Future<bool> _restoreExactly(
+    SharedPreferences prefs,
+    Map<String, Object?> previous,
+  ) async {
+    var ok = true;
+    for (final entry in previous.entries) {
+      if (!await _write(prefs, entry.key, entry.value)) ok = false;
+    }
+    for (final key in prefs.getKeys().toList()) {
+      if (!previous.containsKey(key)) await prefs.remove(key);
+    }
+    return ok;
   }
 
   /// Açık ekranların eski veriyi göstermemesi için bütün önbellekleri

@@ -400,6 +400,14 @@ class _PgnImportScreenState extends State<PgnImportScreen> {
                             style: TextStyle(fontSize: 11, color: scheme.error),
                           ),
                         ),
+                      if (game.unclosed)
+                        Padding(
+                          padding: const EdgeInsets.only(top: 3),
+                          child: Text(
+                            t('pgn.unclosed'),
+                            style: TextStyle(fontSize: 11, color: scheme.error),
+                          ),
+                        ),
                     ],
                   ),
                 ),

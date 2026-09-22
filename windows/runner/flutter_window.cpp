@@ -1,6 +1,11 @@
 #include "flutter_window.h"
 
+#include <flutter/method_result_functions.h>
+#include <flutter/standard_method_codec.h>
+
 #include <optional>
+#include <string>
+#include <variant>
 
 #include "flutter/generated_plugin_registrant.h"
 
@@ -25,6 +30,10 @@ bool FlutterWindow::OnCreate() {
     return false;
   }
   RegisterPlugins(flutter_controller_->engine());
+  window_channel_ =
+      std::make_unique<flutter::MethodChannel<flutter::EncodableValue>>(
+          flutter_controller_->engine()->messenger(), "chess_library/window",
+          &flutter::StandardMethodCodec::GetInstance());
   SetChildContent(flutter_controller_->view()->GetNativeWindow());
 
   flutter_controller_->engine()->SetNextFrameCallback([&]() {
@@ -40,6 +49,7 @@ bool FlutterWindow::OnCreate() {
 }
 
 void FlutterWindow::OnDestroy() {
+  window_channel_ = nullptr;
   if (flutter_controller_) {
     flutter_controller_ = nullptr;
   }
@@ -51,6 +61,18 @@ LRESULT
 FlutterWindow::MessageHandler(HWND hwnd, UINT const message,
                               WPARAM const wparam,
                               LPARAM const lparam) noexcept {
+  // Kapatma, motordan önce: onay yoksa Dart'a sor ve bekle. Onaydan sonra
+  // motora uğramadan kapat; yoksa motor aynı soruyu bir kez daha
+  // sordurabilirdi.
+  if (message == WM_CLOSE) {
+    if (close_approved_ || !window_channel_) {
+      ::DestroyWindow(hwnd);
+    } else {
+      RequestClose(hwnd);
+    }
+    return 0;
+  }
+
   // Give Flutter, including plugins, an opportunity to handle window messages.
   if (flutter_controller_) {
     std::optional<LRESULT> result =
@@ -68,4 +90,45 @@ FlutterWindow::MessageHandler(HWND hwnd, UINT const message,
   }
 
   return Win32Window::MessageHandler(hwnd, message, wparam, lparam);
+}
+
+void FlutterWindow::RequestClose(HWND hwnd) {
+  // Pencere simge durumundaysa soru görünmez; kullanıcı onu bulabilsin.
+  if (::IsIconic(hwnd)) {
+    ::ShowWindow(hwnd, SW_RESTORE);
+  }
+  ::SetForegroundWindow(hwnd);
+  if (close_pending_) {
+    return;
+  }
+  close_pending_ = true;
+
+  // Kullanıcı pencerede hapsolmasın: Dart yanıt veremezse (hata, işleyici
+  // yok) kapatmaya izin verilir. Yalnızca açık bir "false" pencereyi açık
+  // tutar.
+  auto result =
+      std::make_unique<flutter::MethodResultFunctions<flutter::EncodableValue>>(
+          [this, hwnd](const flutter::EncodableValue* value) {
+            close_pending_ = false;
+            const bool* allow =
+                value == nullptr ? nullptr : std::get_if<bool>(value);
+            if (allow == nullptr || *allow) {
+              ApproveClose(hwnd);
+            }
+          },
+          [this, hwnd](const std::string&, const std::string&,
+                       const flutter::EncodableValue*) {
+            close_pending_ = false;
+            ApproveClose(hwnd);
+          },
+          [this, hwnd]() {
+            close_pending_ = false;
+            ApproveClose(hwnd);
+          });
+  window_channel_->InvokeMethod("requestClose", nullptr, std::move(result));
+}
+
+void FlutterWindow::ApproveClose(HWND hwnd) {
+  close_approved_ = true;
+  ::PostMessage(hwnd, WM_CLOSE, 0, 0);
 }

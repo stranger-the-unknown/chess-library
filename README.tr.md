@@ -58,7 +58,9 @@ Başlıklar ve `[FEN]` ile başlayan oyunlar okunur. Yorumlar, varyantlar ve
 NAG işaretleri ana hattı bozmadan ayıklanır: dosya sorunsuz açılır, ama bu
 bilgiler saklanmaz ve uygulamada görünmez. Hamlesi olmayan, yalnızca
 pozisyon taşıyan oyunlar listeye alınmaz. Uzun dosyalarda ilerleme çubuğu
-görünür, uygulama donmaz.
+görünür, uygulama donmaz. Bir yorum ya da varyant parantezi kapanmamışsa
+oyun işaretlenir: o noktadan sonrası okunamamıştır. Chess960 gibi satranç
+varyantlarının oyunları alınmaz; kaç tanesinin atlandığı söylenir.
 
 **Serbest tahta** — İki tarafı da senin oynadığın analiz tahtası.
 
@@ -302,15 +304,19 @@ dosyanın içindekiler özetlenir (kaç liste, kaç oyun, kaç bulmaca, kaç
 açılış) — yanlış dosyayı seçtiysen veri silinmeden fark edersin. Sonra
 iki seçenek sunulur:
 
-- **Birleştir** — Yedektekiler var olanın üstüne eklenir. Aynı kayıt iki
-  tarafta da varsa yedekteki geçerli olur, cihazın ayarlarına
-  dokunulmaz.
+- **Birleştir** — Yedektekiler var olanın üstüne eklenir. Aynı oyun
+  listesi ya da bulmaca koleksiyonu iki tarafta da varsa yedekteki
+  **bütünüyle** geçerli olur: yedekten sonra o listeye eklenen oyunlar
+  kaybolur. Cihazın ayarlarına dokunulmaz.
 - **Değiştir** — Cihazdaki veri silinir, yerine yedektekiler konur. İki
   cihazı birebir aynı yapmak içindir; ayrıca onay sorar.
 
 Dosyanın içine bir sağlama damgası yazılır: yarım inen ya da bozulan bir
 yedek yüklenmeden önce fark edilir. Yazma sırasında bir şey ters
-giderse eski veri geri konur.
+giderse eski veri geri konur. Geri yüklemeden önce cihazdaki verinin bir
+kopyası alınır: geri yükleme yarıda kesilirse (pencere kapatıldı, telefon
+kapandı) bir sonraki açılışta veri geri yüklemeden önceki hâline döner ve
+bu söylenir.
 
 **Uygulama silinince verisi de gider.** Android'de veri buluta
 yedeklenmez ve yeni telefona aktarılmaz, yeniden kurulunca uygulama boş
@@ -366,6 +372,10 @@ menüsüne kısayol koyar ve Denetim Masası'ndan kaldırılabilir.
 Kurulum istemiyorsanız taşınabilir sürümü de kullanabilirsiniz: verilen
 klasörün **tamamını** kopyalayıp içindeki `ChessLibrary.exe` dosyasını
 çalıştırın. Yanındaki DLL'ler ve `data` klasörü olmadan uygulama açılmaz.
+
+Uygulama tek pencerede çalışır: açıkken yeniden başlatırsanız açık olan
+pencere öne gelir. Kaydedilmemiş hamleleri olan bir oyun açıkken pencereyi
+kapatmak, geri düğmesinde olduğu gibi onay sorar.
 
 > Windows ilk açılışta "Bilgisayarınızı korudu" uyarısı gösterebilir:
 > uygulama kod imzalama sertifikasıyla imzalı değil. **Ek bilgi →

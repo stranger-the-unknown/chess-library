@@ -1,3 +1,5 @@
+import 'dart:io';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -27,6 +29,12 @@ Future<void> _reset() async {
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
 
+  // Geri yükleme öncesi anlık kopya diske yazılıyor; testte
+  // `path_provider` olmadığı için geçici bir klasör veriliyor.
+  setUpAll(() {
+    final dir = Directory.systemTemp.createTempSync('cl_backup_test_');
+    BackupService.snapshotDirectory = () async => dir;
+  });
   setUp(_reset);
 
   group('Geri yükleme sonrası tazeleme', () {
