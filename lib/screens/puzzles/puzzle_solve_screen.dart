@@ -198,14 +198,11 @@ class _PuzzleSolveScreenState extends State<PuzzleSolveScreen> {
     if (_fenError != null) return;
     if (_puzzle.hasSolution) return;
 
-    final baseline = await EngineService.instance.analyze(
-      _puzzle.fen,
-      depth: 14,
-      movetimeMs: 1800,
-    );
+    final baseline = await _ask(_puzzle.fen, depth: 14, movetimeMs: 1800);
     if (token != _loadToken || !mounted) return;
-    // Kesilen arama motorun yokluğu sayılmaz.
-    if (baseline.cancelled) return;
+    // İptal edilen arama burada **erken çıkmıyor**: eskiden çıkıyordu ve
+    // tahtayı kilitleyen `_busy` sonsuza kadar açık kalıyordu. Boş sonuç
+    // aşağıdaki "motor kullanılamıyor" yoluna giriyor; ekran serbest.
 
     // Motor yoksa (ya da çöktüyse) sonuç boş geliyor: skor 0, en iyi
     // hamle yok. Eskiden bu, 80 santipiyonluk toleransla **her hamlenin
@@ -217,6 +214,36 @@ class _PuzzleSolveScreenState extends State<PuzzleSolveScreen> {
       _feedback = unavailable ? _Feedback.finished : _Feedback.none;
       _feedbackText = unavailable ? t('puzzles.engineUnavailable') : '';
     });
+  }
+
+  /// Motora sorar; isteği **başka bir ekranın kapanışı** düşürürse bir
+  /// kez daha sorar.
+  ///
+  /// Motor tek ve `stopAll()` motordaki *her* işi iptal ediyor, yalnızca
+  /// çağıranınkini değil. Kapanan ekranın temizliği de Flutter'da hemen
+  /// değil, çıkış animasyonu bitince çalışıyor — yani alttaki ekran
+  /// çoktan canlıyken. O aralıkta bu ekranın isteği düşebiliyor.
+  ///
+  /// Böyle bir iptal "motor cevap veremedi" demek değil: konum aynı,
+  /// cevaba hâlâ ihtiyacımız var. Tekrar bilerek **tek**: döngüye
+  /// dönmesin. İkincisi de düşerse sonuç boş kalır ve çağıran taraf
+  /// zaten bildiği "motor yok" yoluna girer.
+  Future<SearchResult> _ask(
+    String fen, {
+    required int depth,
+    required int movetimeMs,
+  }) async {
+    final first = await EngineService.instance.analyze(
+      fen,
+      depth: depth,
+      movetimeMs: movetimeMs,
+    );
+    if (!first.cancelled) return first;
+    return EngineService.instance.analyze(
+      fen,
+      depth: depth,
+      movetimeMs: movetimeMs,
+    );
   }
 
   /// Çözüm dizisinde sırada beklenen hamle (UCI); yoksa `null`.
@@ -328,11 +355,7 @@ class _PuzzleSolveScreenState extends State<PuzzleSolveScreen> {
       // Kayıtlı çözümden ayrıldı: aynı hızda mat eden bir alternatif mi?
       final remaining = _puzzle.solution.length - _moves.length;
       final allowedMoves = (remaining + 1) ~/ 2;
-      final reply = await EngineService.instance.analyze(
-        after.fen,
-        depth: 12,
-        movetimeMs: 1200,
-      );
+      final reply = await _ask(after.fen, depth: 12, movetimeMs: 1200);
       final userMate = reply.mateIn == null ? null : -reply.mateIn!;
       if (userMate != null && userMate > 0 && userMate <= allowedMoves) {
         _onSolutionLine = false;
@@ -345,11 +368,7 @@ class _PuzzleSolveScreenState extends State<PuzzleSolveScreen> {
     if (baseline == null) return false;
     if (move.uci == baseline.bestMoveUci) return true;
 
-    final reply = await EngineService.instance.analyze(
-      after.fen,
-      depth: 13,
-      movetimeMs: 1400,
-    );
+    final reply = await _ask(after.fen, depth: 13, movetimeMs: 1400);
     // İptal edilen aramanın skoru sıfırdır; tolerans yüzünden zayıf bir
     // hamle "doğru" sayılabilirdi.
     if (reply.cancelled) return false;
@@ -376,12 +395,10 @@ class _PuzzleSolveScreenState extends State<PuzzleSolveScreen> {
     final scripted = _expectedMove;
     String? uci = scripted;
     if (uci == null) {
-      final result = await EngineService.instance.analyze(
-        fen,
-        depth: 10,
-        movetimeMs: 900,
-      );
-      if (result.cancelled) return;
+      final result = await _ask(fen, depth: 10, movetimeMs: 900);
+      // İptalde erken çıkılmıyordu diye değil — çıkılıyordu ve `_busy`
+      // açık kalıyordu. Boş hamle aşağıdaki denetime düşüyor, o da
+      // ekranı serbest bırakıp durumu yazıyor.
       uci = result.bestMoveUci;
     }
     // Kayıtlı dizide arama yok, cevap anında gelirdi.
@@ -430,11 +447,7 @@ class _PuzzleSolveScreenState extends State<PuzzleSolveScreen> {
   /// Ölçüt konumu değişince yeniden hesaplanır.
   Future<void> _refreshBaseline(int token) async {
     final fen = _game.fen;
-    final result = await EngineService.instance.analyze(
-      fen,
-      depth: 13,
-      movetimeMs: 1200,
-    );
+    final result = await _ask(fen, depth: 13, movetimeMs: 1200);
     if (!mounted || token != _loadToken || _game.fen != fen) return;
     // İptal edilen arama eldeki ölçütü silmemeli.
     if (result.cancelled) return;
@@ -448,6 +461,14 @@ class _PuzzleSolveScreenState extends State<PuzzleSolveScreen> {
   /// indirmeden çıkıyor, tahta ve ileri/geri düğmeleri kilitli kalıyordu.
   /// Tek çıkış ekrandan çıkıp geri dönmekti.
   void _retry() {
+    // Ölçüt yoksa hafif sıfırlama yetmez: tahta açılır ama hamleler
+    // yargılanamadığı için `_onMove` onları sessizce yok sayar, yani
+    // tahta yine ölü görünür. Böyle bir durumda bulmacayı baştan
+    // yüklüyoruz; `_loadPuzzle` jetonu kendi ilerletiyor.
+    if (!_puzzle.hasSolution && _baseline == null) {
+      _loadPuzzle();
+      return;
+    }
     _loadToken++;
     setState(() {
       _busy = false;
@@ -509,6 +530,9 @@ class _PuzzleSolveScreenState extends State<PuzzleSolveScreen> {
   }
 
   Future<void> _editPuzzle() async {
+    // Arayüz boş listeyle bu ekranı açmıyor; açılırsa menü yine duruyor
+    // ve aşağıdaki `widget.puzzles[_index]` atamasi listeyi taşardı.
+    if (widget.puzzles.isEmpty) return;
     final fen = await Navigator.push<String>(
       context,
       MaterialPageRoute(
@@ -946,7 +970,12 @@ class _PuzzleSolveScreenState extends State<PuzzleSolveScreen> {
               _action(
                 Icons.refresh_rounded,
                 t('common.restart'),
-                _moves.isEmpty ? null : _retry,
+                // Meşgulken de açık: bu düğme **kaçış kapısı**. Motor
+                // isteği düşerse tahta, ileri/geri ve "Çözüm" kapanıyor;
+                // "Yeniden" de kapalı olsaydı ekrandan çıkmaktan başka
+                // yol kalmazdı. Sebebini öngöremediğimiz kilitlenmelerde
+                // de kullanıcı burada sıkışmaz.
+                _moves.isEmpty && !_busy ? null : _retry,
               ),
             ],
           ),

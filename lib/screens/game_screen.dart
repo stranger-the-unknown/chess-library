@@ -518,7 +518,15 @@ class _GameScreenState extends State<GameScreen> {
     });
     final fen = _game.fen;
     final started = DateTime.now();
-    final result = await EngineService.instance.bestMoveForLevel(fen, _level);
+    var result = await EngineService.instance.bestMoveForLevel(fen, _level);
+    // İsteği başka bir ekranın kapanışı düşürmüş olabilir: `stopAll()`
+    // motordaki her işi iptal ediyor ve kapanan ekranın temizliği,
+    // alttaki ekran çoktan canlıyken çalışıyor. Konum hâlâ motorun
+    // sırasında, o yüzden bir kez daha soruyoruz. Tek tekrar: döngüye
+    // dönmesin.
+    if (result.cancelled) {
+      result = await EngineService.instance.bestMoveForLevel(fen, _level);
+    }
     // Alt kademelerde arama derinliği 1-2 olduğu için cevap neredeyse
     // anında geliyordu: taşın nereden nereye gittiği, bir taş alındıysa
     // neyin alındığı görülmüyor, hamle ekranda çakıyordu. Aşağıdaki
@@ -541,8 +549,11 @@ class _GameScreenState extends State<GameScreen> {
     // "bu arama artık geçersiz" demektir. Sıra tersken yanlış uyarı
     // çıkıyor ve tahta gereksiz yere iki tarafa açılıyordu.
     if (_game.fen != fen) return;
-    // Kesilen arama motorun sessizliği sayılmaz.
-    if (result.cancelled) return;
+    // İkinci deneme de düştüyse sonuç boş kalıyor ve aşağıdaki denetim
+    // "motor cevap vermedi" yazısını çıkarıp tahtayı iki tarafa açıyor.
+    // Eskiden burada sessizce çıkılıyordu: motor hiç oynamıyor, uyarı da
+    // yok, tahta yalnızca kullanıcının rengine açık olduğu için hiçbir
+    // taş tutmuyordu.
 
     if (result.bestMoveUci.isEmpty) {
       setState(() {

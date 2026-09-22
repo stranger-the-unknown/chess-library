@@ -82,11 +82,25 @@ class PgnParser {
   }
 
   void _readHeaders(String pgn) {
-    final regex = RegExp(r'\[\s*(\w+)\s*"([^"]*)"\s*\]');
+    // Değer, kaçırılmış tırnak içerebilir. Yazan taraf `"` yerine `\"`,
+    // `\` yerine `\\` yazıyor ([_escapeTag]); okuyan taraf bu kuralı
+    // bilmiyordu. `"([^"]*)"` deseni kaçırılmış tırnağı bitiş sanıyor,
+    // ardından `]` bulamayıp eşleşmenin tamamını düşürüyordu: adında
+    // tırnak olan bir oyuncunun başlığı **tümden kayboluyordu**. Kendi
+    // ürettiğimiz dosyayı kendimiz okuyamıyorduk.
+    final regex = RegExp(r'\[\s*(\w+)\s*"((?:[^"\\]|\\.)*)"\s*\]');
     for (final match in regex.allMatches(pgn)) {
-      headers[_canonicalTag(match.group(1)!)] = match.group(2)!;
+      headers[_canonicalTag(match.group(1)!)] = _unescapeTag(match.group(2)!);
     }
   }
+
+  /// [_escapeTag]'in tersi.
+  ///
+  /// Yalnızca yazarken ürettiğimiz iki kaçış çözülüyor. Standart dışı
+  /// üreticilerden gelen `\t` gibi diziler olduğu gibi kalsın: onları da
+  /// çözmek, kaçış niyeti olmayan ters bölüleri sessizce silerdi.
+  static String _unescapeTag(String value) =>
+      value.replaceAllMapped(RegExp(r'\\([\\"])'), (m) => m.group(1)!);
 
   /// Bilinen PGN başlıklarını standart yazıma çeker.
   ///
