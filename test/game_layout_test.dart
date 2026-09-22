@@ -18,6 +18,8 @@ import 'package:chess_pgn_reader/widgets/responsive.dart';
 /// iki yanı boş duruyordu.
 
 const Size _wide = Size(1400, 1000);
+/// En büyük tahtanın (760) alt şeritli yerleşimde de sığdığı pencere.
+const Size _tall = Size(1400, 1300);
 const Size _narrow = Size(800, 700);
 
 const _moves = ['e2e4', 'e7e5', 'g1f3', 'b8c6', 'f1b5', 'a7a6'];
@@ -42,6 +44,11 @@ Future<void> _pump(WidgetTester tester, Widget screen, Size size) async {
 
 double _boardSide(WidgetTester tester) =>
     tester.getSize(find.byType(ChessBoardWidget)).width;
+
+/// Sağdaki sütun (hamle listesi, motor satırı, gezinme).
+final _panel = find.byWidgetPredicate(
+  (w) => w is SizedBox && w.width == Layout.sidePanelWidth,
+);
 
 bool _listIsVertical(WidgetTester tester) =>
     tester.widget<MoveList>(find.byType(MoveList)).vertical;
@@ -93,8 +100,60 @@ void main() {
     await _pump(tester, const GameScreen(uciMoves: _moves), _wide);
 
     expect(_listIsVertical(tester), isFalse);
-    expect(_boardSide(tester), lessThanOrEqualTo(Layout.maxBoardSide),
-        reason: 'alt şeritte tahta eski sınırında kalır');
+    // 10.0.4: boyut ayarı burada da geçerli. 10.0.0'da bilerek eski
+    // sınırda bırakılmıştı, ama ayar bu yerleşimde de görünüyor ve
+    // kaydediliyordu: seçilen Orta/Büyük hiçbir şey yapmıyor, tahta
+    // 520'de (yani "Küçük"te) kalıyordu.
+    expect(_boardSide(tester), Layout.boardSizes[1],
+        reason: 'alt şeritte de seçilen boyut geçerli');
+  });
+
+  testWidgets('"Altta" yerleşiminde büyük tahta da seçilebiliyor',
+      (tester) async {
+    SettingsService.instance.verticalLayout = false;
+    SettingsService.instance.boardSize = 2;
+    addTearDown(() {
+      SettingsService.instance.verticalLayout = true;
+      SettingsService.instance.boardSize = 1;
+    });
+
+    await _pump(tester, const GameScreen(uciMoves: _moves), _tall);
+
+    // Tam 760 değil: alt şeritli yerleşim `ContentWidth` kullanıyor ve
+    // uygulama genelindeki içerik sınırı 760; tahtanın kendi boşluğu
+    // düşünce 744 kalıyor. Önemli olan seçimin işe yaraması.
+    expect(_boardSide(tester), greaterThan(Layout.boardSizes[1]),
+        reason: 'Büyük seçimi Orta boyuttan büyük olmalı');
+  });
+
+  testWidgets('tahta ile hamle paneli arasında koca boşluk yok',
+      (tester) async {
+    // Sol sütun kalan genişliğin tamamını alıyor, tahta da onun ortasına
+    // oturuyordu: 1400 piksellik pencerede tahtayla panel arasında ~200
+    // piksel boşluk kalıyordu (1920'de ~470).
+    await _pump(tester, const GameScreen(uciMoves: _moves), _wide);
+
+    final board = tester.getRect(find.byType(ChessBoardWidget));
+    final panel = tester.getRect(_panel);
+    final gap = panel.left - board.right;
+
+    expect(gap, greaterThanOrEqualTo(0), reason: 'panel tahtanın sağında');
+    expect(gap, lessThan(40), reason: 'aradaki boşluk kapanmalı: $gap');
+  });
+
+  testWidgets('panel pencere boyunca uzamıyor', (tester) async {
+    // `stretch` yüzünden panel gövdenin tamamını kaplıyordu: tahta ortada
+    // yüzerken panelin dibindeki gezinme düğmeleri ekranın en altına
+    // iniyordu.
+    await _pump(tester, const GameScreen(uciMoves: _moves), _wide);
+
+    final panel = tester.getSize(_panel).height;
+    final board = _boardSide(tester);
+
+    expect(panel, lessThan(_wide.height - 150),
+        reason: 'panel pencere boyunda kalmamalı: $panel');
+    expect(panel, greaterThan(board),
+        reason: 'panel tahta sütununu karşılamalı');
   });
 
   testWidgets('tahta boyutu ayarı tahtayı büyütüyor', (tester) async {

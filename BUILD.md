@@ -4,7 +4,7 @@ Flutter 3.47 veya üzeri gerekir.
 
 ```bash
 flutter pub get
-flutter test          # 381 test
+flutter test          # 384 test
 ```
 
 ## Android

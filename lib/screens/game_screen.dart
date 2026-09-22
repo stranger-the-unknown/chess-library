@@ -998,14 +998,21 @@ class _GameScreenState extends State<GameScreen> {
     // yalnızca yerleşimin gerçekten sığdığı genişlikte gösteriliyor;
     // pencere küçülürse kendiliğinden alt şeride dönülüyor.
     final settings = SettingsService.instance;
-    final twoColumn = Layout.isTwoColumn(context) && settings.verticalLayout;
+    // İki ayrı soru: "boyut tercihi geçerli mi?" ve "hangi düzeni
+    // çizeyim?". Eskiden ikisi de `twoColumn`'a bağlıydı; "Altta"
+    // seçilince boyut sınırı `maxBoardSide`'a düşüyordu — o da 520, yani
+    // `boardSizes[0]`. Sonuç: ayar görünüyor, kaydediliyor ve hiçbir şey
+    // yapmıyordu. Görünen ama çalışmayan ayar, olmayan ayardan kötüdür.
+    final wideEnough = Layout.isTwoColumn(context);
+    final twoColumn = wideEnough && settings.verticalLayout;
+    final cap = wideEnough
+        ? Layout.boardSizes[settings.boardSize]
+        : Layout.maxBoardSide;
     final board = _boardArea(
       arrows: arrows,
       atLive: atLive,
       finished: finished,
-      cap: twoColumn
-          ? Layout.boardSizes[settings.boardSize]
-          : Layout.maxBoardSide,
+      cap: cap,
     );
 
     final screen = Scaffold(
@@ -1146,7 +1153,7 @@ class _GameScreenState extends State<GameScreen> {
       body: SafeArea(
         top: false,
         child: twoColumn
-            ? _wideBody(scheme, board)
+            ? _wideBody(scheme, board, cap)
             : _narrowBody(scheme, board),
       ),
     );
@@ -1327,30 +1334,65 @@ class _GameScreenState extends State<GameScreen> {
     );
   }
 
+  /// Tahtanın üstünde ve altında duran sabit yükseklikler: iki oyuncu
+  /// satırı ve tahtanın kendi dikey boşluğu.
+  ///
+  /// Bilerek **cömert**: bu pay gerçekte gerekenden azsa tahta seçilen
+  /// boyutun altına düşer, yani "ayar söylediğini vermiyor" hatası geri
+  /// gelir. Fazla ayrılırsa panel tahtadan birkaç piksel uzun kalır —
+  /// görünmez. `game_layout_test` tahtanın tam olarak seçilen boyutta
+  /// olduğunu ölçüyor.
+  static const double _wideChromeHeight = 88;
+
+  /// Tahtanın yatay boşluğu ([_boardArea] içindeki dolgu), iki yan.
+  static const double _boardGutter = 16;
+
   /// Geniş pencere: solda tahta, sağda hamleler ve motor.
   ///
   /// Eskiden masaüstünde de telefon düzeni kullanılıyordu: tahta 520
   /// pikselde kalıyor, hamleler altta ince bir şeritte yan yana diziliyor
   /// ve pencerenin iki yanı boş duruyordu.
-  Widget _wideBody(ColorScheme scheme, Widget board) {
-    return Row(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: [
-        Expanded(
-          child: Column(
-            children: [
-              if (_warning != null) _warningBanner(scheme),
-              _playerRow(scheme, top: true),
-              board,
-              _playerRow(scheme, top: false),
-              if (_explore.isNotEmpty) _exploreCard(scheme),
-              if (_resultText != null && _explore.isEmpty)
-                _resultBanner(scheme),
-            ],
-          ),
+  Widget _wideBody(ColorScheme scheme, Widget board, double cap) {
+    // Tahta ve panel **tek bir grup**: ikisi birlikte ortalanıyor.
+    //
+    // Eskiden sol sütun kalan genişliğin tamamını alıyor, tahta da onun
+    // ortasına oturuyordu. 1920 piksellik pencerede tahtayla panel
+    // arasında ~470 piksel boşluk kalıyor, oyuncu satırları da tahtadan
+    // çok daha geniş duruyordu (isim en solda, alınan taşlar tahtanın
+    // epey sağında).
+    //
+    // Dikeyde de aynısı: `stretch` yüzünden panel gövdenin tamamını
+    // kaplıyor, tahta ortada yüzüyordu. Panelin dibindeki gezinme
+    // düğmeleri böylece pencerenin en altına iniyor, tahtadan uzaklaşıyordu.
+    return Center(
+      child: ConstrainedBox(
+        constraints: BoxConstraints(
+          maxWidth: cap + _boardGutter + Layout.sidePanelWidth,
+          maxHeight: cap + _wideChromeHeight,
         ),
-        SizedBox(width: Layout.sidePanelWidth, child: _sidePanel(scheme)),
-      ],
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Expanded(
+              child: Column(
+                children: [
+                  if (_warning != null) _warningBanner(scheme),
+                  _playerRow(scheme, top: true),
+                  board,
+                  _playerRow(scheme, top: false),
+                  if (_explore.isNotEmpty) _exploreCard(scheme),
+                  if (_resultText != null && _explore.isEmpty)
+                    _resultBanner(scheme),
+                ],
+              ),
+            ),
+            SizedBox(
+              width: Layout.sidePanelWidth,
+              child: _sidePanel(scheme),
+            ),
+          ],
+        ),
+      ),
     );
   }
 

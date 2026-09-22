@@ -1,7 +1,7 @@
 name: chess_pgn_reader
 description: PGN okuyucu, bulmaca kütüphanesi ve cihazda çalışan satranç motoru.
 publish_to: 'none'
-version: 10.0.3+31
+version: 10.0.4+32
 
 environment:
   sdk: '>=3.4.0 <4.0.0'
