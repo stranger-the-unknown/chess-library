@@ -9,12 +9,14 @@ bağlantısı gerekmez; hiçbir veri dışarı gönderilmez.
 **Android** ve **Windows** üzerinde çalışır. Arayüz pencere genişliğine uyum
 sağlar: telefonda alt gezinme çubuğu, masaüstünde soldaki gezinme şeridi
 kullanılır. Geniş pencerede oyun ekranı iki sütuna ayrılır — solda tahta,
-sağda hamle listesi ve motor satırı. Hamle listesinin yeri (yanda /
-altta) ayarlardan seçilir; yalnızca yerleşimin sığdığı genişlikte görünür.
-Liste yandayken tahtanın boyutu da seçilebilir (küçük / orta / büyük):
-üçü de pencerenin verebildiği en büyük tahtanın oranıdır, yani seçim her
-ekranda gözle ayırt edilir. Liste alttayken tahta zaten sığdığı kadar
-büyüktür, o yüzden boyut seçimi orada gösterilmez.
+sağda hamle listesi ve düğmeler. Aynı yerleşim bulmaca çözerken ve
+açılış çalışırken de kullanılır. Masaüstünde tahtanın boyutu ayarlardan
+seçilir (küçük / orta / büyük): üçü de pencerenin verebildiği en büyük
+tahtanın oranıdır, yani seçim her ekranda gözle ayırt edilir.
+
+Android'de boyut sorulmaz, tahta sığdığının tamamı kadardır. Telefon
+dikey, tablet yatay çalışır ve ekran dönmez: tablette yatay, yan panelin
+sığdığı tek yönelimdir.
 
 Diller: Türkçe ve İngilizce. Ayarlardan değiştirilir; varsayılan sistem
 dilidir.

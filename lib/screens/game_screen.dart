@@ -998,8 +998,10 @@ class _GameScreenState extends State<GameScreen> {
     // yalnızca yerleşimin gerçekten sığdığı genişlikte gösteriliyor;
     // pencere küçülürse kendiliğinden alt şeride dönülüyor.
     final settings = SettingsService.instance;
-    final wideEnough = Layout.isTwoColumn(context);
-    final twoColumn = wideEnough && settings.verticalLayout;
+    // Yerleşim seçeneği kaldırıldı: geniş pencerede hamleler her zaman
+    // yanda. Tek karar pencerenin bunu taşıyıp taşımadığı.
+    final twoColumn = Layout.isTwoColumn(context);
+    final wideEnough = twoColumn;
     // Boyut tercihi yalnızca "Yanda" yerleşiminde geçerli; ayar da
     // yalnızca orada gösteriliyor.
     //
@@ -1009,7 +1011,8 @@ class _GameScreenState extends State<GameScreen> {
     // veriyordu. Oranlı bir ölçek üçünü ayırırdı ama ikisini bugünkünden
     // **küçük** yapardı; kullanıcıya daha kötü bir tahta seçtirmenin
     // anlamı yok. Alt şeritte tahta artık sığdığı kadar büyük.
-    final cap = wideEnough ? Layout.maxWideBoardSide : Layout.maxBoardSide;
+    final cap =
+        wideEnough ? Layout.maxWideBoardSide : Layout.narrowBoardCap;
 
     final screen = Scaffold(
       appBar: AppBar(
@@ -1155,7 +1158,12 @@ class _GameScreenState extends State<GameScreen> {
                 atLive: atLive,
                 finished: finished,
                 cap: cap,
-                scale: Layout.boardScales[settings.boardSize],
+                // Boyut yalnızca masaüstünde seçiliyor; telefon ve
+                // tablette pencere sabit olduğu için tahta sığanın
+                // tamamı kadar.
+                scale: Layout.isDesktop
+                    ? Layout.boardScales[settings.boardSize]
+                    : 1.0,
               )
             : _narrowBody(
                 scheme,
@@ -1334,7 +1342,7 @@ class _GameScreenState extends State<GameScreen> {
           if (_explore.isNotEmpty) _exploreCard(scheme),
           // Motor şeridi için sabit yükseklik: aç/kapa tahtayı kaydırmaz.
           SizedBox(
-            height: _engineStripHeight,
+            height: _engineStripHeightFor(context, null),
             child: _analysisOn ? _engineLine(scheme) : null,
           ),
           // Deneme sırasında tahtadaki konum oyunun sonucunu yansıtmaz.
@@ -1388,12 +1396,20 @@ class _GameScreenState extends State<GameScreen> {
         // kuruluyor. Doğrudan tavandan gidilseydi, tahta o tavana
         // ulaşamadığında (alçak pencerede yükseklik sınırlar) sol sütun
         // tahtadan geniş kalır ve kapatılan boşluk geri gelirdi.
-        final side = Layout.boardSide(
-              constraints.maxWidth - Layout.sidePanelWidth - _boardGutter,
+        // Boşluk tahtanın oranı olduğu için kenar iki adımda
+        // kesinleşiyor: önce boşluksuz hesap, sonra genişliğe sığdırma.
+        final available =
+            constraints.maxWidth - Layout.sidePanelWidth - _boardGutter;
+        var side = Layout.boardSide(
+              available,
               constraints.maxHeight - _wideChromeHeight,
               cap,
             ) *
             scale;
+        final gap = Layout.panelGap(side);
+        if (side > available - gap) {
+          side = (available - gap).clamp(0.0, side);
+        }
         final board = _boardArea(
           arrows: arrows,
           atLive: atLive,
@@ -1404,7 +1420,7 @@ class _GameScreenState extends State<GameScreen> {
         return Center(
           child: ConstrainedBox(
             constraints: BoxConstraints(
-              maxWidth: side + _boardGutter + Layout.sidePanelWidth,
+              maxWidth: side + _boardGutter + gap + Layout.sidePanelWidth,
               maxHeight: side + _wideChromeHeight,
             ),
             child: Row(
@@ -1413,19 +1429,21 @@ class _GameScreenState extends State<GameScreen> {
                 Expanded(
                   child: Column(
                     children: [
-                      if (_warning != null) _warningBanner(scheme),
+                      // Uyarı, deneme kartı ve sonuç afişi yan panelde:
+                      // burada dursalardı grubun boyu değişken olurdu ve
+                      // tahta onlar göründüğünde küçülürdü. Listeden
+                      // açılan kayıtlı bir oyunda (sonuç afişi var)
+                      // tahta 603 yerine 553 piksele iniyordu.
                       _playerRow(scheme, top: true),
                       board,
                       _playerRow(scheme, top: false),
-                      if (_explore.isNotEmpty) _exploreCard(scheme),
-                      if (_resultText != null && _explore.isEmpty)
-                        _resultBanner(scheme),
                     ],
                   ),
                 ),
+                SizedBox(width: gap),
                 SizedBox(
                   width: Layout.sidePanelWidth,
-                  child: _sidePanel(scheme),
+                  child: _sidePanel(scheme, side),
                 ),
               ],
             ),
@@ -1436,7 +1454,7 @@ class _GameScreenState extends State<GameScreen> {
   }
 
   /// Sağ sütun: hamle listesi (dikey), motor satırı ve gezinme düğmeleri.
-  Widget _sidePanel(ColorScheme scheme) {
+  Widget _sidePanel(ColorScheme scheme, double boardSide) {
     return Container(
       margin: const EdgeInsets.fromLTRB(4, 8, 12, 12),
       decoration: BoxDecoration(
@@ -1446,11 +1464,16 @@ class _GameScreenState extends State<GameScreen> {
       clipBehavior: Clip.antiAlias,
       child: Column(
         children: [
+          if (_warning != null) _warningBanner(scheme),
+          if (_explore.isNotEmpty) _exploreCard(scheme),
+          if (_resultText != null && _explore.isEmpty) _resultBanner(scheme),
           Expanded(child: _moveList(vertical: true)),
           Divider(height: 1, color: scheme.outlineVariant),
           SizedBox(
-            height: _engineStripHeight,
-            child: _analysisOn ? _engineLine(scheme) : null,
+            height: _engineStripHeightFor(context, boardSide),
+            child: _analysisOn
+                ? _engineLine(scheme, boardSide: boardSide)
+                : null,
           ),
           Divider(height: 1, color: scheme.outlineVariant),
           _navRow(scheme),
@@ -1537,7 +1560,7 @@ class _GameScreenState extends State<GameScreen> {
     AppDialogs.snack(context, t('board.saveResult.$result'));
   }
 
-  Widget _engineLine(ColorScheme scheme) {
+  Widget _engineLine(ColorScheme scheme, {double? boardSide}) {
     final analysis = _analysis;
     final score = _evalScoreCp;
     // Yeni sonuç beklenirken yalnızca skor yazıyor: ana varyant ve
@@ -1557,14 +1580,25 @@ class _GameScreenState extends State<GameScreen> {
       ),
       child: Row(
         children: [
-          Icon(Icons.memory_rounded, size: 16, color: scheme.primary),
+          // Simge yazıyla birlikte büyüyor; eskiden 16 pikselde sabitti
+          // ve yanındaki yazının yanında iyice küçük kalıyordu.
+          Icon(
+            Icons.memory_rounded,
+            size: Layout.engineFontSize(boardSide) * 1.45,
+            color: scheme.primary,
+          ),
           const SizedBox(width: 8),
           Expanded(
             child: Text(
               text,
               maxLines: 2,
+              // Şerit sabit yükseklikli: sığmayan metin kırpılıyor,
+              // taşmıyor.
               overflow: TextOverflow.ellipsis,
-              style: const TextStyle(fontSize: 12.5, height: 1.3),
+              style: TextStyle(
+                fontSize: Layout.engineFontSize(boardSide),
+                height: 1.25,
+              ),
             ),
           ),
         ],
@@ -1573,12 +1607,20 @@ class _GameScreenState extends State<GameScreen> {
   }
 
 
-  /// Motor şeridinin sabit yüksekliği.
+  /// Motor şeridinin yüksekliği.
   ///
-  /// Sabit, çünkü aç/kapa tahtayı kaydırmasın. İki satırlık metin (12,5
-  /// punto, 1,3 satır aralığı) artı dolgu 44 pikselin içine sığmıyordu:
-  /// uzun ana varyantlarda şerit taşıyordu.
-  static const double _engineStripHeight = 56;
+  /// Sabit, çünkü aç/kapa tahtayı kaydırmasın — ama puntodan türüyor:
+  /// yazı tahtayla büyüyünce şeridin de büyümesi gerekiyor, yoksa iki
+  /// satırlık metin taşardı. İçinde: iki satır metin, dikey dolgu (16)
+  /// ve kenar boşluğu (4).
+  ///
+  /// [MediaQuery.textScalerOf] hesaba katılıyor: masaüstü ölçeği ve
+  /// kullanıcının kendi yazı büyütmesi de yüksekliğe yansısın.
+  double _engineStripHeightFor(BuildContext context, double? boardSide) {
+    final font = Layout.engineFontSize(boardSide);
+    final scaled = MediaQuery.textScalerOf(context).scale(font);
+    return scaled * 1.25 * 2 + 20;
+  }
 
   /// Beyaz bakisi; pozitifte acik +.
   String _formatScoreCp(int cp) {

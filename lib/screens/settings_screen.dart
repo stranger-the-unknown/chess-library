@@ -129,62 +129,39 @@ class _SettingsScreenState extends State<SettingsScreen> {
               ]),
               const SizedBox(height: 8),
               _card([
-                // Masaüstü yerleşimi ayarları yalnızca yerleşimin
-                // gerçekten sığdığı pencerede görünüyor: telefonda
-                // çalışmayan bir ayar göstermenin anlamı yok.
-                if (Layout.isTwoColumn(context)) ...[
+                // Tahta boyutu yalnızca masaüstünde ve yan yerleşimin
+                // gerçekten sığdığı pencerede soruluyor.
+                //
+                // Telefonda ve tablette sorulmuyor: pencere yeniden
+                // boyutlandırılamadığı için "sığanın tamamı"ndan başka
+                // doğru cevap yok. "Hamle yerleşimi" seçeneği de tamamen
+                // kaldırıldı; geniş pencerede hamleler her zaman yanda.
+                if (Layout.isDesktop && Layout.isTwoColumn(context))
                   ListTile(
-                    leading: const Icon(Icons.view_sidebar_rounded),
-                    title: Text(t('settings.gameLayout')),
-                    subtitle: Text(t('settings.gameLayoutSub')),
-                    trailing: SegmentedButton<bool>(
+                    leading: const Icon(Icons.crop_square_rounded),
+                    title: Text(t('settings.boardSize')),
+                    subtitle: Text(t('settings.boardSizeSub')),
+                    trailing: SegmentedButton<int>(
                       showSelectedIcon: false,
                       segments: [
                         ButtonSegment(
-                          value: true,
-                          label: Text(t('settings.layoutVertical')),
+                          value: 0,
+                          label: Text(t('settings.boardSizeSmall')),
                         ),
                         ButtonSegment(
-                          value: false,
-                          label: Text(t('settings.layoutHorizontal')),
+                          value: 1,
+                          label: Text(t('settings.boardSizeMedium')),
+                        ),
+                        ButtonSegment(
+                          value: 2,
+                          label: Text(t('settings.boardSizeLarge')),
                         ),
                       ],
-                      selected: {_settings.verticalLayout},
+                      selected: {_settings.boardSize},
                       onSelectionChanged: (value) =>
-                          _settings.verticalLayout = value.first,
+                          _settings.boardSize = value.first,
                     ),
                   ),
-                  // Boyut yalnızca "Yanda" yerleşiminde bir şey yapıyor:
-                  // alt şeritte tahtayı sınırlayan şey seçim değil,
-                  // altındaki şeritlerden artan yükseklik. Orada
-                  // gösterilseydi seçilir ve hiçbir şey olmazdı.
-                  if (_settings.verticalLayout)
-                    ListTile(
-                      leading: const Icon(Icons.crop_square_rounded),
-                      title: Text(t('settings.boardSize')),
-                      subtitle: Text(t('settings.boardSizeSub')),
-                      trailing: SegmentedButton<int>(
-                        showSelectedIcon: false,
-                        segments: [
-                          ButtonSegment(
-                            value: 0,
-                            label: Text(t('settings.boardSizeSmall')),
-                          ),
-                          ButtonSegment(
-                            value: 1,
-                            label: Text(t('settings.boardSizeMedium')),
-                          ),
-                          ButtonSegment(
-                            value: 2,
-                            label: Text(t('settings.boardSizeLarge')),
-                          ),
-                        ],
-                        selected: {_settings.boardSize},
-                        onSelectionChanged: (value) =>
-                            _settings.boardSize = value.first,
-                      ),
-                    ),
-                ],
                 SwitchListTile(
                   secondary: const Icon(Icons.tag_rounded),
                   title: Text(t('settings.coordinates')),

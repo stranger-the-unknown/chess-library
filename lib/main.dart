@@ -1,8 +1,12 @@
+import 'dart:io' show Platform;
+
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 
 import 'l10n/app_strings.dart';
+import 'widgets/responsive.dart';
 import 'screens/home_shell.dart';
 import 'services/corrupt_data.dart';
 import 'services/prefs_write.dart';
@@ -13,11 +17,34 @@ import 'theme/app_theme.dart';
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
+  await _lockOrientation();
   await SettingsService.instance.load();
   // Sesler arka planda yüklensin; ilk kare için beklemeye gerek yok.
   unawaited(SoundService.instance.init());
 
   runApp(const ChessApp());
+}
+
+/// Telefon dikey, tablet yatay; ekran dönmüyor.
+///
+/// Ekran döndükçe yerleşim değişiyor, tahta yeniden ölçülüyor ve elde
+/// tutulan telefonda bu istemeden oluyordu. Tablette ise tek sebep var:
+/// yan panelin sığdığı tek yönelim yatay.
+///
+/// Sınıflandırma **ekranın kendi ölçüsüne** bakıyor, pencereninkine
+/// değil: uygulama o anda hangi yönelimde olursa olsun sonuç aynı.
+Future<void> _lockOrientation() async {
+  if (kIsWeb || !(Platform.isAndroid || Platform.isIOS)) return;
+  final display = WidgetsBinding.instance.platformDispatcher.views.first.display;
+  final logical = display.size / display.devicePixelRatio;
+  await SystemChrome.setPreferredOrientations(
+    Layout.isTabletScreen(logical)
+        ? const [
+            DeviceOrientation.landscapeLeft,
+            DeviceOrientation.landscapeRight,
+          ]
+        : const [DeviceOrientation.portraitUp],
+  );
 }
 
 /// `dart:async` yalnızca bunun için içe aktarılmasın diye küçük yardımcı.
@@ -111,6 +138,18 @@ class _ChessAppState extends State<ChessApp> {
           darkTheme: AppTheme.dark,
           themeMode: mode,
           home: const HomeShell(),
+      // Masaüstünde bütün yazılar aynı oranda büyüyor; telefon ve
+      // tablet olduğu gibi kalıyor.
+      builder: (context, child) {
+        if (!Layout.isDesktop) return child!;
+        final media = MediaQuery.of(context);
+        return MediaQuery(
+          data: media.copyWith(
+            textScaler: TextScaler.linear(Layout.desktopTextScale),
+          ),
+          child: child!,
+        );
+      },
         );
       },
     );

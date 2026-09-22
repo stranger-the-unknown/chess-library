@@ -10,7 +10,7 @@
 ; klasörüne kurulur. Böylece kullanıcı UAC uyarısıyla karşılaşmaz.
 
 #define AppName "Chess Library"
-#define AppVersion "10.0.5"
+#define AppVersion "10.1.0"
 #define AppPublisher "stranger-the-unknown"
 #define AppExeName "ChessLibrary.exe"
 #define BuildDir "..\..\build\windows\x64\runner\Release"

@@ -39,7 +39,6 @@ class SettingsService extends ChangeNotifier {
   int _boardSize = 1;
 
   /// Masaüstünde hamle listesi yanda mı (dikey), altta mı (yatay)?
-  bool _verticalLayout = true;
   bool _showEngineArrows = true;
   /// Tahta teması -> seçim/ok rengi (0xAARRGGBB).
   final Map<String, int> _boardAccentColors = {};
@@ -75,7 +74,6 @@ class SettingsService extends ChangeNotifier {
 
   int get boardSize => _boardSize;
 
-  bool get verticalLayout => _verticalLayout;
   bool get showEngineArrows => _showEngineArrows;
   bool get showLegalMoves => _showLegalMoves;
   bool get highlightLastMove => _highlightLastMove;
@@ -142,7 +140,6 @@ class SettingsService extends ChangeNotifier {
         : _defaultBoardTheme;
     _showCoordinates = prefs.getBool('showCoordinates') ?? true;
     _boardSize = (prefs.getInt('boardSize') ?? 1).clamp(0, 2);
-    _verticalLayout = prefs.getBool('verticalLayout') ?? true;
     _showEngineArrows = prefs.getBool('showEngineArrows') ?? true;
     // Harita her yüklemede sıfırlanıyor: anahtar yoksa (sıfırlama ya da
     // yedekten dönme sonrası) bellekteki eski renkler kalıyordu.
@@ -232,12 +229,6 @@ class SettingsService extends ChangeNotifier {
   set boardSize(int value) {
     _boardSize = value.clamp(0, 2);
     _set('boardSize', _boardSize);
-    notifyListeners();
-  }
-
-  set verticalLayout(bool value) {
-    _verticalLayout = value;
-    _set('verticalLayout', value);
     notifyListeners();
   }
 

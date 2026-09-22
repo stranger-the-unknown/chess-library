@@ -109,46 +109,33 @@ void main() {
     expect(_boardSide(tester), lessThanOrEqualTo(Layout.maxBoardSide));
   });
 
-  testWidgets('yerleşim "Altta" seçilince geniş pencerede de alt şerit',
-      (tester) async {
-    SettingsService.instance.verticalLayout = false;
-    addTearDown(() => SettingsService.instance.verticalLayout = true);
-
-    await _pump(tester, const GameScreen(uciMoves: _moves), _wide);
-
-    expect(_listIsVertical(tester), isFalse);
-  });
-
-  testWidgets('"Altta" yerleşiminde boyut seçimi tahtayı değiştirmiyor',
-      (tester) async {
-    // Alt şeritte tahtayı sınırlayan şey seçim değil, altındaki
-    // şeritlerden artan yükseklik. Bu yüzden ayar orada gösterilmiyor
-    // ve tahta sığdığı kadar büyük kalıyor.
-    SettingsService.instance.verticalLayout = false;
-    addTearDown(() {
-      SettingsService.instance.verticalLayout = true;
-      SettingsService.instance.boardSize = 1;
-    });
-
-    final kucuk = await _sideFor(tester, 0, _gercek);
-    final buyuk = await _sideFor(tester, 2, _gercek);
-
-    expect(kucuk, buyuk, reason: 'alt şeritte seçim tahtayı değiştirmez');
-    expect(kucuk, greaterThan(500),
-        reason: 'tahta sığdığı kadar büyük kalmalı: $kucuk');
-  });
-
-  testWidgets('"Altta" yerleşiminde boyut ayarı gösterilmiyor',
-      (tester) async {
-    SettingsService.instance.verticalLayout = false;
-    addTearDown(() => SettingsService.instance.verticalLayout = true);
+  testWidgets('telefon/tablette tahta boyutu sorulmuyor', (tester) async {
+    // Pencere yeniden boyutlandırılamayan bir cihazda "sığanın tamamı"
+    // dışında doğru bir cevap yok; seçim sunmak boşuna.
+    Layout.debugDesktopOverride = false;
+    addTearDown(() => Layout.debugDesktopOverride = null);
 
     await _pump(tester, const SettingsScreen(), _wide);
 
-    expect(find.text(t('settings.gameLayout')), findsOneWidget,
-        reason: 'yerleşim seçimi durmalı');
     expect(find.text(t('settings.boardSize')), findsNothing,
-        reason: 'çalışmayan bir ayar gösterilmemeli');
+        reason: 'masaüstü olmayan cihazda boyut ayarı gösterilmemeli');
+  });
+
+  testWidgets('telefon/tablette tahta sığanın tamamı kadar', (tester) async {
+    Layout.debugDesktopOverride = false;
+    addTearDown(() {
+      Layout.debugDesktopOverride = null;
+      SettingsService.instance.boardSize = 1;
+    });
+
+    // Kayıtlı ayar ne olursa olsun sonuç aynı ve en büyüğü.
+    final kucukSecili = await _sideFor(tester, 0, _gercek);
+    final buyukSecili = await _sideFor(tester, 2, _gercek);
+
+    expect(kucukSecili, buyukSecili,
+        reason: 'cihazda kayıtlı seçim tahtayı değiştirmemeli');
+    expect(kucukSecili, greaterThanOrEqualTo(685),
+        reason: 'tahta sığanın tamamı olmalı: $kucukSecili');
   });
 
   testWidgets('gerçek ekranda üç boyut da gözle ayrılıyor', (tester) async {
@@ -182,8 +169,14 @@ void main() {
     final panel = tester.getRect(_panel);
     final gap = panel.left - board.right;
 
-    expect(gap, greaterThanOrEqualTo(0), reason: 'panel tahtanın sağında');
-    expect(gap, lessThan(40), reason: 'aradaki boşluk kapanmalı: $gap');
+    // Boşluk tahtanın oranı: yapışık da değil, kopuk da değil.
+    // Eskiden 1400 piksellik pencerede ~200, 1920'de ~470 piksel
+    // kalıyordu; şimdi tahta genişliğinin ~%5,8'i.
+    final board2 = tester.getSize(find.byType(ChessBoardWidget)).width;
+    expect(gap / board2, greaterThan(0.03),
+        reason: 'panel tahtaya yapışmasın: $gap');
+    expect(gap / board2, lessThan(0.09),
+        reason: 'arada koca boşluk kalmasın: $gap');
   });
 
   testWidgets('panel pencere boyunca uzamıyor', (tester) async {
@@ -211,16 +204,13 @@ void main() {
         reason: 'geniş pencerede Büyük tavana ulaşır');
   });
 
-  testWidgets('yerleşim ayarları yalnızca geniş pencerede görünüyor',
+  testWidgets('boyut ayarı yalnızca geniş pencerede görünüyor',
       (tester) async {
     await _pump(tester, const SettingsScreen(), _narrow);
-    expect(find.text(t('settings.gameLayout')), findsNothing,
+    expect(find.text(t('settings.boardSize')), findsNothing,
         reason: 'çalışmayan bir ayar gösterilmemeli');
-    expect(find.text(t('settings.boardSize')), findsNothing);
 
     await _pump(tester, const SettingsScreen(), _wide);
-    expect(find.text(t('settings.gameLayout')), findsOneWidget);
-    // Varsayılan yerleşim "Yanda": boyut ayarı orada geçerli.
     expect(find.text(t('settings.boardSize')), findsOneWidget);
   });
 }

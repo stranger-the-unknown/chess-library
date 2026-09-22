@@ -744,67 +744,158 @@ class _PuzzleSolveScreenState extends State<PuzzleSolveScreen> {
       ),
       body: SafeArea(
         top: false,
-        child: ContentWidth(
-          child: Column(
-            children: [
-              _header(scheme),
-              Expanded(
-                child: Center(
-                  child: Padding(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 10,
-                      vertical: 4,
-                    ),
-                    child: LayoutBuilder(
-                      builder: (context, constraints) {
-                        final side = Layout.boardSide(
-                          constraints.maxWidth,
-                          constraints.maxHeight,
-                        );
-                        return RepaintBoundary(
-                          key: _boardKey,
-                          child: SizedBox(
-                            width: side,
-                            height: side,
-                            child: ChessBoardWidget(
-                              game: _game,
-                              flipped: _flipped,
-                              interactive:
-                                  !_busy && _feedback != _Feedback.finished,
-                              movableSide: _solverColor,
-                              lastMove:
-                                  _moves.isEmpty ? null : _moves.last.move,
-                              onMove: _onMove,
-                              arrows: arrows,
-                            ),
-                          ),
-                        );
-                      },
-                    ),
+        child: Layout.isTwoColumn(context)
+            ? _wideBody(scheme, arrows)
+            : ContentWidth(child: _narrowBody(scheme, arrows)),
+      ),
+    );
+  }
+
+  /// Tahtanın üstünde duran başlık ve tahtanın kendi dikey boşluğu.
+  static const double _wideChromeHeight = 48;
+
+  /// Tahtanın yatay boşluğu ([_boardArea] içindeki dolgu), iki yan.
+  static const double _boardGutter = 20;
+
+  /// Tahta; kalan alana sığan en büyük kare, üst sınır [cap].
+  Widget _boardArea(List<BoardArrow> arrows, double cap) {
+    return Expanded(
+      child: Center(
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+          child: LayoutBuilder(
+            builder: (context, constraints) {
+              final side = Layout.boardSide(
+                constraints.maxWidth,
+                constraints.maxHeight,
+                cap,
+              );
+              return RepaintBoundary(
+                key: _boardKey,
+                child: SizedBox(
+                  width: side,
+                  height: side,
+                  child: ChessBoardWidget(
+                    game: _game,
+                    flipped: _flipped,
+                    interactive: !_busy && _feedback != _Feedback.finished,
+                    movableSide: _solverColor,
+                    lastMove: _moves.isEmpty ? null : _moves.last.move,
+                    onMove: _onMove,
+                    arrows: arrows,
                   ),
                 ),
-              ),
-              if (_puzzle.note != null && _puzzle.note!.isNotEmpty)
-                _noteCard(scheme),
-              _feedbackCard(scheme),
-              // Şeridin yeri boşken de duruyor: ilk hamlede tahta
-              // yukarı kaymasın (geri bildirim kartında da aynısı var).
-              SizedBox(
-                height: 46,
-                child: _moves.isEmpty
-                    ? null
-                    : MoveList(
-                        moves: _moves,
-                        currentIndex: _moves.length - 1,
-                        onMoveTap: (_) {},
-                        // Bulmacanın ilk hamlesi çözen tarafındır.
-                        blackFirst: _solverColor == engine.Color.black,
-                      ),
-              ),
-              _actions(scheme),
-            ],
+              );
+            },
           ),
         ),
+      ),
+    );
+  }
+
+  /// Hamle şeridi. Yeri boşken de duruyor: ilk hamlede tahta yukarı
+  /// kaymasın (geri bildirim kartında da aynısı var).
+  Widget _moveStrip({required bool vertical}) {
+    if (_moves.isEmpty) return const SizedBox();
+    return MoveList(
+      moves: _moves,
+      currentIndex: _moves.length - 1,
+      onMoveTap: (_) {},
+      vertical: vertical,
+      // Bulmacanın ilk hamlesi çözen tarafındır.
+      blackFirst: _solverColor == engine.Color.black,
+    );
+  }
+
+  /// Telefon ve dar pencere: her şey alt alta.
+  Widget _narrowBody(ColorScheme scheme, List<BoardArrow> arrows) {
+    return Column(
+      children: [
+        _header(scheme),
+        _boardArea(arrows, Layout.narrowBoardCap),
+        if (_puzzle.note != null && _puzzle.note!.isNotEmpty)
+          _noteCard(scheme),
+        _feedbackCard(scheme),
+        SizedBox(height: 46, child: _moveStrip(vertical: false)),
+        _actions(scheme),
+      ],
+    );
+  }
+
+  /// Geniş pencere ve tablet: solda tahta, sağda hamleler ve düğmeler.
+  ///
+  /// Oyun ekranıyla aynı geometri: kenar önce hesaplanıyor, grup ona
+  /// göre kurulup birlikte ortalanıyor. Eskiden bulmaca ekranı geniş
+  /// pencerede de telefon düzenindeydi; tahta 520'de kalıyor, altındaki
+  /// şeritler yüzünden daha da küçülüyordu.
+  Widget _wideBody(ColorScheme scheme, List<BoardArrow> arrows) {
+    final cap = Layout.maxWideBoardSide;
+    final scale = Layout.isDesktop
+        ? Layout.boardScales[SettingsService.instance.boardSize]
+        : 1.0;
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final available =
+            constraints.maxWidth - Layout.sidePanelWidth - _boardGutter;
+        var side = Layout.boardSide(
+              available,
+              constraints.maxHeight - _wideChromeHeight,
+              cap,
+            ) *
+            scale;
+        final gap = Layout.panelGap(side);
+        if (side > available - gap) {
+          side = (available - gap).clamp(0.0, side);
+        }
+        return Center(
+          child: ConstrainedBox(
+            constraints: BoxConstraints(
+              maxWidth: side + _boardGutter + gap + Layout.sidePanelWidth,
+              maxHeight: side + _wideChromeHeight,
+            ),
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                Expanded(
+                  child: Column(
+                    children: [
+                      _header(scheme),
+                      _boardArea(arrows, side),
+                    ],
+                  ),
+                ),
+                SizedBox(width: gap),
+                SizedBox(
+                  width: Layout.sidePanelWidth,
+                  child: _sidePanel(scheme),
+                ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  /// Sağ sütun: not, geri bildirim, hamle listesi ve düğmeler.
+  Widget _sidePanel(ColorScheme scheme) {
+    return Container(
+      margin: const EdgeInsets.fromLTRB(0, 8, 12, 12),
+      decoration: BoxDecoration(
+        color: scheme.surfaceContainer,
+        borderRadius: BorderRadius.circular(18),
+      ),
+      clipBehavior: Clip.antiAlias,
+      child: Column(
+        children: [
+          if (_puzzle.note != null && _puzzle.note!.isNotEmpty)
+            _noteCard(scheme),
+          _feedbackCard(scheme),
+          Divider(height: 1, color: scheme.outlineVariant),
+          Expanded(child: _moveStrip(vertical: true)),
+          Divider(height: 1, color: scheme.outlineVariant),
+          _actions(scheme),
+        ],
       ),
     );
   }
@@ -1012,10 +1103,24 @@ class _PuzzleSolveScreenState extends State<PuzzleSolveScreen> {
   }
 
   Widget _action(IconData icon, String label, VoidCallback? onPressed) {
-    return TextButton.icon(
-      onPressed: onPressed,
-      icon: Icon(icon, size: 19),
-      label: Text(label, style: const TextStyle(fontSize: 13)),
+    // Esnek: bu satır telefonun tam genişliğine göre kurulmuştu, yan
+    // panelde 340 piksele giriyor. Sabit kalsaydı üç düğme taşardı
+    // (masaüstü yazı ölçeğiyle daha da çok).
+    return Flexible(
+      child: TextButton.icon(
+        onPressed: onPressed,
+        style: TextButton.styleFrom(
+          padding: const EdgeInsets.symmetric(horizontal: 8),
+          visualDensity: VisualDensity.compact,
+        ),
+        icon: Icon(icon, size: 19),
+        label: Text(
+          label,
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
+          style: const TextStyle(fontSize: 13),
+        ),
+      ),
     );
   }
 }

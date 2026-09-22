@@ -437,52 +437,158 @@ class _OpeningStudyScreenState extends State<OpeningStudyScreen> {
       ),
       body: SafeArea(
         top: false,
-        child: ContentWidth(
-          child: Column(
-            children: [
-              _header(scheme),
-              Expanded(
-                child: Center(
-                  child: Padding(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 10,
-                      vertical: 4,
-                    ),
-                    child: LayoutBuilder(
-                      builder: (context, constraints) {
-                        final side = Layout.boardSide(
-                          constraints.maxWidth,
-                          constraints.maxHeight,
-                        );
-                        return SizedBox(
-                          width: side,
-                          height: side,
-                          child: RepaintBoundary(
-                            key: _boardImageKey,
-                            child: ChessBoardWidget(
-                              game: _game,
-                              flipped: _flipped,
-                              interactive: _mode == StudyMode.practice,
-                              movableSide: practiceSide,
-                              lastMove: _currentMove,
-                              onMove: _onUserMove,
-                              arrows: arrows,
-                            ),
-                          ),
-                        );
-                      },
-                    ),
+        child: Layout.isTwoColumn(context)
+            ? _wideBody(scheme, opening, practiceSide, arrows)
+            : ContentWidth(
+                child: _narrowBody(scheme, opening, practiceSide, arrows),
+              ),
+      ),
+    );
+  }
+
+  /// Tahtanın üstünde duran başlık ve tahtanın kendi dikey boşluğu.
+  static const double _wideChromeHeight = 48;
+
+  /// Tahtanın yatay boşluğu ([_boardArea] içindeki dolgu), iki yan.
+  static const double _boardGutter = 20;
+
+  /// Tahta; kalan alana sığan en büyük kare, üst sınır [cap].
+  Widget _boardArea(
+    engine.Color? practiceSide,
+    List<BoardArrow> arrows,
+    double cap,
+  ) {
+    return Expanded(
+      child: Center(
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+          child: LayoutBuilder(
+            builder: (context, constraints) {
+              final side = Layout.boardSide(
+                constraints.maxWidth,
+                constraints.maxHeight,
+                cap,
+              );
+              return SizedBox(
+                width: side,
+                height: side,
+                child: RepaintBoundary(
+                  key: _boardImageKey,
+                  child: ChessBoardWidget(
+                    game: _game,
+                    flipped: _flipped,
+                    interactive: _mode == StudyMode.practice,
+                    movableSide: practiceSide,
+                    lastMove: _currentMove,
+                    onMove: _onUserMove,
+                    arrows: arrows,
                   ),
                 ),
-              ),
-              if (opening.note != null && opening.note!.isNotEmpty)
-                _noteCard(scheme, opening.note!),
-              if (_message != null) _messageCard(scheme),
-              _moveStrip(scheme),
-              _controls(scheme),
-            ],
+              );
+            },
           ),
         ),
+      ),
+    );
+  }
+
+  /// Telefon ve dar pencere: her şey alt alta.
+  Widget _narrowBody(
+    ColorScheme scheme,
+    Opening opening,
+    engine.Color? practiceSide,
+    List<BoardArrow> arrows,
+  ) {
+    return Column(
+      children: [
+        _header(scheme),
+        _boardArea(practiceSide, arrows, Layout.narrowBoardCap),
+        if (opening.note != null && opening.note!.isNotEmpty)
+          _noteCard(scheme, opening.note!),
+        if (_message != null) _messageCard(scheme),
+        _moveStrip(scheme, vertical: false),
+        _controls(scheme),
+      ],
+    );
+  }
+
+  /// Geniş pencere ve tablet: solda tahta, sağda hamleler ve düğmeler.
+  ///
+  /// Oyun ve bulmaca ekranlarıyla aynı geometri. Eskiden bu ekran geniş
+  /// pencerede de telefon düzenindeydi: tahta 520'de kalıyordu.
+  Widget _wideBody(
+    ColorScheme scheme,
+    Opening opening,
+    engine.Color? practiceSide,
+    List<BoardArrow> arrows,
+  ) {
+    final cap = Layout.maxWideBoardSide;
+    final scale = Layout.isDesktop
+        ? Layout.boardScales[SettingsService.instance.boardSize]
+        : 1.0;
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final available =
+            constraints.maxWidth - Layout.sidePanelWidth - _boardGutter;
+        var side = Layout.boardSide(
+              available,
+              constraints.maxHeight - _wideChromeHeight,
+              cap,
+            ) *
+            scale;
+        final gap = Layout.panelGap(side);
+        if (side > available - gap) {
+          side = (available - gap).clamp(0.0, side);
+        }
+        return Center(
+          child: ConstrainedBox(
+            constraints: BoxConstraints(
+              maxWidth: side + _boardGutter + gap + Layout.sidePanelWidth,
+              maxHeight: side + _wideChromeHeight,
+            ),
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                Expanded(
+                  child: Column(
+                    children: [
+                      _header(scheme),
+                      _boardArea(practiceSide, arrows, side),
+                    ],
+                  ),
+                ),
+                SizedBox(width: gap),
+                SizedBox(
+                  width: Layout.sidePanelWidth,
+                  child: _sidePanel(scheme, opening),
+                ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  /// Sağ sütun: not, uyarı, hamle listesi ve düğmeler.
+  Widget _sidePanel(ColorScheme scheme, Opening opening) {
+    return Container(
+      margin: const EdgeInsets.fromLTRB(0, 8, 12, 12),
+      decoration: BoxDecoration(
+        color: scheme.surfaceContainer,
+        borderRadius: BorderRadius.circular(18),
+      ),
+      clipBehavior: Clip.antiAlias,
+      child: Column(
+        children: [
+          if (opening.note != null && opening.note!.isNotEmpty)
+            _noteCard(scheme, opening.note!),
+          if (_message != null) _messageCard(scheme),
+          Divider(height: 1, color: scheme.outlineVariant),
+          Expanded(child: _moveStrip(scheme, vertical: true)),
+          Divider(height: 1, color: scheme.outlineVariant),
+          _controls(scheme),
+        ],
       ),
     );
   }
@@ -579,7 +685,7 @@ class _OpeningStudyScreenState extends State<OpeningStudyScreen> {
     );
   }
 
-  Widget _moveStrip(ColorScheme scheme) {
+  Widget _moveStrip(ColorScheme scheme, {required bool vertical}) {
     final moves = widget.opening.sanMoves;
     // Alıştırmada henüz gelmemiş hamleler gizlenir.
     final revealed = _mode == StudyMode.practice ? _cursor + 1 : moves.length;
@@ -591,17 +697,21 @@ class _OpeningStudyScreenState extends State<OpeningStudyScreen> {
       rowCount: (moves.length / 2).ceil(),
     );
 
+    // Dikeyde satırlar zaten hamle çiftleri; yan panelde bu doğrudan
+    // bir hamle listesi oluyor. Kendi arka planı yok: panelinki var.
     return Container(
-      height: 46,
-      margin: const EdgeInsets.fromLTRB(12, 8, 12, 0),
+      height: vertical ? null : 46,
+      margin: vertical
+          ? EdgeInsets.zero
+          : const EdgeInsets.fromLTRB(12, 8, 12, 0),
       decoration: BoxDecoration(
-        color: scheme.surfaceContainer,
+        color: vertical ? Colors.transparent : scheme.surfaceContainer,
         borderRadius: BorderRadius.circular(12),
       ),
       child: ListView.builder(
         controller: _scroller.controller,
-        scrollDirection: Axis.horizontal,
-        padding: const EdgeInsets.symmetric(horizontal: 8),
+        scrollDirection: vertical ? Axis.vertical : Axis.horizontal,
+        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
         itemCount: (moves.length / 2).ceil(),
         itemBuilder: (context, index) {
           final first = index * 2;

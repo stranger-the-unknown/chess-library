@@ -571,11 +571,6 @@ class Strings {
     'settings.boardSizeSmall': 'Küçük',
     'settings.boardSizeMedium': 'Orta',
     'settings.boardSizeLarge': 'Büyük',
-    'settings.gameLayout': 'Oyun yerleşimi',
-    'settings.gameLayoutSub':
-        'Hamle listesi tahtanın yanında mı altında mı dursun?',
-    'settings.layoutVertical': 'Yanda',
-    'settings.layoutHorizontal': 'Altta',
     'settings.coordinates': 'Kare adlarını göster',
     'settings.coordinatesSub': 'a-h ve 1-8 koordinatları',
     'settings.engineArrows': 'Motor oklarını göster',
@@ -1090,11 +1085,6 @@ class Strings {
     'settings.boardSizeSmall': 'Small',
     'settings.boardSizeMedium': 'Medium',
     'settings.boardSizeLarge': 'Large',
-    'settings.gameLayout': 'Game layout',
-    'settings.gameLayoutSub':
-        'Should the move list sit beside the board or below it?',
-    'settings.layoutVertical': 'Beside',
-    'settings.layoutHorizontal': 'Below',
     'settings.coordinates': 'Show square names',
     'settings.coordinatesSub': 'a-h and 1-8 coordinates',
     'settings.engineArrows': 'Show engine arrows',

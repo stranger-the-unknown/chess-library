@@ -9,13 +9,15 @@ internet connection is needed; no data ever leaves the device.
 Runs on **Android** and **Windows**. The interface adapts to the window
 width: a bottom navigation bar on a phone, a rail down the left side on
 the desktop. In a wide window the game screen splits into two columns —
-the board on the left, the move list and engine line on the right. The
-move list position (beside / below) is chosen in Settings and appears only
-when the layout actually fits. With the list beside the board you can also
-pick the board size (small / medium / large); the three are fractions of
-the largest board the window can show, so the choice is visible on any
-screen. With the list below, the board already fills the space it has, so
-no size option is offered there.
+the board on the left, the move list and controls on the right. The same
+layout is used for solving puzzles and studying openings. On the desktop
+the board size is chosen in Settings (small / medium / large); the three
+are fractions of the largest board the window can show, so the choice is
+visible on any screen.
+
+On Android no size is asked and the board fills the space it has. Phones
+run portrait, tablets run landscape, and the screen never rotates: on a
+tablet, landscape is the only orientation the side panel fits in.
 
 Languages: Turkish and English. Change it in Settings; the default is
 your system language.

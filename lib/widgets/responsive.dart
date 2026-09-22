@@ -1,4 +1,7 @@
+import 'dart:io' show Platform;
 import 'dart:math' as math;
+
+import 'package:flutter/foundation.dart';
 
 import 'package:flutter/material.dart';
 
@@ -37,12 +40,90 @@ class Layout {
   /// tamamı.
   static const List<double> boardScales = [0.75, 0.875, 1.0];
 
-  /// İki sütunlu oyun yerleşimi için gereken en küçük genişlik.
+  /// Ayarların bir kısmı yalnızca masaüstünde anlamlı.
   ///
-  /// Tahta (en çok 640) + hamle sütunu (340) + boşluklar. Bunun altında
-  /// yerleşim seçeneği gösterilmiyor: çalışmayan bir ayar, olmayan
+  /// Telefonda ve tablette tahta boyutu sorulmuyor: pencere yeniden
+  /// boyutlandırılamadığı için "sığanın tamamı"ndan başka doğru cevap
+  /// yok. Çalışmayan bir ayar, olmayan ayardan kötüdür.
+  static bool get isDesktop =>
+      debugDesktopOverride ??
+      (!kIsWeb && (Platform.isWindows || Platform.isLinux || Platform.isMacOS));
+
+  /// Testlerde cihaz sınıfını zorlamak için.
+  @visibleForTesting
+  static bool? debugDesktopOverride;
+
+  /// Masaüstünde yazıların büyütülme oranı.
+  ///
+  /// Uygulamadaki punto değerleri telefona göre seçilmişti (101 yerin
+  /// 73'ü 13 punto ve altı). Aynı değerler bir bilgisayar ekranında,
+  /// göze uzak mesafede küçük kalıyor. Tek tek büyütmek yerine tek
+  /// ölçek: Android'e hiç dokunulmuyor, masaüstünde her yazı aynı
+  /// oranda büyüyor.
+  ///
+  /// Oran bilerek ölçülü (%15): daha fazlası sabit yükseklikli
+  /// şeritleri (motor satırı, hamle şeridi, geri bildirim kartı)
+  /// taşırırdı.
+  static const double desktopTextScale = 1.15;
+
+  /// Tahta ile yan panel arasındaki boşluk.
+  ///
+  /// Tahtanın oranı: küçük tahtada küçük, büyük tahtada büyük kalsın.
+  /// Eskiden 8 pikseldi ve panel tahtaya yapışık duruyordu.
+  ///
+  /// Tahtanın kendi 8 piksellik dolgusu da araya ekleniyor; toplam,
+  /// örnek alınan düzendeki oranla (tahta genişliğinin ~%5,8'i) aynı
+  /// yere geliyor.
+  static double panelGap(double boardSide) =>
+      (boardSide * 0.045).clamp(14.0, 38.0);
+
+  /// Tahtanın boyuna göre motor satırının punto değeri.
+  ///
+  /// Alt sınır bugünkü değerin üstünde: yazı zaten küçüktü. Üst sınır
+  /// da var, çünkü şerit sabit yükseklikli ve telefonda tahta ekranı
+  /// doldurduğu için ölçek yukarı kaçabilirdi.
+  static double engineFontSize(double? boardSide) =>
+      boardSide == null ? 14.0 : (boardSide / 640 * 14.0).clamp(13.0, 17.0);
+
+  /// Dar yerleşimde tahtanın üst sınırı.
+  ///
+  /// Masaüstünde dar pencere bir **tercih**, telefonun ve küçük
+  /// tabletin ölçüsü ise **veri**: orada tahta sığdığının tamamı kadar
+  /// olmalı. Telefon için seçilmiş 520'lik tavan, 7" bir tablette
+  /// (600 piksel genişlik) ekranın sekizde birini boşa harcıyordu.
+  static double get narrowBoardCap =>
+      isDesktop ? maxBoardSide : maxWideBoardSide;
+
+  /// Bu ekran, yan yana yerleşimi taşıyabilecek bir tablet mi?
+  ///
+  /// Ölçüt iki parçalı: kısa kenar en az 600 (Material'ın tablet tanımı)
+  /// **ve** uzun kenar en az [twoColumnBreakpoint]. İkincisi şart, çünkü
+  /// yatay çevirmenin tek sebebi yan paneli açabilmek. Sığmayacaksa
+  /// çevirmek tahtayı küçültmekten başka işe yaramaz: 7" bir tablette
+  /// (600x960) dikeyde ~600 piksel olan tahta, yatayda alt şeride
+  /// düşerek ~310'a inerdi.
+  static bool isTabletScreen(Size logical) {
+    final shortest = math.min(logical.width, logical.height);
+    final longest = math.max(logical.width, logical.height);
+    return shortest >= 600 && longest >= twoColumnBreakpoint;
+  }
+
+  /// İki sütunlu yerleşim için gereken en küçük genişlik.
+  ///
+  /// Makul bir tahta (~610) + hamle sütunu (340) + boşluklar. Bunun
+  /// altında boyut ayarı da gösterilmiyor: çalışmayan bir ayar, olmayan
   /// ayardan kötüdür.
-  static const double twoColumnBreakpoint = 1100;
+  ///
+  /// 1100'den 1000'e indi. Sebebi 4:3 tabletler: 9.7" bir cihazın
+  /// (768x1024) yatay genişliği 1024 ve eski eşiğin altında kalıyordu,
+  /// yani cihaz "telefon" sayılıp dikey kilitleniyordu. Orada tahta
+  /// genişliğin %93'ünü kaplıyor, altına her şey sıkışıyordu. Yatayda
+  /// tahta 634 oluyor ve yanına panel geliyor — yüksekliğin ~%83'ü,
+  /// yani diğer tabletlerle aynı oran.
+  ///
+  /// 1000 eşiği 7" tabletleri (uzun kenar 960) dışarıda bırakmaya
+  /// devam ediyor; orada yatay tahtayı 584'ten 530'a düşürürdü.
+  static const double twoColumnBreakpoint = 1000;
 
   /// Yan sütunun genişliği (hamle listesi, motor satırı, düğmeler).
   static const double sidePanelWidth = 340;
