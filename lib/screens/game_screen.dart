@@ -998,22 +998,18 @@ class _GameScreenState extends State<GameScreen> {
     // yalnızca yerleşimin gerçekten sığdığı genişlikte gösteriliyor;
     // pencere küçülürse kendiliğinden alt şeride dönülüyor.
     final settings = SettingsService.instance;
-    // İki ayrı soru: "boyut tercihi geçerli mi?" ve "hangi düzeni
-    // çizeyim?". Eskiden ikisi de `twoColumn`'a bağlıydı; "Altta"
-    // seçilince boyut sınırı `maxBoardSide`'a düşüyordu — o da 520, yani
-    // `boardSizes[0]`. Sonuç: ayar görünüyor, kaydediliyor ve hiçbir şey
-    // yapmıyordu. Görünen ama çalışmayan ayar, olmayan ayardan kötüdür.
     final wideEnough = Layout.isTwoColumn(context);
     final twoColumn = wideEnough && settings.verticalLayout;
-    final cap = wideEnough
-        ? Layout.boardSizes[settings.boardSize]
-        : Layout.maxBoardSide;
-    final board = _boardArea(
-      arrows: arrows,
-      atLive: atLive,
-      finished: finished,
-      cap: cap,
-    );
+    // Boyut tercihi yalnızca "Yanda" yerleşiminde geçerli; ayar da
+    // yalnızca orada gösteriliyor.
+    //
+    // Alt şeritte tahtayı sınırlayan şey seçim değil **yükseklik**:
+    // altındaki motor satırı, hamle şeridi ve gezinme düğmeleri ~300
+    // piksel yiyor, tahtaya 509 kalıyordu ve üç seçenek de aynı sonucu
+    // veriyordu. Oranlı bir ölçek üçünü ayırırdı ama ikisini bugünkünden
+    // **küçük** yapardı; kullanıcıya daha kötü bir tahta seçtirmenin
+    // anlamı yok. Alt şeritte tahta artık sığdığı kadar büyük.
+    final cap = wideEnough ? Layout.maxWideBoardSide : Layout.maxBoardSide;
 
     final screen = Scaffold(
       appBar: AppBar(
@@ -1153,8 +1149,23 @@ class _GameScreenState extends State<GameScreen> {
       body: SafeArea(
         top: false,
         child: twoColumn
-            ? _wideBody(scheme, board, cap)
-            : _narrowBody(scheme, board),
+            ? _wideBody(
+                scheme,
+                arrows: arrows,
+                atLive: atLive,
+                finished: finished,
+                cap: cap,
+                scale: Layout.boardScales[settings.boardSize],
+              )
+            : _narrowBody(
+                scheme,
+                _boardArea(
+                  arrows: arrows,
+                  atLive: atLive,
+                  finished: finished,
+                  cap: cap,
+                ),
+              ),
       ),
     );
 
@@ -1337,12 +1348,12 @@ class _GameScreenState extends State<GameScreen> {
   /// Tahtanın üstünde ve altında duran sabit yükseklikler: iki oyuncu
   /// satırı ve tahtanın kendi dikey boşluğu.
   ///
-  /// Bilerek **cömert**: bu pay gerçekte gerekenden azsa tahta seçilen
-  /// boyutun altına düşer, yani "ayar söylediğini vermiyor" hatası geri
-  /// gelir. Fazla ayrılırsa panel tahtadan birkaç piksel uzun kalır —
-  /// görünmez. `game_layout_test` tahtanın tam olarak seçilen boyutta
-  /// olduğunu ölçüyor.
-  static const double _wideChromeHeight = 88;
+  /// Değer **gerçeğine yakın** olmalı, cömert değil. 10.0.4'te 88'di:
+  /// tahta o zaman genişlikten sınırlandığı için fazla pay zararsızdı.
+  /// Artık kenar bu paydan çıkarılarak hesaplanıyor, yani her fazla
+  /// piksel doğrudan tahtadan gidiyor — 88 ile tahta 690 yerine 672'ye
+  /// düşüyordu. `game_layout_test` ölçüyor.
+  static const double _wideChromeHeight = 70;
 
   /// Tahtanın yatay boşluğu ([_boardArea] içindeki dolgu), iki yan.
   static const double _boardGutter = 16;
@@ -1352,7 +1363,14 @@ class _GameScreenState extends State<GameScreen> {
   /// Eskiden masaüstünde de telefon düzeni kullanılıyordu: tahta 520
   /// pikselde kalıyor, hamleler altta ince bir şeritte yan yana diziliyor
   /// ve pencerenin iki yanı boş duruyordu.
-  Widget _wideBody(ColorScheme scheme, Widget board, double cap) {
+  Widget _wideBody(
+    ColorScheme scheme, {
+    required List<BoardArrow> arrows,
+    required bool atLive,
+    required bool finished,
+    required double cap,
+    required double scale,
+  }) {
     // Tahta ve panel **tek bir grup**: ikisi birlikte ortalanıyor.
     //
     // Eskiden sol sütun kalan genişliğin tamamını alıyor, tahta da onun
@@ -1364,35 +1382,56 @@ class _GameScreenState extends State<GameScreen> {
     // Dikeyde de aynısı: `stretch` yüzünden panel gövdenin tamamını
     // kaplıyor, tahta ortada yüzüyordu. Panelin dibindeki gezinme
     // düğmeleri böylece pencerenin en altına iniyor, tahtadan uzaklaşıyordu.
-    return Center(
-      child: ConstrainedBox(
-        constraints: BoxConstraints(
-          maxWidth: cap + _boardGutter + Layout.sidePanelWidth,
-          maxHeight: cap + _wideChromeHeight,
-        ),
-        child: Row(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            Expanded(
-              child: Column(
-                children: [
-                  if (_warning != null) _warningBanner(scheme),
-                  _playerRow(scheme, top: true),
-                  board,
-                  _playerRow(scheme, top: false),
-                  if (_explore.isNotEmpty) _exploreCard(scheme),
-                  if (_resultText != null && _explore.isEmpty)
-                    _resultBanner(scheme),
-                ],
-              ),
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        // Kenar **önce** hesaplanıyor; grubun eni ve boyu ona göre
+        // kuruluyor. Doğrudan tavandan gidilseydi, tahta o tavana
+        // ulaşamadığında (alçak pencerede yükseklik sınırlar) sol sütun
+        // tahtadan geniş kalır ve kapatılan boşluk geri gelirdi.
+        final side = Layout.boardSide(
+              constraints.maxWidth - Layout.sidePanelWidth - _boardGutter,
+              constraints.maxHeight - _wideChromeHeight,
+              cap,
+            ) *
+            scale;
+        final board = _boardArea(
+          arrows: arrows,
+          atLive: atLive,
+          finished: finished,
+          // Kenar kesinleşti; içeride bir daha sınırlanmasın.
+          cap: side,
+        );
+        return Center(
+          child: ConstrainedBox(
+            constraints: BoxConstraints(
+              maxWidth: side + _boardGutter + Layout.sidePanelWidth,
+              maxHeight: side + _wideChromeHeight,
             ),
-            SizedBox(
-              width: Layout.sidePanelWidth,
-              child: _sidePanel(scheme),
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                Expanded(
+                  child: Column(
+                    children: [
+                      if (_warning != null) _warningBanner(scheme),
+                      _playerRow(scheme, top: true),
+                      board,
+                      _playerRow(scheme, top: false),
+                      if (_explore.isNotEmpty) _exploreCard(scheme),
+                      if (_resultText != null && _explore.isEmpty)
+                        _resultBanner(scheme),
+                    ],
+                  ),
+                ),
+                SizedBox(
+                  width: Layout.sidePanelWidth,
+                  child: _sidePanel(scheme),
+                ),
+              ],
             ),
-          ],
-        ),
-      ),
+          ),
+        );
+      },
     );
   }
 

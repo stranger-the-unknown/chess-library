@@ -17,11 +17,25 @@ class Layout {
   /// Tahtanın alabileceği en büyük kenar uzunluğu (dar yerleşim).
   static const double maxBoardSide = 520;
 
+  /// Tahtanın ulaşabileceği en büyük kenar.
+  ///
+  /// Çok geniş/yüksek pencerede tahta sonsuza kadar büyümesin diye tavan.
+  static const double maxWideBoardSide = 760;
+
   /// Tahta boyutu seçenekleri: Küçük / Orta / Büyük.
   ///
-  /// Küçük, dar yerleşimdeki boyutun aynısı. Orta varsayılan: bugünküne
-  /// göre kare 65'ten 80 piksele çıkıyor ama ekranı doldurmuyor.
-  static const List<double> boardSizes = [520, 640, 760];
+  /// **Mutlak piksel değil, sığabilecek en büyük tahtanın oranı.**
+  ///
+  /// Önce 520/640/760 yazılmıştı ve yanlıştı: tahtayı sınırlayan şey
+  /// genişlik değil **yükseklik**. 1920x1080 panelde %125 ölçekle gövde
+  /// 816 mantıksal piksel kalıyor, tahtaya kalan ise 690. Yani "Büyük"
+  /// hiçbir zaman 760'a ulaşmıyor, Orta ile arası 50 pikselde (%8)
+  /// kalıyor ve seçim gözle ayırt edilmiyordu.
+  ///
+  /// Oranlar eşit aralıklı: hangi ekranda olursa olsun üç kademe
+  /// birbirinden görünür şekilde ayrılıyor. "Büyük" her zaman sığanın
+  /// tamamı.
+  static const List<double> boardScales = [0.75, 0.875, 1.0];
 
   /// İki sütunlu oyun yerleşimi için gereken en küçük genişlik.
   ///
