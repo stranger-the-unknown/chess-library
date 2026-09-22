@@ -174,7 +174,10 @@ class _OpeningStudyScreenState extends State<OpeningStudyScreen> {
   /// gerekiyordu. Rakibin cevabı doğru hamle yaptığındakiyle aynı
   /// tempoda ve aynı jetona bağlı.
   Future<void> _showNextMove() async {
-    final token = _token;
+    // Jeton **ilerletiliyor**: doğru hamleden sonra beklemede olan rakip
+    // cevabı iptal olsun. Eskiden yalnızca okunuyordu ve "Göster"e
+    // basınca iki yarım hamle üst üste geliyordu.
+    final token = ++_token;
     // Hamleyi tahta oynuyor: bu hat "hatasız bitirildi" sayılmamalı,
     // yoksa "Göster" ile geçilen varyant öğrenilmiş gibi kaydediliyordu.
     _mistakeMade = true;

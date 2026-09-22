@@ -329,7 +329,12 @@ class _OpeningListScreenState extends State<OpeningListScreen> {
     await _load();
   }
 
-  Future<void> _deleteFamily(String family, int count) async {
+  Future<void> _deleteFamily(String family) async {
+    // Onay, **süzgeçsiz** sayıyı söylemeli: ekrandaki liste aramaya ve
+    // "yalnızca favoriler"e göre daralıyor ama silme o ailenin tümünü
+    // götürüyordu. "Najdorf" arayıp aileyi silen kullanıcı "1 varyant"
+    // onayı verip yirmisini birden kaybedebiliyordu.
+    final count = _all.where((o) => o.family == family).length;
     final confirmed = await AppDialogs.confirm(
       context,
       title: t('openings.deleteFamily'),
@@ -635,7 +640,7 @@ class _OpeningListScreenState extends State<OpeningListScreen> {
                   ),
                   onSelected: (value) {
                     if (value == 'deleteFamily') {
-                      _deleteFamily(family, openings.length);
+                      _deleteFamily(family);
                     }
                   },
                   itemBuilder: (context) => [

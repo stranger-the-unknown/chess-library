@@ -172,9 +172,15 @@ class EngineService {
   }
 
   /// Analizde kullanılacak hash boyutu (MB). Telefonda küçük kalıyor.
+  ///
+  /// Telefonda 64'ten 32'ye indi: Stockfish'in gömülü sinir ağı zaten
+  /// ~98 MB tutuyor ve 2 GB'lık cihazlarda toplam ayak izi sistemin
+  /// uygulamayı arka planda kapatmasına yetecek kadar büyüyordu. Bir-iki
+  /// saniyelik aramalarda 32 ile 64 arasında görülebilir bir fark yok;
+  /// hash asıl uzun analizlerde işe yarıyor, orası da masaüstü.
   static int get analysisHashMb {
-    if (kIsWeb) return 64;
-    if (Platform.isAndroid || Platform.isIOS) return 64;
+    if (kIsWeb) return 32;
+    if (Platform.isAndroid || Platform.isIOS) return 32;
     return 128;
   }
 

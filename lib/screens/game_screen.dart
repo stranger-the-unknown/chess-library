@@ -145,6 +145,16 @@ class _GameScreenState extends State<GameScreen> {
     if (leave && mounted) Navigator.of(context).pop();
   }
 
+  /// Serbest tahta: kayıtlı bir oyunu okumuyoruz, hamleler oyunun
+  /// kendisi.
+  ///
+  /// Böyle bir tahtada geçmişe gidip başka bir hamle denemek mümkün
+  /// olmalı — "analiz tahtası" bunun için var. Eskiden tahta yalnızca
+  /// canlı uçta açıktı; `_onBoardMove` içindeki "sonrasını sil" kodu bu
+  /// yüzden hiç çalışmıyordu.
+  bool get _freeBoard =>
+      widget.mode == GameMode.analysis && !_replayMode;
+
   bool get _replayMode =>
       widget.mode == GameMode.analysis &&
       (widget.pgnContent != null || widget.uciMoves != null) &&
@@ -218,14 +228,14 @@ class _GameScreenState extends State<GameScreen> {
             'tokens': parser.skippedTokens.take(4).join(', '),
           });
         }
-        if (parser.startFenRejected) {
-          // Başlıktaki konum okunamadı: hamleler standart açılıştan
-          // oynandı, yani ekrandaki parti PGN'deki parti olmayabilir.
-          _warning = t('game.pgnFenIgnored');
-        }
-        if (parser.moves.isEmpty) {
-          _warning = t('game.pgnNoMoves');
-        }
+        // Birden fazla uyarı olabilir; eskiden yalnızca sonuncusu
+        // görünüyordu (atlanan hamle + bozuk FEN aynı anda olabiliyor).
+        final notes = <String>[
+          if (_warning != null) _warning!,
+          if (parser.startFenRejected) t('game.pgnFenIgnored'),
+          if (parser.moves.isEmpty) t('game.pgnNoMoves'),
+        ];
+        if (notes.isNotEmpty) _warning = notes.join('  ·  ');
       } else {
         _warning = t('game.pgnUnreadable');
       }
@@ -745,12 +755,21 @@ class _GameScreenState extends State<GameScreen> {
     );
     if (!confirmed || !mounted) return;
 
+    // Uçan analiz yeni konuma yazılmasın: jeton ilerletiliyor ve
+    // bekleyen istek iptal ediliyor. Eskiden eski konumun oku/skoru
+    // sıfırlanan tahtaya düşebiliyordu.
+    _analysisToken++;
+    _analysisDebounce?.cancel();
+    EngineService.instance.stopAnalysis();
+
     if (replay) {
       setState(() {
         _explore.clear();
         _warning = null;
         _resigned = false;
         _engineStalled = false;
+        _analysis = null;
+        _evalScoreCp = null;
         _loadInitialPosition();
       });
       _afterPositionChanged();
@@ -758,6 +777,8 @@ class _GameScreenState extends State<GameScreen> {
     }
 
     setState(() {
+      _analysis = null;
+      _evalScoreCp = null;
       _history.clear();
       _cursor = -1;
       _game = engine.ChessGame.fromFen(_startFen);
@@ -1250,7 +1271,8 @@ class _GameScreenState extends State<GameScreen> {
                     flipped: _flipped,
                     // Kayıtlı oyunda hamle oynamak oyunu değiştirmez;
                     // deneme olarak çalışır.
-                    interactive: (_replayMode || atLive) && !finished,
+                    interactive:
+                        (_replayMode || atLive || _freeBoard) && !finished,
                     animateLastMove: _animateBoard,
                     movableSide:
                         widget.mode == GameMode.versusEngine && !_engineStalled

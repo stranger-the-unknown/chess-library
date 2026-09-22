@@ -256,6 +256,14 @@ class PuzzleService {
     String? note,
     List<String>? tags,
   }) async {
+    // Konum değiştiyse kayıtlı çözüm artık o konuma ait değil.
+    // Eskiden duruyordu: yeni konumda eski hamle dizisi bekleniyor ve
+    // doğru hamleler "yanlış" sayılıyordu.
+    final fenChanged = fen != puzzle.fen;
+    // Bellekteki nesne de temizleniyor: ekran bulmacayı elinde tutuyor
+    // ve yeniden okunana kadar eski diziyle yargılıyordu.
+    if (fenChanged) puzzle.solution = <String>[];
+
     if (collection.isBuiltIn || puzzle.id.startsWith('${collection.id}#')) {
       final overrides = await _loadOverrides();
       final existing = overrides[puzzle.id] ?? <String, dynamic>{};
@@ -265,6 +273,7 @@ class PuzzleService {
         'title': title,
         'note': note,
         'tags': tags ?? puzzle.tags,
+        if (fenChanged) 'solution': <String>[],
       };
       await _saveOverrides();
     } else {
@@ -273,6 +282,7 @@ class PuzzleService {
         ..title = title
         ..note = note
         ..tags = tags ?? puzzle.tags;
+      if (fenChanged) puzzle.solution = <String>[];
       await _saveCollections();
     }
   }

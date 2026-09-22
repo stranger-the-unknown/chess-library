@@ -17,6 +17,7 @@ import '../services/pgn_import_service.dart';
 import '../services/storage_service.dart';
 import '../theme/app_theme.dart';
 import '../widgets/app_dialogs.dart';
+import 'pgn_import_screen.dart';
 import '../widgets/game_filter_dialog.dart';
 import '../widgets/range_dialog.dart';
 import 'game_screen.dart';
@@ -228,6 +229,7 @@ class _PlaylistDetailScreenState extends State<PlaylistDetailScreen> {
     if (!mounted || picked == null) return;
 
     final content = picked.content;
+    final suggested = picked.suggestedListName;
     final games = await AppDialogs.runWithProgress<List<PgnGame>>(
       context,
       message: t('pgn.reading'),
@@ -242,17 +244,20 @@ class _PlaylistDetailScreenState extends State<PlaylistDetailScreen> {
       return;
     }
 
-    final int added;
-    try {
-      added = await PgnImportService.addToList(widget.playlistId, games);
-    } catch (_) {
-      if (mounted) AppDialogs.snack(context, t('lists.saveFailed'));
-      return;
-    }
+    // Seçim ekranından geçiliyor: eksik okunan oyunlar orada işaretsiz
+    // geliyor ve kullanıcı ne kaydettiğini görüyor. Eskiden buradan
+    // alınan dosyada hepsi doğrudan listeye yazılıyordu — sapmış
+    // oyunlar dahil.
+    await Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (_) => PgnImportScreen(
+          games: games,
+          suggestedName: suggested,
+        ),
+      ),
+    );
     await _load();
-    if (mounted) {
-      AppDialogs.snack(context, t('pgn.saved', {'count': added}));
-    }
   }
 
   /// Listeyi PGN dosyası olarak kaydeder; kaydedilemezse panoya kopyalar.

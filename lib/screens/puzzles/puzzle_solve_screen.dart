@@ -72,7 +72,22 @@ class _PuzzleSolveScreenState extends State<PuzzleSolveScreen> {
   /// baştan sona gösterilmesi ayrı ve bilerek daha yavaş (700 ms).
   static const Duration _movePace = Duration(milliseconds: 700);
 
-  static const int _toleranceCp = 80;
+  /// Çözümü kayıtlı olmayan bulmacalarda kabul edilen sapma.
+  ///
+  /// 80 santipiyon fazla gevşekti: kazanan bir konumda beraberliğe düşen
+  /// hamle bile "doğru" sayılabiliyordu. Aşağıdaki [_keepsTheWin] kuralı
+  /// da bunun için var.
+  static const int _toleranceCp = 30;
+
+  /// Kazanılmış konumu elden kaçıran hamle kabul edilmiyor.
+  ///
+  /// Motor ölçüsünde "kazanıyor" (+2.00 ve üstü) bir konumdan sonra
+  /// kullanıcının hamlesi eşitliğe yakınsa (+1.00 altı) tolerans ne
+  /// olursa olsun bu hamle doğru değildir.
+  static bool _keepsTheWin(int baselineCp, int userCp) {
+    if (baselineCp < 200) return true;
+    return userCp >= 100;
+  }
 
   final PuzzleService _service = PuzzleService.instance;
 
@@ -147,9 +162,13 @@ class _PuzzleSolveScreenState extends State<PuzzleSolveScreen> {
   }
 
   Future<void> _loadPuzzle() async {
-    if (widget.puzzles.isEmpty) return;
     final token = ++_loadToken;
-    _puzzle = widget.puzzles[_index];
+    // Boş listede ekran yine de kurulur: yordamın geri kalanı bütün
+    // alanları dolduruyor. Erken çıkmak `late` alanları atanmamış
+    // bırakıyor ve ekran çizilirken hata veriyordu.
+    _puzzle = widget.puzzles.isEmpty
+        ? Puzzle(id: '', fen: engine.ChessGame().fen)
+        : widget.puzzles[_index];
 
     setState(() {
       _game = _freshGame();
@@ -344,6 +363,7 @@ class _PuzzleSolveScreenState extends State<PuzzleSolveScreen> {
           userMate > 0 &&
           userMate <= baseline.mateIn! + 1;
     }
+    if (!_keepsTheWin(baseline.scoreCp, userScore)) return false;
     return userScore >= baseline.scoreCp - _toleranceCp;
   }
 
