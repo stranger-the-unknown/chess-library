@@ -184,8 +184,8 @@ class _GameScreenState extends State<GameScreen> {
     _awake.release();
     _analysisDebounce?.cancel();
     _analysisToken++;
-    // SF stop askiya almasin; fire-and-forget.
-    EngineService.instance.stopAnalysis();
+    // Ekran kapanıyor: motorun hamlesi de dahil bekleyen her şey iptal.
+    EngineService.instance.stopAll();
     super.dispose();
   }
 
@@ -643,6 +643,9 @@ class _GameScreenState extends State<GameScreen> {
   /// kimse oynamıyordu. 9.0.6'da geri alma için kapatılan kilit buradan
   /// geri geliyordu.
   void _applyNewPosition(String fen) {
+    // Pano okuması ya da düzenleyici beklenirken ekrandan çıkılmış
+    // olabilir; kapanmış ekrana yazmak hata veriyordu.
+    if (!mounted) return;
     setState(() {
       _startFen = fen;
       _history.clear();
@@ -1280,7 +1283,7 @@ class _GameScreenState extends State<GameScreen> {
           if (_explore.isNotEmpty) _exploreCard(scheme),
           // Motor şeridi için sabit yükseklik: aç/kapa tahtayı kaydırmaz.
           SizedBox(
-            height: 44,
+            height: _engineStripHeight,
             child: _analysisOn ? _engineLine(scheme) : null,
           ),
           // Deneme sırasında tahtadaki konum oyunun sonucunu yansıtmaz.
@@ -1332,7 +1335,7 @@ class _GameScreenState extends State<GameScreen> {
           Expanded(child: _moveList(vertical: true)),
           Divider(height: 1, color: scheme.outlineVariant),
           SizedBox(
-            height: 44,
+            height: _engineStripHeight,
             child: _analysisOn ? _engineLine(scheme) : null,
           ),
           Divider(height: 1, color: scheme.outlineVariant),
@@ -1456,6 +1459,13 @@ class _GameScreenState extends State<GameScreen> {
   }
 
 
+  /// Motor şeridinin sabit yüksekliği.
+  ///
+  /// Sabit, çünkü aç/kapa tahtayı kaydırmasın. İki satırlık metin (12,5
+  /// punto, 1,3 satır aralığı) artı dolgu 44 pikselin içine sığmıyordu:
+  /// uzun ana varyantlarda şerit taşıyordu.
+  static const double _engineStripHeight = 56;
+
   /// Beyaz bakisi; pozitifte acik +.
   String _formatScoreCp(int cp) {
     final body = (cp.abs() / 100).toStringAsFixed(2);
@@ -1469,12 +1479,23 @@ class _GameScreenState extends State<GameScreen> {
     // değer vardı (mat olurken de mat ederken de "Mat 3"), sonra işaretli
     // sayıya çevrildi ("Mat -3") — ikisi de okunaksızdı.
     final mate = analysis.mateIn;
-    final whiteMates =
-        (_game.sideToMove == engine.Color.white ? mate : -(mate ?? 0))! > 0;
-    final evaluation = mate != null
-        ? t(whiteMates ? 'game.mateWhite' : 'game.mateBlack',
-            {'n': mate.abs()})
-        : _formatScoreCp(_evalScoreCp!);
+    final String evaluation;
+    if (mate != null) {
+      // Motor mat sayısını sırası gelen tarafa göre veriyor; beyaz
+      // bakışına çevirip kimin mat ettiğini yazıyoruz.
+      final whiteMates =
+          (_game.sideToMove == engine.Color.white ? mate : -mate) > 0;
+      evaluation = t(
+        whiteMates ? 'game.mateWhite' : 'game.mateBlack',
+        {'n': mate.abs()},
+      );
+    } else {
+      // Mat yoksa santipiyon skoru. Bu hesap eskiden mat **olmadığında
+      // da** çalışıyordu ve `mateIn` null iken sıra beyazdayken null
+      // denetimi patlıyordu: analiz açılan her konumda ekran kırmızıya
+      // düşüyordu.
+      evaluation = _formatScoreCp(_evalScoreCp ?? analysis.scoreCp);
+    }
 
     // Ana varyantı SAN'a çevir.
     final position = _game.copy();

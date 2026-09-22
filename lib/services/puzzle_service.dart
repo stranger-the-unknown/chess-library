@@ -131,7 +131,11 @@ class PuzzleService {
     String? description,
   }) async {
     final all = await collections();
-    final collection = all.firstWhere((c) => c.id == id);
+    // Liste bu arada silinmiş olabilir; `firstWhere` yedeksizken hata
+    // fırlatıyordu.
+    final index = all.indexWhere((c) => c.id == id);
+    if (index == -1) return;
+    final collection = all[index];
     collection.name = name;
     if (description != null) collection.description = description;
     await _saveCollections();

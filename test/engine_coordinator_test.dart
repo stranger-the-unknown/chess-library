@@ -169,6 +169,20 @@ void main() {
         reason: 'motorun hamlesi iptalden etkilenmemeli');
   });
 
+  test('ekrandan çıkarken motorun hamlesi de iptal ediliyor', () async {
+    // `stopAnalysis` bilerek oyun hamlesine dokunmuyor; ekran kapanırken
+    // ise kimse o aramayı beklemiyordu ve motor saniyelerce çalışıyordu.
+    final play = _Job();
+    final playFuture = coordinator.submit(EngineJobKind.play, play.run);
+    await _settle();
+
+    await coordinator.cancel(EngineJobKind.play);
+    expect(stops, 1);
+
+    play.gate.complete(_result('e2e4'));
+    expect((await playFuture).cancelled, isTrue);
+  });
+
   test('süren analiz iptal edilince durduruluyor', () async {
     final analysis = _Job();
     final analysisFuture =

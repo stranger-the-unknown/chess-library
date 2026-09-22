@@ -105,21 +105,21 @@ void main() {
     expect(missing, isEmpty, reason: 'tabloda karşılığı olmayan anahtarlar');
   });
 
-  test('sürüm numarası tutarlı (teknik 10.0.0, About gösterimi 10)', () {
-    // Teknik sürüm: pubspec + Windows installer AppVersion = 10.0.0(+N)
+  test('sürüm numarası tutarlı (teknik 10.0.1, About gösterimi 10)', () {
+    // Teknik sürüm: pubspec + Windows installer AppVersion = 10.0.1(+N)
     // Kullanıcıya görünen About/Ayarlar metni: appVersionName = '10'
     final pubspec = File('pubspec.yaml').readAsStringSync();
     final match = RegExp(r'^version:\s*([0-9.]+)\+', multiLine: true)
         .firstMatch(pubspec);
     expect(match, isNotNull, reason: 'pubspec sürümü okunamadı');
-    expect(match!.group(1), '10.0.0');
+    expect(match!.group(1), '10.0.1');
     expect(appVersionName, '10');
 
     final installer =
         File('windows/installer/chess_library.iss').readAsStringSync();
     expect(
       installer,
-      contains('#define AppVersion "10.0.0"'),
+      contains('#define AppVersion "10.0.1"'),
       reason: 'kurulum betiği eski sürümde kalmış',
     );
 

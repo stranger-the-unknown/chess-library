@@ -35,7 +35,17 @@ class MoveScroller {
   /// Hamlenin çizildiği kutuya verilecek anahtar.
   GlobalKey keyFor(int index) => _keys.putIfAbsent(index, GlobalKey.new);
 
-  void dispose() => controller.dispose();
+  /// Şerit ekrandan kalktı mı?
+  ///
+  /// Kare sonu işleri bir kare sonra çalışıyor; o arada şerit
+  /// atılabiliyor (pencere dar↔geniş yerleşim arasında geçince olur).
+  /// Atılmış bir denetleyiciye dokunmak hata veriyordu.
+  bool _disposed = false;
+
+  void dispose() {
+    _disposed = true;
+    controller.dispose();
+  }
 
   /// [index] numaralı hamleyi görünür kılar.
   ///
@@ -61,7 +71,7 @@ class MoveScroller {
   /// kurulana kadar tekrarlanıyor.
   void _step(int index, int rowCount, int Function(int index) rowOf, int tries) {
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (!controller.hasClients) return;
+      if (_disposed || !controller.hasClients) return;
       // Bu arada başka bir hamle istendiyse eski hedefin peşine düşme.
       if (_followed != index) return;
       final position = controller.position;

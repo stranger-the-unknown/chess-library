@@ -175,6 +175,9 @@ class _OpeningStudyScreenState extends State<OpeningStudyScreen> {
   /// tempoda ve aynı jetona bağlı.
   Future<void> _showNextMove() async {
     final token = _token;
+    // Hamleyi tahta oynuyor: bu hat "hatasız bitirildi" sayılmamalı,
+    // yoksa "Göster" ile geçilen varyant öğrenilmiş gibi kaydediliyordu.
+    _mistakeMade = true;
     _goTo(_cursor + 1);
     if (_mode != StudyMode.practice) return;
     if (_cursor >= widget.opening.uciMoves.length - 1) return;

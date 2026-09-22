@@ -125,7 +125,7 @@ class _PuzzleSolveScreenState extends State<PuzzleSolveScreen> {
     _awake.release();
     // Ekrandan çıkarken süren aramayı bırak: sonucunu kimse beklemiyor,
     // boşuna işlemci ve pil harcıyordu. Tahta ekranında bu zaten yapılıyor.
-    EngineService.instance.stopAnalysis();
+    EngineService.instance.stopAll();
     super.dispose();
   }
 
@@ -331,6 +331,9 @@ class _PuzzleSolveScreenState extends State<PuzzleSolveScreen> {
       depth: 13,
       movetimeMs: 1400,
     );
+    // İptal edilen aramanın skoru sıfırdır; tolerans yüzünden zayıf bir
+    // hamle "doğru" sayılabilirdi.
+    if (reply.cancelled) return false;
 
     // Sonuç rakibin bakış açısındandır; kullanıcıya çevir.
     final userScore = -reply.scoreCp;

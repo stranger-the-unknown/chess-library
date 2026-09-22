@@ -286,6 +286,18 @@ class EngineService {
     await _coordinator.cancel(EngineJobKind.hint);
   }
 
+  /// Ekrandan çıkarken: motorun hamlesi dahil her şey iptal edilir.
+  ///
+  /// `stopAnalysis` bilerek oyun hamlesine dokunmuyor (analizi kapatmak
+  /// motoru kesmesin diye). Ama ekran kapanırken kimse o hamleyi
+  /// beklemiyor: usta kademesinde beş saniyeye kadar boşuna işlemci ve
+  /// pil harcanıyordu.
+  Future<void> stopAll() async {
+    for (final kind in EngineJobKind.values) {
+      await _coordinator.cancel(kind);
+    }
+  }
+
   /// Süren aramayı iptal eder.
   Future<void> cancel() async {
     await stopAnalysis();
