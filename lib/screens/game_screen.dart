@@ -994,7 +994,10 @@ class _GameScreenState extends State<GameScreen> {
         title: Text(
           widget.title ??
               (widget.mode == GameMode.versusEngine
-                  ? t('game.vsEngine', {'level': _level.name})
+                  // Düzey burada yazmıyor: dar ekranda başlığa sığmayıp
+                  // üç noktaya iniyordu ve zaten tahtanın yanındaki
+                  // oyuncu satırında yazıyor.
+                  ? t('game.vsEngine')
                   : t('game.board')),
         ),
         actions: [
@@ -1221,16 +1224,27 @@ class _GameScreenState extends State<GameScreen> {
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
       child: Row(
+        // Açıkça ortalı: yuvarlak, ad ve alınan taşlar aynı eksende.
+        crossAxisAlignment: CrossAxisAlignment.center,
         children: [
+          // Sıranın kimde olduğunu **bu yuvarlak** söylüyor: sırası gelen
+          // tarafınki vurgu rengiyle halkalanıyor.
+          //
+          // Eskiden sırayı adın rengi söylüyordu (koyu/soluk) ve bu,
+          // adlardan biri kalınmış gibi okunuyordu. Adlar artık birbirinin
+          // tıpatıp aynısı.
           Container(
-            width: 10,
-            height: 10,
+            width: 12,
+            height: 12,
             decoration: BoxDecoration(
               shape: BoxShape.circle,
               color: side == engine.Color.white
                   ? const Color(0xFFF2EEE7)
                   : const Color(0xFF3B3630),
-              border: Border.all(color: scheme.outlineVariant),
+              border: Border.all(
+                color: toMove ? scheme.primary : scheme.outlineVariant,
+                width: toMove ? 2.5 : 1,
+              ),
             ),
           ),
           const SizedBox(width: 8),
@@ -1240,11 +1254,17 @@ class _GameScreenState extends State<GameScreen> {
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
               style: TextStyle(
-                // Her iki ad da kalın: sıranın kimde olduğunu yazı
-                // kalınlığının değişmesi değil, rengi söylüyor.
+                // İki ad da aynı: ne kalınlık ne renk değişiyor. Sırayı
+                // soldaki yuvarlağın halkası söylüyor.
                 fontWeight: FontWeight.w700,
-                color: toMove ? scheme.onSurface : scheme.onSurfaceVariant,
-                fontSize: 13,
+                color: scheme.onSurface,
+                // 13 punto telefona göre seçilmişti; masaüstünde 600+
+                // piksellik tahtanın yanında ufak kalıyordu.
+                fontSize: 15,
+                // Satır kutusu harflere otursun: yanındaki yuvarlak,
+                // inişli harflerin bıraktığı boşluk yüzünden yazıya göre
+                // aşağıda duruyor gibi görünüyordu.
+                height: 1.1,
               ),
             ),
           ),

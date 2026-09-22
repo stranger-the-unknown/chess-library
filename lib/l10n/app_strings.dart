@@ -251,7 +251,7 @@ class Strings {
 
     // Tahta ekranı
     'game.board': 'Tahta',
-    'game.vsEngine': 'Motora karşı · {level}',
+    'game.vsEngine': 'Motora karşı',
     'game.engine': 'Motor · {level}',
     'game.you': 'Sen',
     'game.analysisOn': 'Motor analizi',
@@ -775,7 +775,7 @@ class Strings {
     'pgn.importIntoList': 'Import a PGN file',
     'pgn.reading': 'Reading games…',
     'game.board': 'Board',
-    'game.vsEngine': 'vs engine · {level}',
+    'game.vsEngine': 'vs engine',
     'game.engine': 'Engine · {level}',
     'game.you': 'You',
     'game.analysisOn': 'Engine analysis',
