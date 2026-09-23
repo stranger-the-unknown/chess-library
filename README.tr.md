@@ -154,6 +154,15 @@ Doğru hamleden sonra rakibin cevabını motor oynar.
 İpucu alabilir, çözümü izleyebilir, baştan başlayabilir, favorilere
 ekleyebilir, çözüldü olarak işaretleyebilir ve not düşebilirsin.
 
+- **İpucu**, tahtadaki konumda oynanması gereken hamleyi okla gösterir;
+  bulmacanın her hamlesinde ve ayarlardaki motor okları kapalı olsa da.
+- **Çözüm**, bulmaca sürüyorsa kaldığın yerden sonrasını oynar; bittiyse
+  (çözüldü ya da gösterildi) çözümün tamamını baştan oynar.
+- Hamle listesinde bir hamleye dokununca o konuma bakarsın; son hamleye
+  dokununca kaldığın yere dönersin.
+- Motor bir hamleyi yargılayamazsa (cevap vermediyse) hamle oynanmaz ve
+  bu söylenir; doğru ya da yanlış sayılmaz.
+
 **Numaralar** — Her bulmacanın numarası **listedeki asıl sırasıdır**
 (kaynak dosyada numara verilmişse o kullanılır). Süzgeç açıkken de,
 sıralama ters çevrilmişken de aynı numara görünür; satırda, bulmaca
@@ -350,6 +359,10 @@ silmeden önce yedek al.
   motor okları.
 - **Bugün çözülen sayısı** — bulmaca listesi kartlarında günlük sayacı
   gösterir.
+- **Onay pencereleri** — kapatılınca kaydedilmemiş hamlelerle oyundan
+  çıkarken, pencereyi kapatırken, pes ederken ya da oyunu yeniden
+  başlatırken sorulmaz. Kayıtlı veriyi silen işlemler (liste, bulmaca
+  listesi, ilerleme, bütün veriler) her zaman sorar.
 - **Hamle sesleri** ve **titreşim** — titreşim yalnızca telefonda
   bulunur; sesler kapatılınca titreşim de kapanır ve ses yeniden
   açılana kadar açılamaz.
@@ -406,5 +419,5 @@ Taş takımları dışarıdan alınmıştır; çizenleri ve lisansları için
 Kaynaktan derlemek için [BUILD.md](BUILD.md), ses ve görsellerin nasıl
 üretildiği için [ASSETS.md](ASSETS.md) dosyalarına bakın.
 
-Her sürümle birlikte Türkçe ve İngilizce bir kullanım kılavuzu da PDF
-olarak yayımlanır.
+Son kullanım kılavuzu (PDF, Türkçe ve İngilizce) 10.2.0 sürümüyle
+yayımlandı; uygulama tamamlanınca yenilenecek.

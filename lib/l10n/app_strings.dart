@@ -96,6 +96,10 @@ class Strings {
     'settings.dailyCountSub':
         'Bulmaca listesi kartlarında gece yarısından beri çözdüklerin '
         'gösterilir.',
+    'settings.confirmations': 'Onay pencereleri',
+    'settings.confirmationsSub':
+        'Kaydedilmemiş hamlelerle çıkarken, pes ederken ya da oyunu yeniden '
+        'başlatırken sorar. Kayıtlı veriyi silen işlemler her zaman sorar.',
     'lists.markRange': 'Aralığı işaretle',
     'lists.rangeHint': 'Listedeki sıraya göre; {min} ile {max} arası.',
     'lists.rangeMarked': '{count} oyun işaretlendi.',
@@ -638,6 +642,10 @@ class Strings {
     'settings.dailyCountSub':
         'Shows how many you have solved since midnight on puzzle list '
         'cards.',
+    'settings.confirmations': 'Confirmation prompts',
+    'settings.confirmationsSub':
+        'Asks before leaving with unsaved moves, resigning or restarting a '
+        'game. Anything that deletes saved data always asks.',
     'lists.markRange': 'Mark a range',
     'lists.rangeHint': 'By position in the list; between {min} and {max}.',
     'lists.rangeMarked': '{count} games marked.',

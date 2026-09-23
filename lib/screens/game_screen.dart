@@ -150,6 +150,7 @@ class _GameScreenState extends State<GameScreen> {
       message: t('game.exitMessage'),
       confirmLabel: t('game.exitConfirm'),
       destructive: true,
+      optional: true,
     );
     if (leave && mounted) Navigator.of(context).pop();
   }
@@ -731,6 +732,7 @@ class _GameScreenState extends State<GameScreen> {
       message: t('game.resignMessage'),
       confirmLabel: t('game.resign'),
       destructive: true,
+      optional: true,
     );
     if (!confirmed || !mounted) return;
 
@@ -760,6 +762,7 @@ class _GameScreenState extends State<GameScreen> {
       // Düğme "Sil" yazıyordu; yaptığı iş bu değil.
       confirmLabel: t('game.restart'),
       destructive: !replay,
+      optional: true,
     );
     if (!confirmed || !mounted) return;
 
@@ -1179,8 +1182,9 @@ class _GameScreenState extends State<GameScreen> {
 
     // Kaydedilmemiş oyunda geri tuşu hamleleri sessizce siliyordu:
     // yirmi hamlelik bir oyun sistem geri jestiyle yok oluyordu.
+    // "Onay pencereleri" ayarı kapalıysa sorulmadan çıkılıyor.
     return PopScope(
-      canPop: !_unsaved,
+      canPop: !_unsaved || !SettingsService.instance.askConfirmations,
       onPopInvokedWithResult: _onPopInvoked,
       child: screen,
     );

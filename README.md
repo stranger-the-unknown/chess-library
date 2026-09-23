@@ -165,6 +165,17 @@ accepted. After a correct move the engine plays the reply.
 You can ask for a hint, watch the solution, start over, add the puzzle to
 favorites, mark it solved and write a note.
 
+- **Hint** draws an arrow for the move to play in the position on the
+  board, on every move of the puzzle and whether or not engine arrows are
+  turned on in the settings.
+- **Solution** continues from where you are while the puzzle is still
+  going; once it is over (solved or shown) it plays the whole solution
+  from the start.
+- Tap a move in the move list to look at that position; tap the last move
+  to come back.
+- If the engine cannot judge a move (it gave no answer), the move is not
+  played and the app says so, rather than counting it as right or wrong.
+
 **Numbers** — A puzzle's number is its **real place in the list** (or the
 number given in the source file). The same number is shown whatever
 filter is active and whichever way the list is sorted; in the row, in the
@@ -362,6 +373,10 @@ to keep them: take a backup before you uninstall.
   or white so it does not disappear.
 - Legal move hints, last move highlight, move animation, engine arrows.
 - **Daily solved count** — shows the daily counter on puzzle list cards.
+- **Confirmation prompts** — when turned off, the app no longer asks
+  before leaving a game with unsaved moves, closing the window, resigning
+  or restarting a game. Anything that deletes saved data (a list, a
+  puzzle collection, progress, all data) always asks.
 - **Move sounds** and **vibration** — vibration exists only on the phone;
   turning sounds off turns vibration off too, and it cannot be turned on
   again until sounds are back on.
@@ -420,5 +435,5 @@ To build from source see [BUILD.md](BUILD.md); for how the sounds and
 images were produced see [ASSETS.md](ASSETS.md). Those two documents, and
 `COPYRIGHT.md`, are written in Turkish.
 
-A user manual is published with each release as a PDF, in English and in
-Turkish.
+The latest user manual (PDF, English and Turkish) was published with
+version 10.2.0; it will be brought up to date once the app is finished.

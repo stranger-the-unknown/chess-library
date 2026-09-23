@@ -3,6 +3,7 @@ import 'dart:math' as math;
 import 'package:flutter/material.dart';
 
 import '../l10n/app_strings.dart';
+import '../services/settings_service.dart';
 
 /// Uygulama genelinde tekrar eden küçük diyaloglar.
 class AppDialogs {
@@ -81,6 +82,11 @@ class AppDialogs {
   }
 
   /// Evet / hayır sorusu.
+  ///
+  /// [optional]: kaydedilmiş veriyi silmeyen bir onay (kaydedilmemiş
+  /// hamlelerle çıkmak, pes etmek...). Kullanıcı "Onay pencereleri"
+  /// ayarını kapattıysa sorulmadan `true` döner. Kayıtlı veriyi geri
+  /// dönüşsüz silen onaylar bu seçeneği kullanmıyor; her zaman soruluyor.
   static Future<bool> confirm(
     BuildContext context, {
     required String title,
@@ -88,7 +94,9 @@ class AppDialogs {
     String? confirmLabel,
     String? cancelLabel,
     bool destructive = false,
+    bool optional = false,
   }) async {
+    if (optional && !SettingsService.instance.askConfirmations) return true;
     final scheme = Theme.of(context).colorScheme;
     final result = await showDialog<bool>(
       context: context,

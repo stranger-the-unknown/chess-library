@@ -21,7 +21,11 @@ import '../../widgets/move_list.dart';
 import '../board_editor_screen.dart';
 import '../game_screen.dart';
 
-enum _Feedback { none, thinking, correct, wrong, finished }
+/// Geri bildirim kartının durumu.
+///
+/// [info]: yalnızca bilgi (ör. motor bu hamleyi yargılayamadı); tahta
+/// açık kalır, kullanıcı yeniden deneyebilir.
+enum _Feedback { none, thinking, correct, wrong, finished, info }
 
 /// Bulmaca çözme ekranı.
 ///
@@ -53,6 +57,14 @@ class PuzzleSolveScreen extends StatefulWidget {
     this.numbers = const {},
     this.totalInCollection = 0,
   });
+
+  /// Testlerde motorun yerine geçer.
+  @visibleForTesting
+  static Future<SearchResult> Function(
+    String fen, {
+    required int depth,
+    required int movetimeMs,
+  })? debugAnalyze;
 
   @override
   State<PuzzleSolveScreen> createState() => _PuzzleSolveScreenState();
@@ -97,7 +109,30 @@ class _PuzzleSolveScreenState extends State<PuzzleSolveScreen> {
   late engine.Color _solverColor;
 
   final List<MoveEntry> _moves = [];
+
+  /// Motorla yargılanan bulmacada **başlangıç konumunun** analizi.
+  ///
+  /// "Baştan" tahtayı sıfırlarken ölçütü de buna döndürüyor. Eskiden
+  /// döndürmüyordu: ölçüt sonraki bir konumda kalıyor, ipucu ve çözüm
+  /// başlangıç konumunda o konumun hamlesini oynamaya çalışıp hiçbir şey
+  /// göstermiyor, hamleler de yanlış ölçüte göre yargılanıyordu.
+  SearchResult? _startBaseline;
+
+  /// O anki ölçüt ve **ait olduğu konum**.
+  ///
+  /// Ölçüt her rakip cevabından sonra yeni konum için yeniden
+  /// hesaplanıyor; iptal olursa eskisi duruyordu. Konumu yanında tutmak,
+  /// başka bir konumun ölçütünün yanlışlıkla kullanılmasını engelliyor
+  /// (bkz. [_currentBaseline]).
   SearchResult? _baseline;
+  String? _baselineFen;
+
+  /// Hamle listesinde dokunulan geçmiş konum; `null` ise canlı konum.
+  int? _viewIndex;
+
+  /// Son gösterilen çözümün başlangıçtan itibaren tamamı; çözüm düğmesine
+  /// yeniden basılınca baştan bu oynanır.
+  List<String>? _shownLine;
 
   /// Kullanıcı kayıtlı çözüm dizisini takip ediyor mu?
   bool _onSolutionLine = false;
@@ -176,7 +211,11 @@ class _PuzzleSolveScreenState extends State<PuzzleSolveScreen> {
       if (!_manualFlip) _flipped = _solverColor == engine.Color.black;
       _moves.clear();
       _onSolutionLine = _puzzle.hasSolution;
+      _startBaseline = null;
       _baseline = null;
+      _baselineFen = null;
+      _viewIndex = null;
+      _shownLine = null;
       _showHint = false;
       // Çözümü bilinen bulmacalarda motoru beklemeye gerek yok.
       _busy = _fenError == null && !_puzzle.hasSolution;
@@ -209,7 +248,9 @@ class _PuzzleSolveScreenState extends State<PuzzleSolveScreen> {
     // doğru sayılması** demekti. Yargılayamıyorsak yargılamıyoruz.
     final unavailable = baseline.bestMoveUci.isEmpty;
     setState(() {
-      _baseline = unavailable ? null : baseline;
+      _startBaseline = unavailable ? null : baseline;
+      _baseline = _startBaseline;
+      _baselineFen = unavailable ? null : _game.fen;
       _busy = false;
       _feedback = unavailable ? _Feedback.finished : _Feedback.none;
       _feedbackText = unavailable ? t('puzzles.engineUnavailable') : '';
@@ -233,17 +274,13 @@ class _PuzzleSolveScreenState extends State<PuzzleSolveScreen> {
     required int depth,
     required int movetimeMs,
   }) async {
-    final first = await EngineService.instance.analyze(
-      fen,
-      depth: depth,
-      movetimeMs: movetimeMs,
-    );
+    final analyze = PuzzleSolveScreen.debugAnalyze ??
+        (String fen, {required int depth, required int movetimeMs}) =>
+            EngineService.instance
+                .analyze(fen, depth: depth, movetimeMs: movetimeMs);
+    final first = await analyze(fen, depth: depth, movetimeMs: movetimeMs);
     if (!first.cancelled) return first;
-    return EngineService.instance.analyze(
-      fen,
-      depth: depth,
-      movetimeMs: movetimeMs,
-    );
+    return analyze(fen, depth: depth, movetimeMs: movetimeMs);
   }
 
   /// Çözüm dizisinde sırada beklenen hamle (UCI); yoksa `null`.
@@ -253,8 +290,26 @@ class _PuzzleSolveScreenState extends State<PuzzleSolveScreen> {
     return _puzzle.solution[_moves.length];
   }
 
-  /// İpucu ya da çözüm gösterilebilir mi?
-  bool get _hasAnswer => _puzzle.hasSolution || _baseline != null;
+  /// Ölçüt **tahtadaki konuma** aitse o; değilse `null`.
+  SearchResult? get _currentBaseline {
+    final baseline = _baseline;
+    if (baseline == null || _baselineFen != _game.fen) return null;
+    return baseline.bestMoveUci.length >= 4 ? baseline : null;
+  }
+
+  /// Tahtadaki konumda oynanması gereken hamle (ipucu); bilinmiyorsa
+  /// `null`.
+  ///
+  /// Eskiden motorla yargılanan bulmacalarda yalnızca ilk hamlede
+  /// vardı: ikinci hamlede ipucu düğmesi hiçbir şey göstermiyordu.
+  String? get _hintUci => _expectedMove ?? _currentBaseline?.bestMoveUci;
+
+  /// Çözüm gösterilebilir mi?
+  bool get _canReveal =>
+      _fenError == null &&
+      (_puzzle.hasSolution ||
+          _startBaseline != null ||
+          _currentBaseline != null);
 
 
   // -------------------------------------------------------------------------
@@ -287,6 +342,18 @@ class _PuzzleSolveScreenState extends State<PuzzleSolveScreen> {
     final correct = await _isCorrect(move, probe);
     if (!mounted || token != _loadToken) return;
 
+    if (correct == null) {
+      // Motor bu hamleyi yargılayamadı. Eskiden skor 0 sayılıyordu: ölçüt
+      // sıfıra yakın bulmacalarda (savunma) zayıf bir hamle "doğru"
+      // kabul ediliyordu. Hamle oynanmıyor, deneme sayılmıyor.
+      setState(() {
+        _busy = false;
+        _feedback = _Feedback.info;
+        _feedbackText = t('puzzles.engineUnavailable');
+      });
+      return;
+    }
+
     await _service.registerAttempt(_puzzle.id);
     // Disk yazımı sürerken kullanıcı ekrandan çıkmış ya da bulmaca
     // değiştirmiş olabilir; silinmiş ekranda setState çağırmak hata
@@ -307,6 +374,7 @@ class _PuzzleSolveScreenState extends State<PuzzleSolveScreen> {
     final entry = MoveEntry.play(_game, move);
     setState(() {
       _moves.add(entry);
+      _viewIndex = null;
       _feedback = _Feedback.correct;
       _feedbackText = t('puzzles.correct', {'move': san});
     });
@@ -345,7 +413,9 @@ class _PuzzleSolveScreenState extends State<PuzzleSolveScreen> {
   ///
   /// Çözümü kayıtlı bulmacalarda önce kayıtlı hamleye bakılır; farklı ama
   /// yine aynı sürede mat eden hamleler de motora danışılarak kabul edilir.
-  Future<bool> _isCorrect(engine.ChessMove move, engine.ChessGame after) async {
+  ///
+  /// Motor yargılayamadıysa (sonuç boş ya da iptal) `null` döner.
+  Future<bool?> _isCorrect(engine.ChessMove move, engine.ChessGame after) async {
     if (after.isCheckmate) return true;
 
     final expected = _expectedMove;
@@ -364,18 +434,36 @@ class _PuzzleSolveScreenState extends State<PuzzleSolveScreen> {
       return false;
     }
 
-    final baseline = _baseline;
-    if (baseline == null) return false;
+    // Ölçüt tahtadaki konuma ait olmalı. Rakip cevabından sonraki analiz
+    // iptal olduysa eskiden önceki konumun ölçütü kullanılıyordu: hamle
+    // başka bir konumun skoruyla karşılaştırılıyor, kazancı kaçıran bir
+    // hamle bile kabul edilebiliyordu. Şimdi bu konum için soruluyor.
+    var baseline = _currentBaseline;
+    if (baseline == null) {
+      final fen = _game.fen;
+      final fresh = await _ask(fen, depth: 13, movetimeMs: 1200);
+      if (fresh.cancelled || fresh.bestMoveUci.isEmpty) return null;
+      _baseline = fresh;
+      _baselineFen = fen;
+      baseline = fresh;
+    }
     if (move.uci == baseline.bestMoveUci) return true;
 
-    final reply = await _ask(after.fen, depth: 13, movetimeMs: 1400);
-    // İptal edilen aramanın skoru sıfırdır; tolerans yüzünden zayıf bir
-    // hamle "doğru" sayılabilirdi.
-    if (reply.cancelled) return false;
-
-    // Sonuç rakibin bakış açısındandır; kullanıcıya çevir.
-    final userScore = -reply.scoreCp;
-    final userMate = reply.mateIn == null ? null : -reply.mateIn!;
+    final int userScore;
+    final int? userMate;
+    if (after.isStalemate) {
+      // Pat: beraberlik. Motora sorulacak bir şey yok.
+      userScore = 0;
+      userMate = null;
+    } else {
+      final reply = await _ask(after.fen, depth: 13, movetimeMs: 1400);
+      // İptal edilen ya da boş dönen aramanın skoru sıfırdır; tolerans
+      // yüzünden zayıf bir hamle "doğru" sayılabilirdi.
+      if (reply.cancelled || reply.bestMoveUci.isEmpty) return null;
+      // Sonuç rakibin bakış açısındandır; kullanıcıya çevir.
+      userScore = -reply.scoreCp;
+      userMate = reply.mateIn == null ? null : -reply.mateIn!;
+    }
 
     if (baseline.mateIn != null && baseline.mateIn! > 0) {
       return userMate != null &&
@@ -421,6 +509,7 @@ class _PuzzleSolveScreenState extends State<PuzzleSolveScreen> {
     final entry = MoveEntry.play(_game, move);
     setState(() {
       _moves.add(entry);
+      _viewIndex = null;
       if (_game.isCheckmate) {
         _feedback = _Feedback.finished;
         _feedbackText = t('puzzles.opponentMated');
@@ -449,9 +538,14 @@ class _PuzzleSolveScreenState extends State<PuzzleSolveScreen> {
     final fen = _game.fen;
     final result = await _ask(fen, depth: 13, movetimeMs: 1200);
     if (!mounted || token != _loadToken || _game.fen != fen) return;
-    // İptal edilen arama eldeki ölçütü silmemeli.
+    // İptal edilen arama eldeki ölçütü silmemeli. Eldeki ölçüt artık bu
+    // konuma ait değil; [_currentBaseline] onu kullanmıyor, sıradaki
+    // hamlede bu konum yeniden soruluyor.
     if (result.cancelled) return;
-    setState(() => _baseline = result.bestMoveUci.isEmpty ? null : result);
+    setState(() {
+      _baseline = result.bestMoveUci.isEmpty ? null : result;
+      _baselineFen = fen;
+    });
   }
 
   /// Bulmacayı başa sarar ve **bekleyen işleri iptal eder**.
@@ -465,7 +559,7 @@ class _PuzzleSolveScreenState extends State<PuzzleSolveScreen> {
     // yargılanamadığı için `_onMove` onları sessizce yok sayar, yani
     // tahta yine ölü görünür. Böyle bir durumda bulmacayı baştan
     // yüklüyoruz; `_loadPuzzle` jetonu kendi ilerletiyor.
-    if (!_puzzle.hasSolution && _baseline == null) {
+    if (!_puzzle.hasSolution && _startBaseline == null) {
       _loadPuzzle();
       return;
     }
@@ -475,33 +569,80 @@ class _PuzzleSolveScreenState extends State<PuzzleSolveScreen> {
       _game = _freshGame();
       _onSolutionLine = _puzzle.hasSolution;
       _moves.clear();
+      _viewIndex = null;
+      // Ölçüt de başlangıç konumuna dönüyor (bkz. [_startBaseline]).
+      _baseline = _startBaseline;
+      _baselineFen = _startBaseline == null ? null : _game.fen;
       _feedback = _Feedback.none;
       _feedbackText = '';
       _showHint = false;
     });
   }
 
+  /// Çözümü gösterir.
+  ///
+  /// Bulmaca sürüyorsa **kaldığı yerden** devam eder: kayıtlı çözümde
+  /// sıradaki hamlelerden, motorla yargılanan bulmacada tahtadaki konumun
+  /// en iyi hattından. Eskiden her zaman başa dönüp başlangıç ölçütünün
+  /// hattını oynuyordu; bir hamleden sonra ölçüt yeni konuma ait olduğu
+  /// için hiçbir hamle oynanmıyor, ekran "çözüm gösterildi" deyip
+  /// kilitleniyordu.
+  ///
+  /// Bulmaca bittiyse (çözüm gösterildi ya da mat edildi) çözümü baştan
+  /// oynar; düğme böylece her zaman bir şey yapar.
   Future<void> _revealSolution() async {
-    final line = _puzzle.hasSolution
-        ? _puzzle.solution
-        : (_baseline?.pvUci ?? const <String>[]);
+    if (!_canReveal) return;
+    final finished = _feedback == _Feedback.finished;
+    final current = _currentBaseline;
+
+    List<String> line;
+    var fromStart = false;
+    if (!finished && _onSolutionLine && _puzzle.hasSolution &&
+        _moves.length < _puzzle.solution.length) {
+      line = _puzzle.solution.sublist(_moves.length);
+    } else if (!finished && current != null && current.pvUci.isNotEmpty) {
+      line = current.pvUci;
+    } else {
+      fromStart = true;
+      line = _shownLine ??
+          (_puzzle.hasSolution
+              ? _puzzle.solution
+              : (_startBaseline?.pvUci ?? const <String>[]));
+    }
     if (line.isEmpty) return;
-    _retry();
+
+    if (fromStart) {
+      _retry();
+    } else {
+      // Bekleyen bir iş kalmışsa (olmamalı: düğme meşgulken kapalı)
+      // gösterimle çakışmasın.
+      _loadToken++;
+    }
     // Jeton `_retry`'den sonra alınıyor: o çağrı bekleyen işleri iptal
     // etmek için jetonu ilerletiyor.
     final token = _loadToken;
+    final prefix = [for (final m in _moves) m.move.uci];
     // Çözüm oynanırken tahta kapalı. Eskiden açık kalıyordu: 700 ms'lik
     // adımlar arasında kullanıcı hamle yapabiliyor ve tahta karışıyordu.
-    setState(() => _busy = true);
+    setState(() {
+      _busy = true;
+      _showHint = false;
+      _viewIndex = null;
+    });
 
     // Çözümü adım adım oyna.
+    final played = <String>[];
     for (final uci in line) {
       if (!mounted) return;
       final move = _game.moveFromUci(uci);
       if (move == null) break;
       final solverMove = _game.sideToMove == _solverColor;
       final entry = MoveEntry.play(_game, move);
-      setState(() => _moves.add(entry));
+      played.add(uci);
+      setState(() {
+        _moves.add(entry);
+        _viewIndex = null;
+      });
       // Gösterim sessizdi: hamleler akıyor ama hiçbir ses çıkmıyordu.
       // Çözen tarafın hamlesi kendi sesiyle, rakibinki rakip sesiyle.
       SoundService.instance.playForSan(entry.san, opponent: !solverMove);
@@ -512,11 +653,35 @@ class _PuzzleSolveScreenState extends State<PuzzleSolveScreen> {
     }
     if (!mounted) return;
     setState(() {
+      _shownLine = [...prefix, ...played];
       _busy = false;
       _feedback = _Feedback.finished;
       _feedbackText = t('puzzles.solutionShown');
     });
   }
+
+  /// Hamle listesinde dokunulan hamleden sonraki konumu gösterir.
+  ///
+  /// Eskiden listedeki hamlelere dokunmak hiçbir şey yapmıyordu. Son
+  /// hamleye dokunmak canlı konuma döndürüyor; yeni bir hamle geldiğinde
+  /// de canlı konuma dönülüyor.
+  void _viewMove(int index) {
+    if (index < 0 || index >= _moves.length) return;
+    setState(() => _viewIndex = index == _moves.length - 1 ? null : index);
+  }
+
+  /// Geçmiş konuma bakılıyorsa o konumun tahtası; değilse `null`.
+  engine.ChessGame? get _viewGame {
+    final index = _viewIndex;
+    if (index == null || index >= _moves.length) return null;
+    final fen = _moves[index].fenAfter;
+    final cached = _viewCache;
+    if (cached != null && cached.fen == fen) return cached;
+    return _viewCache = engine.ChessGame.fromFen(fen);
+  }
+
+  /// Aynı konum için her çizimde yeni bir tahta kurulmasın.
+  engine.ChessGame? _viewCache;
 
   void _goToPuzzle(int index) {
     if (index < 0 || index >= widget.puzzles.length) return;
@@ -623,12 +788,12 @@ class _PuzzleSolveScreenState extends State<PuzzleSolveScreen> {
     final scheme = Theme.of(context).colorScheme;
 
     final arrows = <BoardArrow>[];
-    if (_showHint) {
-      final best =
-          _expectedMove ?? (_moves.isEmpty ? _baseline?.bestMoveUci : null);
-      if (SettingsService.instance.showEngineArrows &&
-          best != null &&
-          best.length >= 4) {
+    // İpucu bizzat istenen bir şey: "motor okları" ayarına bağlı değil.
+    // Eskiden bağlıydı ve ayar kapalıyken düğme hiçbir şey yapmıyordu.
+    // Geçmiş bir konuma bakılırken gösterilmiyor (başka bir tahtaya ait).
+    if (_showHint && _viewIndex == null) {
+      final best = _hintUci;
+      if (best != null && best.length >= 4) {
         final move = _game.moveFromUci(best);
         if (move != null) {
           arrows.add(
@@ -776,11 +941,16 @@ class _PuzzleSolveScreenState extends State<PuzzleSolveScreen> {
                   width: side,
                   height: side,
                   child: ChessBoardWidget(
-                    game: _game,
+                    game: _viewGame ?? _game,
                     flipped: _flipped,
-                    interactive: !_busy && _feedback != _Feedback.finished,
+                    // Geçmiş bir konuma bakılırken hamle yapılamaz.
+                    interactive: !_busy &&
+                        _feedback != _Feedback.finished &&
+                        _viewIndex == null,
                     movableSide: _solverColor,
-                    lastMove: _moves.isEmpty ? null : _moves.last.move,
+                    lastMove: _moves.isEmpty
+                        ? null
+                        : _moves[_viewIndex ?? _moves.length - 1].move,
                     onMove: _onMove,
                     arrows: arrows,
                   ),
@@ -799,8 +969,8 @@ class _PuzzleSolveScreenState extends State<PuzzleSolveScreen> {
     if (_moves.isEmpty) return const SizedBox();
     return MoveList(
       moves: _moves,
-      currentIndex: _moves.length - 1,
-      onMoveTap: (_) {},
+      currentIndex: _viewIndex ?? _moves.length - 1,
+      onMoveTap: _viewMove,
       vertical: vertical,
       // Bulmacanın ilk hamlesi çözen tarafındır.
       blackFirst: _solverColor == engine.Color.black,
@@ -996,6 +1166,11 @@ class _PuzzleSolveScreenState extends State<PuzzleSolveScreen> {
           Icons.hourglass_top_rounded,
           _feedbackText,
         ),
+      _Feedback.info => (
+          scheme.onSurfaceVariant,
+          Icons.info_outline_rounded,
+          _feedbackText,
+        ),
       // Ulaşılmaz: none durumunda kart yukarıda çizilmeden dönüyor.
       _Feedback.none => (scheme.onSurfaceVariant, Icons.info_outline, ''),
     };
@@ -1051,14 +1226,20 @@ class _PuzzleSolveScreenState extends State<PuzzleSolveScreen> {
                 Icons.lightbulb_outline_rounded,
                 t('common.hint'),
                 // Yanlışlıkla basıldıysa aynı tuş ipucunu kapatıyor.
-                _hasAnswer
-                    ? () => setState(() => _showHint = !_showHint)
+                // Geçmiş bir konuma bakılıyorsa canlı konuma dönüyor.
+                _hintUci != null &&
+                        !_busy &&
+                        _feedback != _Feedback.finished
+                    ? () => setState(() {
+                          _viewIndex = null;
+                          _showHint = !_showHint;
+                        })
                     : null,
               ),
               _action(
                 Icons.visibility_outlined,
                 t('puzzles.solution'),
-                _hasAnswer && !_busy ? _revealSolution : null,
+                _canReveal && !_busy ? _revealSolution : null,
               ),
               _action(
                 Icons.refresh_rounded,

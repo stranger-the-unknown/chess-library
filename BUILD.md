@@ -4,7 +4,7 @@ Flutter 3.47 veya üzeri gerekir.
 
 ```bash
 flutter pub get
-flutter test          # 437 test (3'ü yalnızca POSIX'te koşar)
+flutter test          # 451 test (3'ü yalnızca POSIX'te koşar)
 ```
 
 Windows'ta oyun listeleri, bulmacalar ve açılışlar `SharedPreferences`
@@ -145,9 +145,8 @@ ilgili paket güncellenirse kaldırılabilirler.
 
 ## Sürüm notları
 
-Her sürümün notu `fastlane/metadata/android/<dil>/changelogs/<sürüm
-kodu>.txt` dosyasındadır (Türkçe ve İngilizce). GitHub'daki yayın
-açıklaması da buradan yazılır; tek yerde tutulur ki ikisi birbirinden
-ayrılmasın.
+Sürüm notları GitHub'daki yayın açıklamasındadır. `fastlane/metadata/
+android/<dil>/changelogs/<sürüm kodu>.txt` dosyaları 18. sürüm koduna
+kadar tutuldu; sonrasında yalnızca yayın açıklaması yazılıyor.
 
 Mağaza metinleri (başlık, kısa ve uzun açıklama) aynı klasördedir.

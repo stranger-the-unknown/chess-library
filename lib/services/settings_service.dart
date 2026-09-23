@@ -54,6 +54,14 @@ class SettingsService extends ChangeNotifier {
   /// Bulmaca listelerinde "bugün çözülen" sayısı gösterilsin mi?
   bool _showDailyCount = true;
 
+  /// Kaydedilmiş veriyi silmeyen onaylar sorulsun mu?
+  ///
+  /// Kapalıyken kaydedilmemiş hamlelerle oyundan çıkma, pencereyi kapatma,
+  /// pes etme ve oyunu yeniden başlatma sorulmuyor. Kayıtlı veriyi geri
+  /// dönüşsüz silen onaylar (liste silme, verileri sıfırlama...) bu ayardan
+  /// bağımsız, her zaman soruluyor.
+  bool _askConfirmations = true;
+
   /// Titreşim yalnızca telefonlarda var.
   ///
   /// Flutter'ın Windows gömülü katmanı dokunsal geri bildirimi
@@ -88,6 +96,7 @@ class SettingsService extends ChangeNotifier {
   bool get vibrationEnabled => _vibrationEnabled;
   int get engineLevel => _engineLevel;
   bool get showDailyCount => _showDailyCount;
+  bool get askConfirmations => _askConfirmations;
 
   /// Ses ve titreşim varsayılanlarını bir kez geri getirir.
   ///
@@ -162,6 +171,7 @@ class SettingsService extends ChangeNotifier {
     _vibrationEnabled = prefs.getBool('vibrationEnabled') ?? true;
     _engineLevel = prefs.getInt('engineLevel') ?? 2;
     _showDailyCount = prefs.getBool('showDailyCount') ?? true;
+    _askConfirmations = prefs.getBool('askConfirmations') ?? true;
     notifyListeners();
   }
 
@@ -317,6 +327,12 @@ class SettingsService extends ChangeNotifier {
   set showDailyCount(bool value) {
     _showDailyCount = value;
     _set('showDailyCount', value);
+    notifyListeners();
+  }
+
+  set askConfirmations(bool value) {
+    _askConfirmations = value;
+    _set('askConfirmations', value);
     notifyListeners();
   }
 }

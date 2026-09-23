@@ -50,6 +50,7 @@ class UnsavedWork {
         message: t('game.exitMessage'),
         confirmLabel: t('game.exitConfirm'),
         destructive: true,
+        optional: true,
       );
       return leave;
     } catch (_) {
