@@ -1,8 +1,7 @@
 import 'dart:convert';
 
 import 'package:flutter/services.dart' show rootBundle;
-import 'package:shared_preferences/shared_preferences.dart';
-
+import 'app_store.dart';
 import 'corrupt_data.dart';
 import 'prefs_write.dart';
 
@@ -53,14 +52,12 @@ class PuzzleService {
 
   Future<List<PuzzleCollection>> collections() async {
     if (_collections != null) return _collections!;
-    final prefs = await SharedPreferences.getInstance();
-    final raw = prefs.getString(_collectionsKey);
+    final raw = await AppStore.instance.getString(_collectionsKey);
     if (raw == null) {
       _collections = List<PuzzleCollection>.from(_defaults);
       await _saveCollections();
     } else {
       final list = await readOrQuarantine<List<PuzzleCollection>>(
-        prefs,
         _collectionsKey,
         raw,
         (decoded) => (decoded as List)
@@ -100,9 +97,7 @@ class PuzzleService {
 
   /// Listeleri yazar; başarısız olursa `false`.
   Future<bool> _saveCollections() async {
-    final prefs = await SharedPreferences.getInstance();
     return writeString(
-      prefs,
       _collectionsKey,
       jsonEncode(_collections!.map((c) => c.toJson()).toList()),
     );
@@ -443,12 +438,10 @@ class PuzzleService {
 
   Future<Map<String, Map<String, dynamic>>> _loadOverrides() async {
     if (_overrides != null) return _overrides!;
-    final prefs = await SharedPreferences.getInstance();
-    final raw = prefs.getString(_overridesKey);
+    final raw = await AppStore.instance.getString(_overridesKey);
     _overrides = raw == null
         ? <String, Map<String, dynamic>>{}
         : await readOrQuarantine<Map<String, Map<String, dynamic>>>(
-            prefs,
             _overridesKey,
             raw,
             (decoded) => (decoded as Map).map(
@@ -463,8 +456,7 @@ class PuzzleService {
   }
 
   Future<bool> _saveOverrides() async {
-    final prefs = await SharedPreferences.getInstance();
-    return writeString(prefs, _overridesKey, jsonEncode(_overrides));
+    return writeString(_overridesKey, jsonEncode(_overrides));
   }
 
   // ---------------------------------------------------------------------
@@ -473,12 +465,10 @@ class PuzzleService {
 
   Future<Map<String, PuzzleProgress>> _loadProgress() async {
     if (_progress != null) return _progress!;
-    final prefs = await SharedPreferences.getInstance();
-    final raw = prefs.getString(_progressKey);
+    final raw = await AppStore.instance.getString(_progressKey);
     _progress = raw == null
         ? <String, PuzzleProgress>{}
         : await readOrQuarantine<Map<String, PuzzleProgress>>(
-            prefs,
             _progressKey,
             raw,
             (decoded) => (decoded as Map).map(
@@ -494,9 +484,7 @@ class PuzzleService {
   }
 
   Future<void> _saveProgress() async {
-    final prefs = await SharedPreferences.getInstance();
     await writeString(
-      prefs,
       _progressKey,
       jsonEncode(_progress!.map((key, value) => MapEntry(key, value.toJson()))),
     );

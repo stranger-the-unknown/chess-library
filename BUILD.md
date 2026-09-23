@@ -4,7 +4,18 @@ Flutter 3.47 veya üzeri gerekir.
 
 ```bash
 flutter pub get
-flutter test          # 424 test (3'ü yalnızca POSIX'te koşar)
+flutter test          # 437 test (3'ü yalnızca POSIX'te koşar)
+```
+
+Windows'ta oyun listeleri, bulmacalar ve açılışlar `SharedPreferences`
+yerine kendi dosyalarında duruyor (`lib/services/app_store.dart`,
+`FileStore`). Servis testleri iki depoyla da koşmalı:
+
+```bash
+flutter test --dart-define=CL_FILE_STORE=true test/backup_test.dart \
+  test/corrupt_data_test.dart test/opening_manage_test.dart \
+  test/opening_san_case_test.dart test/opening_test.dart \
+  test/puzzle_scale_test.dart test/storage_test.dart test/v1020_store_test.dart
 ```
 
 `flutter clean` sonrasında testlerin bir kısmı

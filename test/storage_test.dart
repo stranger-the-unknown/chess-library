@@ -1,8 +1,8 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:shared_preferences/shared_preferences.dart';
 
 import 'package:chess_pgn_reader/models/playlist.dart';
 import 'package:chess_pgn_reader/services/storage_service.dart';
+import 'support/device.dart';
 
 SavedGame _game(String name) => SavedGame(
       name: name,
@@ -15,7 +15,7 @@ void main() {
 
   // Depo bir tekil olduğu için tüm adımlar tek testte sırayla yürütülür.
   test('toplu ekleme, okundu işareti ve bildirim', () async {
-    SharedPreferences.setMockInitialValues({});
+    await resetDevice({});
     final storage = StorageService.instance;
 
     int notifications = 0;

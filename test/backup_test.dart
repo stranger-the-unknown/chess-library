@@ -2,7 +2,6 @@ import 'dart:convert';
 import 'dart:io';
 
 import 'package:flutter_test/flutter_test.dart';
-import 'package:shared_preferences/shared_preferences.dart';
 
 import 'package:chess_pgn_reader/models/playlist.dart';
 import 'package:chess_pgn_reader/services/backup_service.dart';
@@ -10,13 +9,14 @@ import 'package:chess_pgn_reader/services/opening_service.dart';
 import 'package:chess_pgn_reader/services/puzzle_service.dart';
 import 'package:chess_pgn_reader/services/settings_service.dart';
 import 'package:chess_pgn_reader/services/storage_service.dart';
+import 'support/device.dart';
 
 /// Yedekleme, uygulamanın kullanıcı verisine dokunan tek yeridir; bir
 /// hata sessizce veri kaybettirir. Bu yüzden her yol ayrı denetlenir:
 /// tam tur, birleştirme, bozuk dosya, yarım kalan yazma.
 
 Future<void> _resetAll() async {
-  SharedPreferences.setMockInitialValues({});
+  await resetDevice({});
   StorageService.instance.resetCache();
   PuzzleService.instance.resetCache();
   OpeningService.instance.resetCache();

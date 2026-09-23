@@ -1,8 +1,8 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:shared_preferences/shared_preferences.dart';
 
 import 'package:chess_pgn_reader/models/chess_engine.dart' as engine;
 import 'package:chess_pgn_reader/services/puzzle_service.dart';
+import 'support/device.dart';
 
 /// Toplu FEN aktarımının ölçeği.
 ///
@@ -69,8 +69,8 @@ String _emptyBoardWith(Map<String, String> pieces) {
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
 
-  setUp(() {
-    SharedPreferences.setMockInitialValues({});
+  setUp(() async {
+    await resetDevice({});
     PuzzleService.instance.resetCache();
   });
 
@@ -87,7 +87,7 @@ void main() {
     final service = PuzzleService.instance;
 
     for (final count in [500, 2000, 8000]) {
-      SharedPreferences.setMockInitialValues({});
+      await resetDevice({});
       service.resetCache();
 
       final collection = await service.createCollection('Ölçek $count');
@@ -149,7 +149,7 @@ void main() {
     // Önceki sürümde uygulamayla üç bulmaca kitabı geliyordu. Ayarlarda
     // kalan bu kayıtlar, varlık dosyaları artık pakette olmadığı için
     // liste ekranını kilitliyordu.
-    SharedPreferences.setMockInitialValues({
+    await resetDevice({
       'puzzle_collections_v1':
           '[{"id":"endgames","name":"Oyun Sonları",'
               '"asset":"assets/puzzles/endgames.txt"},'

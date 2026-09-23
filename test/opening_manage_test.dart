@@ -1,8 +1,8 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:shared_preferences/shared_preferences.dart';
 
 import 'package:chess_pgn_reader/l10n/app_strings.dart';
 import 'package:chess_pgn_reader/services/opening_service.dart';
+import 'support/device.dart';
 
 /// Açılış listesini yönetme: tekrar denetimi, toptan silme, gizleme.
 ///
@@ -17,7 +17,7 @@ D00|Queen's Pawn|Ana Hat|d4 d5
 ''';
 
 Future<OpeningService> _seed() async {
-  SharedPreferences.setMockInitialValues({});
+  await resetDevice({});
   Strings.language = AppLanguage.turkish;
   OpeningService.instance.resetCache();
   final service = OpeningService.instance;
@@ -56,7 +56,7 @@ void main() {
     });
 
     test('aynı dosyanın içindeki tekrarlar da bir kez eklenir', () async {
-      SharedPreferences.setMockInitialValues({});
+      await resetDevice({});
       OpeningService.instance.resetCache();
       final result = await OpeningService.instance.importText('$_text$_text');
       expect(result.added, 4);
@@ -66,7 +66,7 @@ void main() {
     test('aynı pozisyona farklı sırayla varanlar ayrı varyant', () async {
       // Transpozisyon serbest: iki hat aynı pozisyonda bitse de farklı
       // hamle dizileri, ikisi de çalışmaya değer.
-      SharedPreferences.setMockInitialValues({});
+      await resetDevice({});
       OpeningService.instance.resetCache();
       final result = await OpeningService.instance.importText(
         'A|Bir|d4 Nf6 c4 e6 Nc3\n'
@@ -101,7 +101,7 @@ void main() {
     });
 
     test('boş listede sıfır döner', () async {
-      SharedPreferences.setMockInitialValues({});
+      await resetDevice({});
       OpeningService.instance.resetCache();
       expect(await OpeningService.instance.deleteAll(), 0);
     });

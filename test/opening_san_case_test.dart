@@ -1,7 +1,7 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:shared_preferences/shared_preferences.dart';
 
 import 'package:chess_pgn_reader/services/opening_service.dart';
+import 'support/device.dart';
 
 /// Açılış içe aktarmada da harf büyüklüğü anlam taşır.
 ///
@@ -19,7 +19,7 @@ void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
 
   setUp(() async {
-    SharedPreferences.setMockInitialValues({});
+    await resetDevice({});
     OpeningService.instance.resetCache();
   });
 

@@ -4,10 +4,12 @@ import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
+import 'package:path_provider/path_provider.dart';
 
 import 'l10n/app_strings.dart';
 import 'widgets/responsive.dart';
 import 'screens/home_shell.dart';
+import 'services/app_store.dart';
 import 'services/backup_service.dart';
 import 'services/corrupt_data.dart';
 import 'services/prefs_recovery.dart';
@@ -33,6 +35,25 @@ Future<void> main() async {
     await SettingsService.instance.load();
     PrefsRecovery.quarantined.value = moved;
   }
+  // Windows: oyun listeleri, bulmacalar ve açılışlar kendi dosyalarında,
+  // atomik yazılıyor (bkz. FileStore). İlk açılışta tercih dosyasından
+  // taşınıyor. Açılamazsa veri tercih dosyasında kalır ve oradan
+  // okunmaya devam eder: taşıma doğrulanmadan hiçbir şeyi silmiyor.
+  if (!kIsWeb && Platform.isWindows) {
+    try {
+      AppStore.instance =
+          await FileStore.open(await getApplicationSupportDirectory());
+    } catch (_) {}
+  }
+  if (PrefsRecovery.quarantined.value != null) {
+    // Tercih dosyası bozuk çıktı. Veri artık ayrı dosyalarda durduğu için
+    // çoğu zaman yalnızca ayarlar gitmiş olur; uyarı bunu söylemeli.
+    try {
+      _dataSurvived = (await AppStore.instance.readAll())
+          .keys
+          .any(AppStore.isDataKey);
+    } catch (_) {}
+  }
   // Önceki geri yükleme yarıda kaldıysa (pencere kapatıldı, sistem
   // uygulamayı öldürdü) veri geri yüklemeden önceki hâline dönüyor.
   try {
@@ -54,6 +75,9 @@ Future<void> main() async {
 
 /// Açılışta yarım kalmış bir geri yükleme geri alındı mı?
 bool _restoreRolledBack = false;
+
+/// Tercih dosyası bozuk çıktı ama veri kendi dosyalarında sağlam mı?
+bool _dataSurvived = false;
 
 /// Telefon dikey, tablet yatay; ekran dönmüyor.
 ///
@@ -148,7 +172,8 @@ class _ChessAppState extends State<ChessApp> {
     if (_restoreRolledBack) {
       message = t('backup.interruptedRestored');
     } else if (moved != null) {
-      message = t('data.prefsRecovered', {'file': moved});
+      message = t(_dataSurvived ? 'data.settingsRecovered' : 'data.prefsRecovered',
+          {'file': moved});
     } else {
       return;
     }

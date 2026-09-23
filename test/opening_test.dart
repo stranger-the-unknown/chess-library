@@ -1,8 +1,8 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:shared_preferences/shared_preferences.dart';
 
 import 'package:chess_pgn_reader/l10n/app_strings.dart';
 import 'package:chess_pgn_reader/services/opening_service.dart';
+import 'support/device.dart';
 
 /// Açılış varyantlarının eklenmesi, düzenlenmesi ve metinle taşınması.
 
@@ -10,7 +10,7 @@ void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
 
   setUp(() async {
-    SharedPreferences.setMockInitialValues({});
+    await resetDevice({});
     Strings.language = AppLanguage.turkish;
     OpeningService.instance.resetCache();
   });
@@ -167,7 +167,7 @@ bu satır bozuk
     );
     final text = await service.exportText();
 
-    SharedPreferences.setMockInitialValues({});
+    await resetDevice({});
     service.resetCache();
     final result = await service.importText(text);
 

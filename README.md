@@ -385,6 +385,14 @@ If you would rather not install anything, use the portable version: copy
 **the whole** folder you were given and run `ChessLibrary.exe` inside it.
 The app will not start without the DLLs and the `data` folder next to it.
 
+Your data lives under `%APPDATA%`, in `io.github.strangertheunknown` /
+`Chess Library`: settings in `shared_preferences.json`, game lists, puzzles
+and openings in the `veri` folder, each in its own file. Files are never
+rewritten in place (the new version is written next to the old one and
+swapped in), so a write cut short by a power cut leaves the previous
+version intact. Versions before 10.2.0 do not know this layout and open
+empty; to go back to one, take a backup first and restore it there.
+
 The app runs in a single window: starting it again while it is open
 brings that window to the front. Closing the window while a game with
 unsaved moves is open asks first, like the back button does.

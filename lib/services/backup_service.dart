@@ -3,9 +3,8 @@ import 'dart:io';
 
 import 'package:flutter/foundation.dart';
 import 'package:path_provider/path_provider.dart';
-import 'package:shared_preferences/shared_preferences.dart';
-
 import '../l10n/app_strings.dart';
+import 'app_store.dart';
 import 'opening_service.dart';
 import 'puzzle_service.dart';
 import 'settings_service.dart';
@@ -61,7 +60,7 @@ class BackupSummary {
 /// bulmaca listeleri ve ilerlemesi (çözüldü, favori, deneme, çözüm
 /// tarihi), eklenen açılışlar ve açılış ilerlemesi/notları, ayarlar.
 ///
-/// Anahtar listesi elle tutulmaz: `SharedPreferences` zaten yalnızca bu
+/// Anahtar listesi elle tutulmaz: depo ([AppStore]) yalnızca bu
 /// uygulamanın verisini tutar, bu yüzden içindeki bütün anahtarlar
 /// yazılır. Böylece ileride eklenen bir ayar yedeğin dışında kalmaz —
 /// elle tutulan listelerde en sık yapılan hata buydu.
@@ -115,13 +114,17 @@ class BackupService {
 
   Future<String> exportAll({ValueChanged<double>? onProgress}) async {
     onProgress?.call(0);
-    final prefs = await SharedPreferences.getInstance();
+    // Ayarlar ve veri tek yerden: Windows'ta veri ayrı dosyalarda duruyor,
+    // ama yedeğin biçimi (anahtarlar ve değer türleri) aynı kalıyor. Yani
+    // eski sürümün yedeği bu sürümde, bu sürümün yedeği eski sürümde
+    // açılıyor.
+    final all = await AppStore.instance.readAll();
 
-    final keys = prefs.getKeys().where((k) => !_notBackedUp.contains(k)).toList()
+    final keys = all.keys.where((k) => !_notBackedUp.contains(k)).toList()
       ..sort();
     final data = <String, Object?>{};
     for (int i = 0; i < keys.length; i++) {
-      final value = prefs.get(keys[i]);
+      final value = all[keys[i]];
       if (value == null) continue;
       data[keys[i]] = value;
       if (i % 8 == 7) {
@@ -225,10 +228,8 @@ class BackupService {
     ValueChanged<double>? onProgress,
   }) async {
     onProgress?.call(0);
-    final prefs = await SharedPreferences.getInstance();
-    final previous = <String, Object?>{
-      for (final key in prefs.getKeys()) key: prefs.get(key),
-    };
+    final store = AppStore.instance;
+    final Map<String, Object?> previous = await store.readAll();
     final snapshot = await _writeSnapshot(previous);
     onProgress?.call(0.1);
 
@@ -237,13 +238,13 @@ class BackupService {
       for (int i = 0; i < entries.length; i++) {
         Object? value = entries[i].value;
         if (mode == ImportMode.merge) {
-          value = _merged(prefs, entries[i].key, value);
+          value = await _merged(entries[i].key, value);
           if (value == null) continue;
         }
         // Yazma başarısızsa (disk dolu) geri yükleme başarılı
         // sayılmıyordu: ilerleme %100'e gidiyor, "içeri aktarıldı"
         // yazıyor ama veri diske hiç ulaşmıyordu.
-        if (!await _write(prefs, entries[i].key, value)) {
+        if (!await store.write(entries[i].key, value)) {
           throw const FormatException('writeFailed');
         }
         await debugAfterWrite?.call(i + 1);
@@ -255,13 +256,13 @@ class BackupService {
       if (mode == ImportMode.replace) {
         for (final key in previous.keys) {
           if (_notBackedUp.contains(key) || data.containsKey(key)) continue;
-          await prefs.remove(key);
+          await store.remove(key);
         }
       }
     } catch (_) {
       // Eski hâle dön. Dönüş de tamamlanamazsa kopya kalır, açılışta
       // yeniden denenir.
-      if (await _restoreExactly(prefs, previous)) {
+      if (await _restoreExactly(previous)) {
         await _deleteSnapshot(snapshot);
       }
       await reloadServices();
@@ -299,8 +300,7 @@ class BackupService {
       await _deleteSnapshot(file);
       return false;
     }
-    final prefs = await SharedPreferences.getInstance();
-    if (!await _restoreExactly(prefs, previous)) return false;
+    if (!await _restoreExactly(previous)) return false;
     await reloadServices();
     await _deleteSnapshot(file);
     return true;
@@ -353,16 +353,14 @@ class BackupService {
   /// Deponun içeriğini tam olarak [previous] yapar: önce değerler
   /// yazılır, sonra fazlalık anahtarlar silinir. Her şey yazılabildiyse
   /// `true` döner.
-  Future<bool> _restoreExactly(
-    SharedPreferences prefs,
-    Map<String, Object?> previous,
-  ) async {
+  Future<bool> _restoreExactly(Map<String, Object?> previous) async {
+    final store = AppStore.instance;
     var ok = true;
     for (final entry in previous.entries) {
-      if (!await _write(prefs, entry.key, entry.value)) ok = false;
+      if (!await store.write(entry.key, entry.value)) ok = false;
     }
-    for (final key in prefs.getKeys().toList()) {
-      if (!previous.containsKey(key)) await prefs.remove(key);
+    for (final key in (await store.readAll()).keys.toList()) {
+      if (!previous.containsKey(key)) await store.remove(key);
     }
     return ok;
   }
@@ -378,9 +376,9 @@ class BackupService {
   /// Tek tek anahtar silmek yerine hepsi siliniyor: ileride eklenen bir
   /// anahtar unutulursa yarım temizlenmiş bir durum kalırdı.
   Future<int> wipeAll() async {
-    final prefs = await SharedPreferences.getInstance();
-    final count = prefs.getKeys().length;
-    await prefs.clear();
+    final store = AppStore.instance;
+    final count = (await store.readAll()).length;
+    await store.clear();
     await reloadServices();
     return count;
   }
@@ -399,17 +397,6 @@ class BackupService {
   // Yardımcılar
   // -------------------------------------------------------------------
 
-  Future<bool> _write(SharedPreferences prefs, String key, Object? value) {
-    if (value is String) return prefs.setString(key, value);
-    if (value is bool) return prefs.setBool(key, value);
-    if (value is int) return prefs.setInt(key, value);
-    if (value is double) return prefs.setDouble(key, value);
-    if (value is List) {
-      return prefs.setStringList(key, value.map((e) => '$e').toList());
-    }
-    return prefs.remove(key);
-  }
-
   /// Birleştirme kipinde yazılacak değeri üretir.
   ///
   /// Kimlikli listelerde yedekteki kayıt aynı kimlikli eskisinin yerine
@@ -420,10 +407,10 @@ class BackupService {
   /// Eskiden en başta `getString` çağrılıyordu; cihazda aynı adla bir
   /// mantıksal ayar duruyorsa (ör. `soundEnabled`) bu çağrı tür hatasıyla
   /// patlıyor ve birleştirme kipiyle geri yükleme çöküyordu.
-  Object? _merged(SharedPreferences prefs, String key, Object? incoming) {
+  Future<Object?> _merged(String key, Object? incoming) async {
     if (_mergeableLists.containsKey(key)) {
       if (incoming is! String) return null;
-      final current = prefs.getString(key);
+      final current = await AppStore.instance.getString(key);
       if (current == null) return incoming;
       final idField = _mergeableLists[key]!;
       final byId = <String, Map<String, dynamic>>{};
@@ -440,7 +427,7 @@ class BackupService {
 
     if (_mergeableMaps.contains(key)) {
       if (incoming is! String) return null;
-      final current = prefs.getString(key);
+      final current = await AppStore.instance.getString(key);
       if (current == null) return incoming;
       final merged = Map<String, dynamic>.from(jsonDecode(current) as Map)
         ..addAll(Map<String, dynamic>.from(jsonDecode(incoming) as Map));

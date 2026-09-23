@@ -18,6 +18,10 @@ import 'package:path_provider/path_provider.dart';
 /// `shared_preferences.bozuk-<zaman>.json` adıyla kenara alıyor ve boş
 /// başlıyor. İçerik aynen saklandığı için elle kurtarılabiliyor;
 /// kullanıcıya da yedekten geri yükleyebileceği söyleniyor.
+///
+/// 10.2.0'dan beri Windows'ta bu dosyada yalnızca ayarlar kalıyor; veri
+/// kendi dosyalarında ve atomik yazılıyor (bkz. `FileStore`). Yani bozulan
+/// bir tercih dosyası artık yalnızca ayarları sıfırlıyor.
 class PrefsRecovery {
   PrefsRecovery._();
 

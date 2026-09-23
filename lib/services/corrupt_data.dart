@@ -1,7 +1,8 @@
 import 'dart:convert';
 
 import 'package:flutter/foundation.dart';
-import 'package:shared_preferences/shared_preferences.dart';
+
+import 'app_store.dart';
 
 /// Bozuk bir kayıt bulunduğunda artan sayaç.
 ///
@@ -22,7 +23,6 @@ final ValueNotifier<int> corruptRecords = ValueNotifier<int>(0);
 /// Oyun listelerinde bu düzen 9.0.3'te kurulmuştu; açılışlar, bulmacalar
 /// ve eski liste anahtarı dışarıda kalmıştı.
 Future<T> readOrQuarantine<T>(
-  SharedPreferences prefs,
   String key,
   String raw,
   T Function(dynamic decoded) parse,
@@ -31,10 +31,10 @@ Future<T> readOrQuarantine<T>(
   try {
     return parse(jsonDecode(raw));
   } catch (_) {
-    await prefs.setString('${key}_bozuk', raw);
+    await AppStore.instance.setString('$key${AppStore.quarantineSuffix}', raw);
     // Asıl anahtar kaldırılıyor: yoksa her açılışta aynı bozuk veri
     // yeniden çözümlenip aynı uyarı çıkıyordu. Veri kopyada duruyor.
-    await prefs.remove(key);
+    await AppStore.instance.remove(key);
     corruptRecords.value++;
     return fallback();
   }

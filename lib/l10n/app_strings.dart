@@ -384,6 +384,8 @@ class Strings {
         'Kaydedilemedi: cihazda yer kalmamış olabilir.',
     'data.corruptFound':
         'Bozuk bir kayıt bulundu ve bir kenara alındı; o bölüm boş açıldı.',
+    'data.settingsRecovered':
+        'Ayarlar dosyası okunamadı (yarım yazılmış olabilir) ve şu adla kenara alındı: {file}. Ayarlar varsayılana döndü; oyun listelerin, bulmacaların ve açılışların ayrı dosyalarda durduğu için yerinde.',
     'data.prefsRecovered':
         'Kayıtlı veriler okunamadı (dosya yarım yazılmış olabilir), uygulama boş açıldı. Bozuk dosya şu adla saklandı: {file}. Yedeğin varsa Ayarlar > Veri > Yedekten geri yükle ile geri getirebilirsin.',
     'lists.filterGames': 'Oyun filtrele',
@@ -912,6 +914,8 @@ class Strings {
         'Could not save: the device may be out of space.',
     'data.corruptFound':
         'A damaged record was found and set aside; that section opened empty.',
+    'data.settingsRecovered':
+        'The settings file could not be read (it may have been half written) and was set aside as: {file}. Settings went back to their defaults; your game lists, puzzles and openings are kept in separate files and are still here.',
     'data.prefsRecovered':
         'Your saved data could not be read (the file may have been half written), so the app opened empty. The damaged file was kept as: {file}. If you have a backup, use Settings > Data > Restore from backup.',
     'lists.filterGames': 'Filter games',

@@ -1,9 +1,11 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:shared_preferences/shared_preferences.dart';
 
 import 'package:chess_pgn_reader/services/opening_service.dart';
 import 'package:chess_pgn_reader/services/puzzle_service.dart';
 import 'package:chess_pgn_reader/services/storage_service.dart';
+import 'package:chess_pgn_reader/services/app_store.dart';
+
+import 'support/device.dart';
 
 /// Bozuk bir kayıt uygulamanın o bölümünü kapatmamalı.
 ///
@@ -22,7 +24,7 @@ void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
 
   test('bozuk açılış kaydı açılışlar sekmesini kapatmıyor', () async {
-    SharedPreferences.setMockInitialValues({
+    await resetDevice({
       'openings_custom_v1': _broken,
       'openings_notes_v1': _broken,
       'openings_progress_v1': _broken,
@@ -32,18 +34,18 @@ void main() {
     expect(await OpeningService.instance.all(), isEmpty);
     expect(await OpeningService.instance.progressMap(), isEmpty);
 
-    final prefs = await SharedPreferences.getInstance();
+    final store = AppStore.instance;
     expect(
-      prefs.getString('openings_custom_v1_bozuk'),
+      await store.getString('openings_custom_v1_bozuk'),
       _broken,
       reason: 'bozuk veri elle kurtarılabilsin diye saklanmalı',
     );
-    expect(prefs.getString('openings_notes_v1_bozuk'), _broken);
-    expect(prefs.getString('openings_progress_v1_bozuk'), _broken);
+    expect(await store.getString('openings_notes_v1_bozuk'), _broken);
+    expect(await store.getString('openings_progress_v1_bozuk'), _broken);
   });
 
   test('bozuk bulmaca kaydı bulmacalar sekmesini kapatmıyor', () async {
-    SharedPreferences.setMockInitialValues({
+    await resetDevice({
       'puzzle_collections_v1': _broken,
       'puzzle_progress_v1': _broken,
     });
@@ -52,20 +54,20 @@ void main() {
     await PuzzleService.instance.collections();
     expect((await PuzzleService.instance.progressMap()), isEmpty);
 
-    final prefs = await SharedPreferences.getInstance();
-    expect(prefs.getString('puzzle_collections_v1_bozuk'), _broken);
-    expect(prefs.getString('puzzle_progress_v1_bozuk'), _broken);
+    final store = AppStore.instance;
+    expect(await store.getString('puzzle_collections_v1_bozuk'), _broken);
+    expect(await store.getString('puzzle_progress_v1_bozuk'), _broken);
   });
 
   test('bozuk eski liste kaydı listelerim sekmesini kapatmıyor', () async {
     // 'playlists' 8.x öncesinden kalan anahtar; yeni anahtar yoksa
     // okunup taşınıyor. Taşıma sırasında bozuk veri hata fırlatıyordu.
-    SharedPreferences.setMockInitialValues({'playlists': _broken});
+    await resetDevice({'playlists': _broken});
     StorageService.instance.resetCache();
 
     expect(await StorageService.instance.loadPlaylists(), isEmpty);
 
-    final prefs = await SharedPreferences.getInstance();
-    expect(prefs.getString('playlists_bozuk'), _broken);
+    final store = AppStore.instance;
+    expect(await store.getString('playlists_bozuk'), _broken);
   });
 }

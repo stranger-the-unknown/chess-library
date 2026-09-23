@@ -1,7 +1,7 @@
 import 'dart:convert';
 
-import 'package:shared_preferences/shared_preferences.dart';
 
+import 'app_store.dart';
 import 'corrupt_data.dart';
 import 'prefs_write.dart';
 
@@ -62,12 +62,10 @@ class OpeningService {
 
   Future<List<Opening>> _loadCustom() async {
     if (_custom != null) return _custom!;
-    final prefs = await SharedPreferences.getInstance();
-    final raw = prefs.getString(_customKey);
+    final raw = await AppStore.instance.getString(_customKey);
     _custom = raw == null
         ? <Opening>[]
         : await readOrQuarantine<List<Opening>>(
-            prefs,
             _customKey,
             raw,
             (decoded) => (decoded as List)
@@ -81,9 +79,7 @@ class OpeningService {
 
   /// Kullanıcının açılışlarını yazar; başarısız olursa `false`.
   Future<bool> _saveCustom() async {
-    final prefs = await SharedPreferences.getInstance();
     return writeString(
-      prefs,
       _customKey,
       jsonEncode(_custom!.map((o) => o.toJson()).toList()),
     );
@@ -370,13 +366,12 @@ class OpeningService {
     custom.clear();
     await _saveCustom();
 
-    final prefs = await SharedPreferences.getInstance();
     _progress = <String, OpeningProgress>{};
     await _saveProgress();
     _notes = <String, String>{};
-    await writeString(prefs, _notesKey, jsonEncode(_notes));
+    await writeString(_notesKey, jsonEncode(_notes));
     _hidden = <String>{};
-    await prefs.setStringList(_hiddenKey, const []);
+    await AppStore.instance.setStringList(_hiddenKey, const []);
     return count;
   }
 
@@ -391,15 +386,15 @@ class OpeningService {
   /// alındığında bütün gizlilikler dağılırdı.
   Future<Set<String>> hiddenFamilies() async {
     if (_hidden != null) return _hidden!;
-    final prefs = await SharedPreferences.getInstance();
-    _hidden = (prefs.getStringList(_hiddenKey) ?? const <String>[]).toSet();
+    _hidden = (await AppStore.instance.getStringList(_hiddenKey) ??
+            const <String>[])
+        .toSet();
     return _hidden!;
   }
 
   Future<void> setHiddenFamilies(Set<String> families) async {
     _hidden = families;
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.setStringList(_hiddenKey, families.toList()..sort());
+    await AppStore.instance.setStringList(_hiddenKey, families.toList()..sort());
   }
 
   Future<void> setFamilyHidden(String family, bool hidden) async {
@@ -438,8 +433,7 @@ class OpeningService {
     }
     if (progressChanged) await _saveProgress();
     if (notesChanged) {
-      final prefs = await SharedPreferences.getInstance();
-      await writeString(prefs, _notesKey, jsonEncode(notes));
+      await writeString(_notesKey, jsonEncode(notes));
     }
   }
 
@@ -501,12 +495,10 @@ class OpeningService {
 
   Future<Map<String, String>> _loadNotes() async {
     if (_notes != null) return _notes!;
-    final prefs = await SharedPreferences.getInstance();
-    final raw = prefs.getString(_notesKey);
+    final raw = await AppStore.instance.getString(_notesKey);
     _notes = raw == null
         ? <String, String>{}
         : await readOrQuarantine<Map<String, String>>(
-            prefs,
             _notesKey,
             raw,
             (decoded) => Map<String, String>.from(decoded as Map),
@@ -522,8 +514,7 @@ class OpeningService {
     } else {
       notes[openingId] = note;
     }
-    final prefs = await SharedPreferences.getInstance();
-    await writeString(prefs, _notesKey, jsonEncode(notes));
+    await writeString(_notesKey, jsonEncode(notes));
   }
 
   // ---------------------------------------------------------------------
@@ -532,12 +523,10 @@ class OpeningService {
 
   Future<Map<String, OpeningProgress>> progressMap() async {
     if (_progress != null) return _progress!;
-    final prefs = await SharedPreferences.getInstance();
-    final raw = prefs.getString(_progressKey);
+    final raw = await AppStore.instance.getString(_progressKey);
     _progress = raw == null
         ? <String, OpeningProgress>{}
         : await readOrQuarantine<Map<String, OpeningProgress>>(
-            prefs,
             _progressKey,
             raw,
             (decoded) => (decoded as Map).map(
@@ -553,9 +542,7 @@ class OpeningService {
   }
 
   Future<void> _saveProgress() async {
-    final prefs = await SharedPreferences.getInstance();
     await writeString(
-      prefs,
       _progressKey,
       jsonEncode(_progress!.map((k, v) => MapEntry(k, v.toJson()))),
     );

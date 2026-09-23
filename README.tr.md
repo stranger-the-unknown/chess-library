@@ -373,6 +373,14 @@ Kurulum istemiyorsanız taşınabilir sürümü de kullanabilirsiniz: verilen
 klasörün **tamamını** kopyalayıp içindeki `ChessLibrary.exe` dosyasını
 çalıştırın. Yanındaki DLL'ler ve `data` klasörü olmadan uygulama açılmaz.
 
+Verileriniz `%APPDATA%` altında, `io.github.strangertheunknown` /
+`Chess Library` klasöründe durur: ayarlar `shared_preferences.json`
+dosyasında, oyun listeleri, bulmacalar ve açılışlar `veri` klasöründe, her
+biri kendi dosyasında. Dosyalar hiçbir zaman yerinde yeniden yazılmaz (yenisi
+yanına yazılıp eskisiyle yer değiştirir); elektrik kesintisinde yarıda kalan
+bir yazma önceki hâli bozmaz. 10.2.0'dan önceki sürümler bu düzeni bilmez ve
+boş açılır; birine dönmek isterseniz önce yedek alıp orada geri yükleyin.
+
 Uygulama tek pencerede çalışır: açıkken yeniden başlatırsanız açık olan
 pencere öne gelir. Kaydedilmemiş hamleleri olan bir oyun açıkken pencereyi
 kapatmak, geri düğmesinde olduğu gibi onay sorar.

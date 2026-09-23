@@ -3,6 +3,7 @@ import 'dart:convert';
 import 'package:flutter/foundation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
+import 'app_store.dart';
 import 'corrupt_data.dart';
 import 'prefs_write.dart';
 
@@ -76,7 +77,8 @@ class StorageService extends ChangeNotifier {
       await prefs.remove(_legacyAnalysisKey);
     }
 
-    final raw = prefs.getString(_key);
+    final store = AppStore.instance;
+    final raw = await store.getString(_key);
     if (raw != null) {
       // Bozuk ya da yarım yazılmış bir kayıt yüzünden "Listelerim"
       // sekmesi hiç açılmasın: çözümlenemeyen veri bir kenara konuyor,
@@ -87,8 +89,8 @@ class StorageService extends ChangeNotifier {
             .map((e) => Playlist.fromJson(Map<String, dynamic>.from(e as Map)))
             .toList();
       } catch (_) {
-        await prefs.setString('${_key}_bozuk', raw);
-        await prefs.remove(_key);
+        await store.setString('$_key${AppStore.quarantineSuffix}', raw);
+        await store.remove(_key);
         corruptRecords.value++;
         _cache = <Playlist>[];
         return _cache!;
@@ -97,11 +99,10 @@ class StorageService extends ChangeNotifier {
       return _cache!;
     }
 
-    final legacy = prefs.getString(_legacyKey);
+    final legacy = await store.getString(_legacyKey);
     if (legacy != null) {
       // v2 kaydı 9.0.3'te korunmuştu; eski anahtar açıkta kalmıştı.
       _cache = await readOrQuarantine<List<Playlist>>(
-        prefs,
         _legacyKey,
         legacy,
         (decoded) => (decoded as List)
@@ -110,7 +111,7 @@ class StorageService extends ChangeNotifier {
         () => <Playlist>[],
       );
       await _save(notify: false);
-      await prefs.remove(_legacyKey);
+      await store.remove(_legacyKey);
       return _cache!;
     }
 
@@ -135,9 +136,8 @@ class StorageService extends ChangeNotifier {
   /// fırlatıyor — çağıran yolun sessizce "kaydedildi" demesindense
   /// görünür bir hata iyidir.
   Future<void> _save({bool notify = true}) async {
-    final prefs = await SharedPreferences.getInstance();
     final payload = jsonEncode(_cache!.map((p) => p.toJson()).toList());
-    final ok = await writeString(prefs, _key, payload);
+    final ok = await writeString(_key, payload);
     if (!ok) throw StateError('listeler diske yazılamadı');
     if (notify) notifyListeners();
   }
