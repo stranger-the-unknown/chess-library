@@ -360,41 +360,99 @@ class HomeScreen extends StatelessWidget {
                     t('home.difficulty'),
                     style: const TextStyle(fontWeight: FontWeight.w600),
                   ),
+                  const SizedBox(height: 10),
+                  Text(
+                    t('home.maiaTitle'),
+                    style: const TextStyle(fontSize: 14),
+                  ),
+                  const SizedBox(height: 2),
+                  Text(
+                    t('home.maiaHint'),
+                    style: TextStyle(
+                      fontSize: 12,
+                      color: scheme.onSurfaceVariant,
+                    ),
+                  ),
                   const SizedBox(height: 8),
+                  // Dokuz puan seviyesi alt alta çok yer kaplıyordu; puanlar
+                  // yan yana, seçilenin açıklaması altta.
+                  Wrap(
+                    spacing: 6,
+                    runSpacing: 6,
+                    children: [
+                      for (final level in EngineLevel.all)
+                        if (level.isMaia)
+                          ChoiceChip(
+                            label: Text(level.name),
+                            selected: levelIndex == level.index,
+                            showCheckmark: false,
+                            onSelected: (_) => setLocalState(() {
+                              levelIndex = level.index;
+                              settings.engineLevel = level.index;
+                            }),
+                          ),
+                    ],
+                  ),
+                  // Stockfish seçilince açıklama kalkıyor; sayfa alttan
+                  // tutunduğu için üstteki puanlar kayıyor. Kayma
+                  // animasyonlu, sıçramasın.
+                  AnimatedSize(
+                    duration: const Duration(milliseconds: 160),
+                    curve: Curves.easeOut,
+                    alignment: Alignment.topLeft,
+                    child: EngineLevel.all[levelIndex].isMaia
+                        ? Padding(
+                            padding: const EdgeInsets.only(top: 6),
+                            child: Text(
+                              EngineLevel.all[levelIndex].description,
+                              style: TextStyle(
+                                fontSize: 12,
+                                color: scheme.onSurfaceVariant,
+                              ),
+                            ),
+                          )
+                        : const SizedBox(width: double.infinity),
+                  ),
+                  const SizedBox(height: 14),
+                  Text(
+                    t('home.stockfishTitle'),
+                    style: const TextStyle(fontSize: 14),
+                  ),
                   for (int i = 0; i < EngineLevel.all.length; i++)
-                    ListTile(
-                      dense: true,
-                      contentPadding: EdgeInsets.zero,
-                      // Zorluk seçilir seçilmez kaydediliyor. Eskiden
-                      // yalnızca oyun başlatılırsa kaydediliyordu; geri
-                      // çıkan kullanıcı ayarı eski hâlinde buluyordu.
-                      // Açılış çalışırken "bu konumdan motora karşı oyna"
-                      // zorluk sormadan başladığı için, zorluğu önceden
-                      // buradan ayarlayabilmek gerekiyor.
-                      onTap: () => setLocalState(() {
-                        levelIndex = i;
-                        settings.engineLevel = i;
-                      }),
-                      leading: Icon(
-                        levelIndex == i
-                            ? Icons.radio_button_checked_rounded
-                            : Icons.radio_button_unchecked_rounded,
-                        color: levelIndex == i
-                            ? scheme.primary
-                            : scheme.onSurfaceVariant,
-                      ),
-                      title: Text(
-                        EngineLevel.all[i].name,
-                        style: const TextStyle(fontSize: 14),
-                      ),
-                      subtitle: Text(
-                        EngineLevel.all[i].description,
-                        style: TextStyle(
-                          fontSize: 12,
-                          color: scheme.onSurfaceVariant,
+                    if (!EngineLevel.all[i].isMaia)
+                      ListTile(
+                        dense: true,
+                        contentPadding: EdgeInsets.zero,
+                        // Zorluk seçilir seçilmez kaydediliyor. Eskiden
+                        // yalnızca oyun başlatılırsa kaydediliyordu; geri
+                        // çıkan kullanıcı ayarı eski hâlinde buluyordu.
+                        // Açılış çalışırken "bu konumdan motora karşı oyna"
+                        // zorluk sormadan başladığı için, zorluğu önceden
+                        // buradan ayarlayabilmek gerekiyor.
+                        onTap: () => setLocalState(() {
+                          levelIndex = i;
+                          settings.engineLevel = i;
+                        }),
+                        leading: Icon(
+                          levelIndex == i
+                              ? Icons.radio_button_checked_rounded
+                              : Icons.radio_button_unchecked_rounded,
+                          color: levelIndex == i
+                              ? scheme.primary
+                              : scheme.onSurfaceVariant,
+                        ),
+                        title: Text(
+                          EngineLevel.all[i].name,
+                          style: const TextStyle(fontSize: 14),
+                        ),
+                        subtitle: Text(
+                          EngineLevel.all[i].description,
+                          style: TextStyle(
+                            fontSize: 12,
+                            color: scheme.onSurfaceVariant,
+                          ),
                         ),
                       ),
-                    ),
                   const SizedBox(height: 12),
                   Text(
                     t('home.yourColor'),

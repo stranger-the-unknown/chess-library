@@ -6,6 +6,8 @@ Bu depodaki varlıklar iki gruba ayrılır:
    projeyle birlikte dağıtılmalıdır.
 2. **Sesler ve uygulama simgesi** — bu proje için üretilmiştir;
    uygulamanın lisansı altındadır.
+3. **Maia-3 ağırlıkları** — dışarıdan alınmıştır (AGPL-3.0); aşağıda
+   "İnsan gibi rakip".
 
 Hiçbir varlık ticari bir üründen kopyalanmamıştır.
 
@@ -96,6 +98,23 @@ olacak şekilde yazıldı. Çizimin kendisi değişmedi.
   eklendiğinde güncellenmemişti.
 
 ---
+
+## İnsan gibi rakip — `assets/maia/`
+
+| Dosya | Kaynak | Lisans |
+|---|---|---|
+| `maia3-5m.bin` (~10 MB) | [Maia-3](https://github.com/CSSLab/maia3), CSSLab (Toronto Üniversitesi); ağırlıklar [UofTCSSLab/Maia3-5M](https://huggingface.co/UofTCSSLab/Maia3-5M) | [AGPL-3.0](https://github.com/CSSLab/maia3/blob/main/LICENSE) |
+
+`maia3-5m.pt` dosyası `tools/maia_export.py` ile uygulamanın okuduğu
+biçime çevrilir: yalnızca hamle olasılıkları için gereken tensörler
+alınır (değer ve düşünme süresi başlıkları dışarıda) ve ağırlıklar 16
+bitlik kayan noktaya yuvarlanır. Ağın kendisi değişmez; Dart ile yeniden
+yazılan hali orijinal Python modeliyle aynı olasılıkları verir
+(`tools/maia_reference.py`, `test/maia_test.dart`).
+
+Dosya depoda değildir (`.gitignore`); üretimi
+[`assets/maia/README.md`](assets/maia/README.md) içinde anlatılır.
+Uygulamayla aynı lisans (AGPL-3.0) altında dağıtılır.
 
 ## Sesler — `assets/sounds/` (10 dosya, ~74 KB)
 

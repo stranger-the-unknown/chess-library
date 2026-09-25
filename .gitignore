@@ -73,6 +73,9 @@ android/app/src/main/assets/stockfish/armeabi-v7a
 assets/stockfish/arm64-v8a
 assets/stockfish/armeabi-v7a
 
+# Maia-3 weights (AGPL-3.0; see assets/maia/README.md)
+assets/maia/*.bin
+
 # Stockfish as Android native lib (built from android/stockfish/; see README)
 android/app/src/main/jniLibs/**/libstockfish.so
 

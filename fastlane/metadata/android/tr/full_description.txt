@@ -2,9 +2,11 @@ Chess Library, tamamen cihazınızda çalışan bir satranç uygulamasıdır. He
 yok, ağ erişimi yok, takip yok — hiçbir veri telefonunuzdan çıkmaz.
 
 <b>Oyna</b>
-Yerleşik motora karşı altı zorluk kademesinde oynayın, acemiden ustaya.
-Rengi siz seçin ya da rastgele bırakın; normal dizilişten veya kendi
-kurduğunuz pozisyondan başlayın. Motor ayrı bir iş parçacığında çalışır,
+İnsan gibi oynayan rakip Maia'ya karşı 800'den 2400'e dokuz puan
+seviyesinde oynayın: o puandaki insanların oynadığı hamleleri, hatalarıyla
+birlikte oynar. Ya da Stockfish'e karşı Uzman veya tam güç Usta
+seviyesinde. Rengi siz seçin ya da rastgele bırakın; normal dizilişten veya
+kendi kurduğunuz pozisyondan başlayın. Her şey cihazda, arka planda çalışır;
 tahta akıcı kalır.
 
 <b>Oyunlarını oku</b>

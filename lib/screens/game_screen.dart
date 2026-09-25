@@ -14,6 +14,7 @@ import '../models/pgn_parser.dart';
 import '../models/playlist.dart';
 import '../services/board_image_service.dart';
 import '../services/engine/engine_service.dart';
+import '../services/engine/maia/maia_player.dart';
 import '../services/unsaved_work.dart';
 import '../services/settings_service.dart';
 import '../services/screen_awake.dart';
@@ -76,6 +77,29 @@ class GameScreen extends StatefulWidget {
   /// listesi olarak geliyor; atlanan hamle, okunamayan FEN ya da
   /// kapanmamış yorum bilgisi yolda kayboluyordu.
   final String? initialWarning;
+
+  /// Mat skorunun yazısı. Motor sayıyı sırası gelen tarafa göre veriyor:
+  /// pozitifse o taraf mat ediyor, negatifse mat oluyor, **sıfırsa zaten
+  /// mat olmuş**. Sıfırın işareti yok; eskiden "mat eden" diye sırası
+  /// gelen tarafın rakibi yerine kendisi yazılıyordu: beyaz mat edince
+  /// "Siyah mat ediyor (0)" çıkıyordu.
+  @visibleForTesting
+  static String mateText(int mate, engine.Color sideToMove) {
+    final sideToMoveMates = mate > 0;
+    final whiteMates = (sideToMove == engine.Color.white) == sideToMoveMates;
+    if (mate == 0) {
+      return t(whiteMates ? 'game.matedByWhite' : 'game.matedByBlack');
+    }
+    return t(
+      whiteMates ? 'game.mateWhite' : 'game.mateBlack',
+      {'n': mate.abs()},
+    );
+  }
+
+  /// Testler için canlı analizin yerine geçer (motor olmadan hangi
+  /// konumun sorulduğu görülebilsin).
+  @visibleForTesting
+  static Future<SearchResult> Function(String fen)? debugAnalyze;
 
   @override
   State<GameScreen> createState() => _GameScreenState();
@@ -193,6 +217,10 @@ class _GameScreenState extends State<GameScreen> {
     _level = EngineLevel.all[
         (widget.engineLevelIndex ?? SettingsService.instance.engineLevel)
             .clamp(0, EngineLevel.all.length - 1)];
+    // Maia'nın ağı ilk hamleden önce hazır olsun (ağırlıklar ~10 MB).
+    if (widget.mode == GameMode.versusEngine && _level.isMaia) {
+      unawaited(MaiaPlayer.instance.warmUp());
+    }
     _flipped = widget.playerColor == engine.Color.black &&
         widget.mode == GameMode.versusEngine;
     _resultText = widget.initialResult;
@@ -504,11 +532,14 @@ class _GameScreenState extends State<GameScreen> {
     final side = _game.sideToMove;
     final token = ++_analysisToken;
     // Ara skor / spinner yok; sadece nihai sonuc.
-    final result = await EngineService.instance.analyze(
-      fen,
-      depth: 22,
-      movetimeMs: 800,
-    );
+    final debug = GameScreen.debugAnalyze;
+    final result = debug != null
+        ? await debug(fen)
+        : await EngineService.instance.analyze(
+            fen,
+            depth: 22,
+            movetimeMs: 800,
+          );
     if (!mounted || token != _analysisToken) return;
     // Başka bir istek (motorun hamlesi, ipucu) bu aramayı düşürdüyse
     // ekranda bir şey değiştirmiyoruz: sonuç motorun sözü değil.
@@ -519,6 +550,19 @@ class _GameScreenState extends State<GameScreen> {
       _evalScoreCp = result.scoreCp * sign;
       _thinking = false;
     });
+  }
+
+  /// Motor hamle veremediğinde gösterilen yazı.
+  ///
+  /// Maia açılamadıysa bunu sebebiyle birlikte söylüyor. Eskiden bu
+  /// durumda sessizce Stockfish oynuyordu; bir hata böylece gözden
+  /// kaçabilirdi.
+  String _stalledMessage() {
+    final maia = MaiaPlayer.instance;
+    if (_level.isMaia && maia.unavailable) {
+      return t('game.maiaUnavailable', {'error': maia.failure ?? '?'});
+    }
+    return t('game.engineStalled');
   }
 
   /// Motor hamlesinin ekranda görünmesi için geçmesi gereken en kısa süre.
@@ -540,15 +584,22 @@ class _GameScreenState extends State<GameScreen> {
       _engineStalled = false;
     });
     final fen = _game.fen;
+    // Maia son sekiz konuma bakıyor; oyunun konumları eskiden yeniye.
+    final history = [
+      _startFen,
+      for (final entry in _history) entry.fenAfter,
+    ];
     final started = DateTime.now();
-    var result = await EngineService.instance.bestMoveForLevel(fen, _level);
+    var result = await EngineService.instance
+        .bestMoveForLevel(fen, _level, history: history);
     // İsteği başka bir ekranın kapanışı düşürmüş olabilir: `stopAll()`
     // motordaki her işi iptal ediyor ve kapanan ekranın temizliği,
     // alttaki ekran çoktan canlıyken çalışıyor. Konum hâlâ motorun
     // sırasında, o yüzden bir kez daha soruyoruz. Tek tekrar: döngüye
     // dönmesin.
     if (result.cancelled) {
-      result = await EngineService.instance.bestMoveForLevel(fen, _level);
+      result = await EngineService.instance
+          .bestMoveForLevel(fen, _level, history: history);
     }
     // Alt kademelerde arama derinliği 1-2 olduğu için cevap neredeyse
     // anında geliyordu: taşın nereden nereye gittiği, bir taş alındıysa
@@ -581,7 +632,7 @@ class _GameScreenState extends State<GameScreen> {
     if (result.bestMoveUci.isEmpty) {
       setState(() {
         _engineStalled = true;
-        _warning = t('game.engineStalled');
+        _warning = _stalledMessage();
       });
       return;
     }
@@ -590,7 +641,7 @@ class _GameScreenState extends State<GameScreen> {
     if (move == null) {
       setState(() {
         _engineStalled = true;
-        _warning = t('game.engineStalled');
+        _warning = _stalledMessage();
       });
       return;
     }
@@ -800,6 +851,11 @@ class _GameScreenState extends State<GameScreen> {
       _engineStalled = false;
       _savedToList = false;
     });
+    // Analiz açıksa başlangıç konumu için de sürüyor. Eskiden burada
+    // yeni konum motora hiç verilmiyordu: analiz düğmesi basılı kalıyor
+    // ama şerit boş, motor duruyordu. (Motora karşı oyunda sıra motorda
+    // ise kural aynı: analiz motorun hamlesinden sonra başlıyor.)
+    _afterPositionChanged();
     if (widget.mode == GameMode.versusEngine) _maybePlayEngineMove();
   }
 
@@ -1234,7 +1290,7 @@ class _GameScreenState extends State<GameScreen> {
     if (widget.mode == GameMode.versusEngine) {
       name = side == widget.playerColor
           ? t('game.you')
-          : t('game.engine', {'level': _level.name});
+          : _level.opponentLabel;
     } else {
       // PGN'de adlar varsa onlar yazılır; listede kartta sığmayan adlar
       // burada tam görünüyor. Yoksa rengin adı.
@@ -1662,14 +1718,7 @@ class _GameScreenState extends State<GameScreen> {
     final mate = analysis.mateIn;
     final String evaluation;
     if (mate != null) {
-      // Motor mat sayısını sırası gelen tarafa göre veriyor; beyaz
-      // bakışına çevirip kimin mat ettiğini yazıyoruz.
-      final whiteMates =
-          (_game.sideToMove == engine.Color.white ? mate : -mate) > 0;
-      evaluation = t(
-        whiteMates ? 'game.mateWhite' : 'game.mateBlack',
-        {'n': mate.abs()},
-      );
+      evaluation = GameScreen.mateText(mate, _game.sideToMove);
     } else {
       // Mat yoksa santipiyon skoru. Bu hesap eskiden mat **olmadığında
       // da** çalışıyordu ve `mateIn` null iken sıra beyazdayken null

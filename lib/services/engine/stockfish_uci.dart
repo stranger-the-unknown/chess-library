@@ -2,6 +2,8 @@ import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
 
+import 'package:flutter/foundation.dart' show visibleForTesting;
+
 import 'search_result.dart';
 
 /// Ayrı bir işletim sistemi sürecinde UCI konuşan Stockfish sarmalayıcı.
@@ -484,6 +486,10 @@ class StockfishUci {
     _waiters.clear();
   }
 
+  /// Testler için: bir `info` satırının çözümü.
+  @visibleForTesting
+  static SearchResult? parseInfo(String line) => _parseInfo(line);
+
   static SearchResult? _parseInfo(String line) {
     final depthMatch = RegExp(r'\bdepth (\d+)').firstMatch(line);
     final nodesMatch = RegExp(r'\bnodes (\d+)').firstMatch(line);
@@ -498,7 +504,10 @@ class StockfishUci {
     if (mateMatch != null) {
       final m = int.parse(mateMatch.group(1)!);
       mateIn = m;
-      scoreCp = m >= 0 ? 100000 - m : -100000 - m;
+      // `mate 0`: sıradaki taraf zaten mat edilmiş. Eskiden sıfır
+      // pozitif sayılıyordu ve mat olan taraf +100000 alıyordu: beyaz
+      // mat ettiğinde skor çubuğu siyahı kazanıyor gösteriyordu.
+      scoreCp = m > 0 ? 100000 - m : -100000 - m;
     } else if (cpMatch != null) {
       scoreCp = int.parse(cpMatch.group(1)!);
     }

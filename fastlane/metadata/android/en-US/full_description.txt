@@ -2,10 +2,12 @@ Chess Library is a chess app that works entirely on your device. There is no
 account, no network access and no tracking — nothing ever leaves your phone.
 
 <b>Play</b>
-Play against a built-in engine with six difficulty levels, from beginner to
-master. Pick your colour, or let it be random, and start from the normal setup
-or from a position you build yourself. The engine runs in a separate thread,
-so the board stays smooth.
+Play against a human-like opponent, Maia, at nine ratings from 800 to 2400:
+it plays the moves people at that rating play, mistakes included. Or play
+Stockfish at Expert or full-strength Master. Pick your colour, or let it be
+random, and start from the normal setup or from a position you build
+yourself. Everything runs on the device, in the background, so the board
+stays smooth.
 
 <b>Read your games</b>
 Load PGN files or paste text. A single file may hold any number of games;

@@ -56,3 +56,9 @@ Taş takımlarının ve tahtaların çizeni ile lisansı
 - **Yazı tipi**: `NotoSansSymbols2-Regular.ttf`, **SIL OFL 1.1**;
   lisans metni `assets/fonts/OFL.txt` içinde uygulamayla birlikte
   dağıtılır.
+- **İnsan gibi rakip**: [Maia-3](https://github.com/CSSLab/maia3)
+  (CSSLab, Toronto Üniversitesi) modelinin ağırlıkları, **AGPL-3.0**.
+  Ağ, uygulamada Dart ile yeniden yazılmıştır
+  (`lib/services/engine/maia/`).
+- **Motor**: Stockfish, **GPLv3**; ayrı bir süreç olarak çalışır,
+  ikilisi depoda değildir.

@@ -92,6 +92,8 @@ void main() {
     _silencePlugins(clipboard: _pastedFen);
     StockfishUci.cachedBinaryPath =
         '${Directory.systemTemp.path}/chesslib-yok-sf-3';
+    // Bu test Stockfish'i sınıyor; varsayılan seviye artık Maia.
+    SettingsService.instance.engineLevel = 9; // Uzman
     addTearDown(() async {
       StockfishUci.cachedBinaryPath = null;
       await EngineService.instance.dispose();
@@ -163,6 +165,8 @@ void main() {
     _silencePlugins();
     StockfishUci.cachedBinaryPath =
         '${Directory.systemTemp.path}/chesslib-yok-sf-4';
+    // Bu test Stockfish'i sınıyor; varsayılan seviye artık Maia.
+    SettingsService.instance.engineLevel = 9; // Uzman
     addTearDown(() async {
       StockfishUci.cachedBinaryPath = null;
       await EngineService.instance.dispose();

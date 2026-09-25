@@ -1,7 +1,7 @@
 name: chess_pgn_reader
 description: PGN okuyucu, bulmaca kütüphanesi ve cihazda çalışan satranç motoru.
 publish_to: 'none'
-version: 10.3.0+39
+version: 10.4.0+40
 
 environment:
   sdk: '>=3.4.0 <4.0.0'
@@ -50,6 +50,7 @@ flutter:
     - assets/pieces/pirouetti/
     - assets/pieces/pixel/
     - assets/pieces/mpchess/
+    - assets/maia/
 
   # Ana menüdeki at (♞) sistem yazı tipinden geliyordu: Android'de Noto,
   # Windows'ta Segoe çiziyordu ve ikisi birbirini tutmuyordu. Uygulama

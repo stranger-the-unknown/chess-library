@@ -3,8 +3,9 @@
 ***English** · [Türkçe](README.tr.md)*
 
 An app for reading chess games, solving puzzles, studying openings and
-playing against an engine that runs **entirely on your device**. No
-internet connection is needed; no data ever leaves the device.
+playing against an opponent that runs **entirely on your device** — the
+human-like Maia or Stockfish. No internet connection is needed; no data
+ever leaves the device.
 
 Runs on **Android** and **Windows**. The interface adapts to the window
 width: a bottom navigation bar on a phone, a rail down the left side on
@@ -26,8 +27,8 @@ your system language.
 
 ## Engine (Stockfish)
 
-- **All engine moves** → official Stockfish as a separate UCI OS process (no Dart engine)
-- **Play vs engine** → Stockfish with strength limit (`Skill Level` / `UCI_LimitStrength`+`UCI_Elo`) for the six UI levels (Beginner→Master). Master = full strength.
+- **Analysis, puzzles and the top two levels** → official Stockfish as a separate UCI OS process (no chess engine written in Dart)
+- **Expert and Master** → Stockfish with strength limit (`Skill Level` / `UCI_LimitStrength`+`UCI_Elo`). Master = full strength. The levels below are Maia (see below).
 - **Puzzles and live analysis** → full-strength Stockfish
 - **Cores**: an engine *move* always uses one core, on the phone and on
   the PC alike, so a level means the same thing everywhere. *Analysis*
@@ -45,12 +46,45 @@ your system language.
   told to `stop` and its own `bestmove` is awaited (with a one-second
   safety net).
 
+## Human-like opponent (Maia)
+
+Stockfish's weakened levels did not play like people: they searched for
+the best move and then threw in random big mistakes, seeing a deep
+tactic in one position and hanging the queen in the next. For a
+lower-rated player this stood out at once.
+
+- **Nine levels from 800 to 2400** (steps of 200) →
+  [Maia-3](https://github.com/CSSLab/maia3) (CSSLab, University of
+  Toronto; AGPL-3.0). Ratings are Lichess ratings.
+- Maia does **not** search for the best move: it predicts which moves
+  Lichess players at that rating play in that position, and how often.
+  The move is drawn from that distribution (the 5% tail at the far end
+  is cut), so its mistakes are the mistakes people at that rating make.
+  It does not always play the same move in the same position.
+- It looks at the **last eight positions**, so it sees how the game got
+  here, not only the board as it stands.
+- The model (5 million parameters, ~10 MB) ships inside the app and runs
+  **on the device, in the background**, through a network written in
+  Dart. No internet needed. A test checks that it gives the same
+  probabilities as the original Python model (`test/maia_test.dart`,
+  110 positions, largest difference 0.000003).
+- The levels separate: in 30-game matches among themselves, the level
+  400 points higher scored 83% (800→1200), 82% (1200→1600), 73%
+  (1600→2000) and 68% (2000→2400). The gap narrows at the top.
+- The weights file is **gitignored**; to generate it see
+  [`assets/maia/README.md`](assets/maia/README.md). If it is missing or
+  cannot be opened, the game says "Maia could not be started" with the
+  reason and opens the board to both sides. It never switches to
+  Stockfish behind your back: a bug would go unnoticed that way.
+
 ---
 
 ## Play
 
-**Play the engine** — Pick one of six levels, from beginner to master;
-each level says briefly how often it errs. Your colour can be white,
+**Play the engine** — Pick your opponent: the **human-like Maia** at
+one of nine ratings from 800 to 2400, or **Stockfish** (Expert, Master).
+Each level says briefly how it plays. The level you had chosen in an
+earlier version moves to the closest new one. Your colour can be white,
 black or **random**. You can also start from a **position you set up
 yourself** instead of the standard arrangement.
 
@@ -190,7 +224,9 @@ wanted for one quick look, and that look is over once the filter changes.
 is marked as an endgame list you also get **white wins / draw / black
 wins** filters; an outcome is set from the row menu or comes from a tag
 in an imported file (`white-wins`, `draw`, `black-wins`; the Turkish
-spellings are recognised too).
+spellings are recognised too). The two groups combine: **unsolved** and
+**white wins** can be selected together. Tapping the selected outcome
+again clears it.
 
 The search box works on the number (`#128`), the tags, the name, the note
 and the FEN, and ignores Turkish accents.
@@ -215,10 +251,27 @@ The list starts empty; you add the lines you want to study.
 
 **Adding a line** — A family name (for example "Ruy Lopez"), a variation
 name (for example "Breyer Variation") and the moves, which can be pasted
-as SAN or PGN. Every move is checked against the rules and you are warned
-about one that does not fit. Lines are grouped by family: type the same
-family name again and the new line joins that title. Leave the variation
-name empty and it takes the next number in that family.
+as SAN or PGN. Every move is checked against the rules; reading stops at
+an illegal move and you are told how many lines were cut there. Lines are
+grouped by family: type the same family name again and the new line joins
+that title. The family box suggests existing titles as you type ("ruy"
+offers "Ruy Lopez"); picking a suggestion avoids opening a second title
+through a spelling difference. Leave the variation name empty and it
+takes the next number in that family.
+
+You can type **several lines one under another** in the moves box, each
+on a new row starting from move 1. To name a row, put the name and `|`
+in front (`Breyer | 1. e4 e5 …`); rows without a name take the name from
+the form plus a number. A long PGN wrapped over several rows (a row
+starting `12. Re1 …`) stays one game.
+
+**Title menu** — The ⋮ menu next to each title offers:
+- **Add line**: the form opens with that title filled in; add one line or
+  several one under another.
+- **Rename title**: every line under it moves to the new name; progress
+  and notes stay. If the new name is an existing title, you are asked
+  before the two are merged.
+- **Delete title** (below).
 
 **Editing** — The name, family and moves of a line you added can be
 changed from the row menu, its note deleted, or the line removed.

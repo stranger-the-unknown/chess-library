@@ -8,6 +8,10 @@ import 'package:chess_pgn_reader/services/engine/stockfish_uci.dart';
 /// Bilinen tek hamlelik son oyun (K+P vs K): beyazın en iyisi e1f1.
 const endgameFen = '8/8/8/8/8/4k3/4P3/4K3 w - - 0 1';
 
+/// Zayıf bir Stockfish ayarı (eski "Acemi", skill 2). Listenin başı
+/// artık Maia; bu testler Stockfish'i sınıyor.
+const _weakest = EngineLevel(index: 0, depth: 1, movetimeMs: 150, skill: 2);
+
 void main() {
   tearDown(() async {
     StockfishUci.cachedBinaryPath = null;
@@ -37,7 +41,7 @@ void main() {
 
       final play = await EngineService.instance.bestMoveForLevel(
         endgameFen,
-        EngineLevel.all[0],
+        _weakest,
       );
       expect(play.bestMoveUci, isEmpty);
     });
@@ -105,7 +109,7 @@ void main() {
 
       final play = await EngineService.instance.bestMoveForLevel(
         endgameFen,
-        EngineLevel.all[0], // skill 2
+        _weakest, // skill 2
       );
       expect(play.bestMoveUci, isNotEmpty);
 
@@ -160,7 +164,7 @@ void main() {
 
       final weak = await EngineService.instance.bestMoveForLevel(
         endgameFen,
-        EngineLevel.all[0],
+        _weakest,
       );
       expect(weak.bestMoveUci, isNotEmpty);
       // ignore: avoid_print

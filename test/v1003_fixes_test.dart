@@ -67,6 +67,8 @@ void main() {
     // Motor yok: arama boş dönüyor. İptali `stopAll` üretiyor.
     StockfishUci.cachedBinaryPath =
         '${Directory.systemTemp.path}/chesslib-yok-sf-1003';
+    // Bu test Stockfish'i sınıyor; varsayılan seviye artık Maia.
+    SettingsService.instance.engineLevel = 9; // Uzman
   });
 
   tearDown(() async {

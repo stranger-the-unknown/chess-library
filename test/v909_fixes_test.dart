@@ -73,6 +73,8 @@ void main() {
     // motorda kalıyor, tahta oyuncunun rengine kilitli duruyordu.
     StockfishUci.cachedBinaryPath =
         '${Directory.systemTemp.path}/chesslib-yok-sf-5';
+    // Bu test Stockfish'i sınıyor; varsayılan seviye artık Maia.
+    SettingsService.instance.engineLevel = 9; // Uzman
     addTearDown(() async {
       StockfishUci.cachedBinaryPath = null;
       await EngineService.instance.dispose();

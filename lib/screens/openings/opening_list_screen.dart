@@ -4,6 +4,7 @@ import '../../widgets/responsive.dart';
 
 import '../../l10n/app_strings.dart';
 import '../../models/opening.dart';
+import '../../models/puzzle_search.dart' show foldForSearch;
 import '../../services/opening_service.dart';
 import 'opening_visibility_screen.dart';
 import '../../theme/app_theme.dart';
@@ -119,110 +120,72 @@ class _OpeningListScreenState extends State<OpeningListScreen> {
   /// Varyant ekleme ve düzenleme aynı formu kullanır.
   ///
   /// [existing] verildiğinde alanlar dolu gelir ve kaydetme düzenleme
-  /// yapar; verilmediğinde yeni varyant eklenir.
-  Future<void> _openEditor({Opening? existing}) async {
+  /// yapar; verilmediğinde yeni varyant eklenir. [family]: başlığın
+  /// menüsündeki "Varyant ekle"den gelindiyse o başlık hazır yazılı.
+  Future<void> _openEditor({Opening? existing, String? family}) async {
     final editing = existing != null;
-    final familyController =
-        TextEditingController(text: existing?.family ?? '');
-    final nameController =
-        TextEditingController(text: existing?.variation ?? '');
-    final movesController =
-        TextEditingController(text: existing?.sanMoves.join(' ') ?? '');
-    try {
+    // Başlık kutusu var olan başlıkları önersin (gizliler dahil): elle
+    // yazarken "Ispanyol" ile "İspanyol" iki ayrı başlık oluyordu.
+    final families = {for (final o in _all) o.family}.toList()..sort();
+    // Alanların denetleyicileri pencerenin kendisinde: pencere kapanma
+    // animasyonu sürerken de metin kutularını yeniden çiziyor. Eskiden
+    // denetleyiciler pencere döner dönmez atılıyordu ve kapanan pencere
+    // atılmış denetleyiciye dokunuyordu (hata ayıklama derlemesinde
+    // "TextEditingController was used after being disposed").
+    final form = await showDialog<_EditorResult>(
+      context: context,
+      builder: (_) => _OpeningEditorDialog(
+        existing: existing,
+        initialFamily: family,
+        families: families,
+      ),
+    );
+    if (form == null || !mounted) return;
 
-      final saved = await showDialog<bool>(
-        context: context,
-        builder: (dialogContext) => AlertDialog(
-          title: Text(
-            editing ? t('openings.editVariation') : t('openings.addOwn'),
-          ),
-          content: SingleChildScrollView(
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                TextField(
-                  controller: familyController,
-                  decoration: InputDecoration(
-                    labelText: t('openings.family'),
-                    hintText: t('openings.familyHint'),
-                  ),
-                ),
-                const SizedBox(height: 10),
-                TextField(
-                  controller: nameController,
-                  decoration: InputDecoration(
-                    labelText: t('openings.variationName'),
-                    hintText: t('openings.variationHint'),
-                  ),
-                ),
-                const SizedBox(height: 10),
-                TextField(
-                  controller: movesController,
-                  maxLines: 5,
-                  minLines: 3,
-                  style: const TextStyle(fontSize: 13, fontFamily: 'monospace'),
-                  decoration: InputDecoration(
-                    labelText: t('openings.moves'),
-                    hintText: t('openings.movesHint'),
-                  ),
-                ),
-              ],
-            ),
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(dialogContext, false),
-              child: Text(t('common.cancel')),
-            ),
-            ElevatedButton(
-              onPressed: () => Navigator.pop(dialogContext, true),
-              child: Text(editing ? t('common.save') : t('common.add')),
-            ),
-          ],
-        ),
-      );
-
-      if (saved != true || !mounted) return;
-
-      if (editing) {
-        final ok = await _service.editCustom(
-          id: existing.id,
-          family: familyController.text.trim(),
-          variation: nameController.text.trim(),
-          moveText: movesController.text,
-        );
-        if (!mounted) return;
-        if (!ok) {
-          AppDialogs.snack(context, t('openings.noValidMove'));
-          return;
-        }
-        // Değişiklik listede görünüyor; ayrıca bildirim göstermiyoruz.
-        await _load();
-        return;
-      }
-
-      final opening = await _service.addFromSan(
-        family: familyController.text.trim(),
-        variation: nameController.text.trim(),
-        moveText: movesController.text,
+    if (editing) {
+      final ok = await _service.editCustom(
+        id: existing.id,
+        family: form.family,
+        variation: form.name,
+        moveText: form.moves,
       );
       if (!mounted) return;
-      if (opening == null) {
+      if (!ok) {
         AppDialogs.snack(context, t('openings.noValidMove'));
         return;
       }
+      // Değişiklik listede görünüyor; ayrıca bildirim göstermiyoruz.
       await _load();
-      if (mounted) {
-        AppDialogs.snack(
-          context,
-          t('openings.added', {'count': opening.sanMoves.length}),
-        );
-      }
-    } finally {
-      familyController.dispose();
-      nameController.dispose();
-      movesController.dispose();
+      return;
     }
+
+    // Hamle kutusunda alt alta birden çok varyant olabilir. Eskiden
+    // ilk satırdan sonrası sessizce atılıyordu.
+    final result = await _service.addManyFromSan(
+      family: form.family,
+      variation: form.name,
+      moveText: form.moves,
+    );
+    if (!mounted) return;
+    final added = result.added;
+    if (added.isEmpty) {
+      AppDialogs.snack(context, t('openings.noValidMove'));
+      return;
+    }
+    await _load();
+    if (!mounted) return;
+    // Eklenemeyen ya da yarıda kesilen varyant da söyleniyor: eskiden
+    // geçersiz hamlede sessizce durulup "eklendi" deniyordu.
+    final parts = [
+      added.length == 1
+          ? t('openings.added', {'count': added.single.sanMoves.length})
+          : t('openings.imported', {'count': added.length}),
+      if (result.skipped > 0)
+        t('openings.skippedInvalid', {'count': result.skipped}),
+      if (result.truncated > 0)
+        t('openings.truncatedAtInvalid', {'count': result.truncated}),
+    ];
+    AppDialogs.snack(context, parts.join(' '));
   }
 
   Future<void> _importFromFile() async {
@@ -327,6 +290,43 @@ class _OpeningListScreenState extends State<OpeningListScreen> {
     if (!confirmed) return;
     await _service.deleteCustom(opening.id);
     await _load();
+  }
+
+  /// Başlığı yeniden adlandırır: altındaki bütün varyantlar yeni ada
+  /// taşınıyor. Yeni ad var olan bir başlıksa önce birleştirme soruluyor
+  /// (geri almak varyant varyant düzenlemek demek).
+  Future<void> _renameFamily(String family) async {
+    final name = await AppDialogs.prompt(
+      context,
+      title: t('openings.renameFamily'),
+      label: t('openings.family'),
+      initialValue: family,
+      confirmLabel: t('common.save'),
+    );
+    if (name == null || !mounted) return;
+    final target = name.trim();
+    if (target.isEmpty || target == family) return;
+    if (_all.any((o) => o.family == target)) {
+      final count = _all.where((o) => o.family == family).length;
+      final merge = await AppDialogs.confirm(
+        context,
+        title: t('openings.renameFamily'),
+        message: t('openings.mergeFamilyMessage', {
+          'from': family,
+          'to': target,
+          'count': count,
+        }),
+        confirmLabel: t('openings.merge'),
+      );
+      if (!merge || !mounted) return;
+    }
+    final moved = await _service.renameFamily(family, target);
+    await _load();
+    if (!mounted) return;
+    AppDialogs.snack(
+      context,
+      t('openings.familyRenamed', {'count': moved, 'name': target}),
+    );
   }
 
   Future<void> _deleteFamily(String family) async {
@@ -632,18 +632,39 @@ class _OpeningListScreenState extends State<OpeningListScreen> {
                 ),
                 // Menü dokunuşu kendine alıyor, başlık açılıp kapanmıyor.
                 PopupMenuButton<String>(
-                  tooltip: t('openings.deleteFamily'),
+                  tooltip: t('openings.familyMenu'),
                   icon: Icon(
                     Icons.more_vert,
                     size: 20,
                     color: scheme.onSurfaceVariant,
                   ),
                   onSelected: (value) {
-                    if (value == 'deleteFamily') {
-                      _deleteFamily(family);
+                    switch (value) {
+                      case 'add':
+                        _openEditor(family: family);
+                      case 'rename':
+                        _renameFamily(family);
+                      case 'deleteFamily':
+                        _deleteFamily(family);
                     }
                   },
                   itemBuilder: (context) => [
+                    PopupMenuItem<String>(
+                      value: 'add',
+                      child: ListTile(
+                        contentPadding: EdgeInsets.zero,
+                        leading: const Icon(Icons.playlist_add_rounded),
+                        title: Text(t('openings.addToFamily')),
+                      ),
+                    ),
+                    PopupMenuItem<String>(
+                      value: 'rename',
+                      child: ListTile(
+                        contentPadding: EdgeInsets.zero,
+                        leading: const Icon(Icons.drive_file_rename_outline),
+                        title: Text(t('openings.renameFamily')),
+                      ),
+                    ),
                     PopupMenuItem<String>(
                       value: 'deleteFamily',
                       child: ListTile(
@@ -752,6 +773,181 @@ class _OpeningListScreenState extends State<OpeningListScreen> {
           ),
         ),
       ),
+    );
+  }
+}
+
+/// Varyant formunun sonucu (alanlar kırpılmış; hamleler olduğu gibi).
+typedef _EditorResult = ({String family, String name, String moves});
+
+/// Varyant ekleme / düzenleme penceresi.
+///
+/// Denetleyiciler burada yaşıyor ve pencere ağaçtan tamamen çıkınca
+/// atılıyor; kapanma animasyonu boyunca geçerli kalıyorlar.
+class _OpeningEditorDialog extends StatefulWidget {
+  final Opening? existing;
+
+  /// Başlığın menüsünden "Varyant ekle" ile gelindiyse o başlık.
+  final String? initialFamily;
+
+  /// Önerilecek var olan başlıklar.
+  final List<String> families;
+
+  const _OpeningEditorDialog({
+    this.existing,
+    this.initialFamily,
+    this.families = const [],
+  });
+
+  @override
+  State<_OpeningEditorDialog> createState() => _OpeningEditorDialogState();
+}
+
+class _OpeningEditorDialogState extends State<_OpeningEditorDialog> {
+  late final TextEditingController _family = TextEditingController(
+    text: widget.existing?.family ?? widget.initialFamily ?? '',
+  );
+  final FocusNode _familyFocus = FocusNode();
+  late final TextEditingController _name =
+      TextEditingController(text: widget.existing?.variation ?? '');
+  late final TextEditingController _moves =
+      TextEditingController(text: widget.existing?.sanMoves.join(' ') ?? '');
+
+  @override
+  void dispose() {
+    _family.dispose();
+    _familyFocus.dispose();
+    _name.dispose();
+    _moves.dispose();
+    super.dispose();
+  }
+
+  /// Yazılanla eşleşen başlıklar: önce yazılanla başlayanlar, sonra
+  /// içinde geçenler; Türkçe harf ve büyük/küçük harf farkı gözetmeden.
+  /// Yazılan zaten bir başlığın tam adıysa öneri yok.
+  Iterable<String> _familyOptions(TextEditingValue value) {
+    final query = foldForSearch(value.text);
+    if (query.isEmpty) return const [];
+    final starts = <String>[];
+    final contains = <String>[];
+    for (final family in widget.families) {
+      final folded = foldForSearch(family);
+      if (folded == query) return const [];
+      if (folded.startsWith(query)) {
+        starts.add(family);
+      } else if (folded.contains(query)) {
+        contains.add(family);
+      }
+    }
+    return [...starts, ...contains].take(8);
+  }
+
+  Widget _familyOptionsView(
+    BuildContext context,
+    AutocompleteOnSelected<String> onSelected,
+    Iterable<String> options,
+  ) {
+    final scheme = Theme.of(context).colorScheme;
+    final list = options.toList();
+    return Material(
+      key: const ValueKey('opening-family-options'),
+      elevation: 4,
+      borderRadius: BorderRadius.circular(10),
+      color: scheme.surfaceContainerHigh,
+      child: ConstrainedBox(
+        constraints: const BoxConstraints(maxHeight: 240),
+        child: ListView.builder(
+          padding: const EdgeInsets.symmetric(vertical: 4),
+          shrinkWrap: true,
+          itemCount: list.length,
+          itemBuilder: (context, index) {
+            // Klavyeyle (masaüstü) gezilen öneri vurgulu.
+            final highlighted =
+                AutocompleteHighlightedOption.of(context) == index;
+            return ListTile(
+              dense: true,
+              selected: highlighted,
+              selectedTileColor: scheme.secondaryContainer,
+              title: Text(list[index]),
+              onTap: () => onSelected(list[index]),
+            );
+          },
+        ),
+      ),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final editing = widget.existing != null;
+    return AlertDialog(
+      title: Text(
+        editing ? t('openings.editVariation') : t('openings.addOwn'),
+      ),
+      content: SingleChildScrollView(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            // Var olan başlıklar yazarken öneriliyor; öneri seçmek
+            // zorunlu değil, yeni bir başlık da yazılabilir.
+            RawAutocomplete<String>(
+              textEditingController: _family,
+              focusNode: _familyFocus,
+              optionsBuilder: _familyOptions,
+              optionsViewBuilder: _familyOptionsView,
+              fieldViewBuilder: (context, controller, focusNode, onSubmit) =>
+                  TextField(
+                controller: controller,
+                focusNode: focusNode,
+                onSubmitted: (_) => onSubmit(),
+                decoration: InputDecoration(
+                  labelText: t('openings.family'),
+                  hintText: t('openings.familyHint'),
+                ),
+              ),
+            ),
+            const SizedBox(height: 10),
+            TextField(
+              controller: _name,
+              decoration: InputDecoration(
+                labelText: t('openings.variationName'),
+                hintText: t('openings.variationHint'),
+              ),
+            ),
+            const SizedBox(height: 10),
+            TextField(
+              controller: _moves,
+              // Başlık hazır geldiyse sıra hamlelerde.
+              autofocus: widget.initialFamily != null,
+              maxLines: 5,
+              minLines: 3,
+              style: const TextStyle(fontSize: 13, fontFamily: 'monospace'),
+              decoration: InputDecoration(
+                labelText: t('openings.moves'),
+                hintText: t('openings.movesHint'),
+                // Düzenlerken tek varyant; birden çok varyant yalnızca
+                // eklerken.
+                helperText: editing ? null : t('openings.movesHelp'),
+                helperMaxLines: 4,
+              ),
+            ),
+          ],
+        ),
+      ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.pop(context),
+          child: Text(t('common.cancel')),
+        ),
+        ElevatedButton(
+          onPressed: () => Navigator.pop<_EditorResult>(context, (
+            family: _family.text.trim(),
+            name: _name.text.trim(),
+            moves: _moves.text,
+          )),
+          child: Text(editing ? t('common.save') : t('common.add')),
+        ),
+      ],
     );
   }
 }

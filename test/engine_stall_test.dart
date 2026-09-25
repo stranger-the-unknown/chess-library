@@ -60,6 +60,8 @@ void main() {
     // Motoru yok say: ikili dosya bulunamayınca sonuç boş geliyor.
     StockfishUci.cachedBinaryPath =
         '${Directory.systemTemp.path}/chesslib-yok-sf';
+    // Bu test Stockfish'i sınıyor; varsayılan seviye artık Maia.
+    SettingsService.instance.engineLevel = 9; // Uzman
   });
 
   tearDown(() async {

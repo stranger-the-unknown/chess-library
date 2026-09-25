@@ -6,6 +6,7 @@ import 'package:flutter/foundation.dart' show kIsWeb, visibleForTesting;
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
+import 'engine/engine_service.dart' show EngineLevel;
 import 'prefs_write.dart';
 
 import '../l10n/app_strings.dart';
@@ -49,7 +50,7 @@ class SettingsService extends ChangeNotifier {
   // Davranış
   bool _soundEnabled = true;
   bool _vibrationEnabled = true;
-  int _engineLevel = 2;
+  int _engineLevel = EngineLevel.defaultIndex;
 
   /// Bulmaca listelerinde "bugün çözülen" sayısı gösterilsin mi?
   bool _showDailyCount = true;
@@ -169,7 +170,15 @@ class SettingsService extends ChangeNotifier {
     _animateMoves = prefs.getBool('animateMoves') ?? true;
     _soundEnabled = prefs.getBool('soundEnabled') ?? true;
     _vibrationEnabled = prefs.getBool('vibrationEnabled') ?? true;
-    _engineLevel = prefs.getInt('engineLevel') ?? 2;
+    // 10.4.0'da seviye listesi değişti (Maia geldi); numara yeni anahtarda.
+    // Eski anahtar varsa eski seviye yeni listedeki karşılığına çevriliyor.
+    final level = prefs.getInt('opponentLevel');
+    final legacy = prefs.getInt('engineLevel');
+    _engineLevel = (level ??
+            (legacy != null
+                ? EngineLevel.fromLegacyIndex(legacy)
+                : EngineLevel.defaultIndex))
+        .clamp(0, EngineLevel.all.length - 1);
     _showDailyCount = prefs.getBool('showDailyCount') ?? true;
     _askConfirmations = prefs.getBool('askConfirmations') ?? true;
     notifyListeners();
@@ -319,7 +328,7 @@ class SettingsService extends ChangeNotifier {
 
   set engineLevel(int value) {
     _engineLevel = value;
-    _set('engineLevel', value);
+    _set('opponentLevel', value);
     notifyListeners();
   }
 

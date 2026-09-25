@@ -22,15 +22,15 @@ import '../../services/text_file_service.dart';
 
 import 'package:flutter/services.dart';
 
-enum _Filter {
-  all,
-  unsolved,
-  solved,
-  favorites,
-  whiteWin,
-  draw,
-  blackWin,
-}
+/// Çözüm durumu süzgeci; biri her zaman seçili.
+enum _Status { all, unsolved, solved, favorites }
+
+/// Oyun sonu listelerinde sonuç süzgeci; seçilmeyebilir.
+///
+/// Durum süzgecinden ayrı: "çözülmemiş" ve "beyaz kazanır" birlikte
+/// seçilebiliyor. Eskiden hepsi tek bir süzgeçti, sonuç seçilince durum
+/// seçimi kalkıyordu.
+enum _Outcome { whiteWin, draw, blackWin }
 
 /// Bir listedeki bulmacaları gösterir; arama, süzme ve düzenleme sunar.
 class PuzzleListScreen extends StatefulWidget {
@@ -51,7 +51,8 @@ class _PuzzleListScreenState extends State<PuzzleListScreen> {
   /// Bulmaca kimliği -> tam listedeki sıra numarası (1'den başlar).
   final Map<String, int> _numbers = {};
   Map<String, PuzzleProgress> _progress = {};
-  _Filter _filter = _Filter.all;
+  _Status _status = _Status.all;
+  _Outcome? _outcome;
   String _query = '';
   bool _loading = true;
 
@@ -103,27 +104,35 @@ class _PuzzleListScreenState extends State<PuzzleListScreen> {
     final query = _query.trim().toLowerCase();
     return _all.where((puzzle) {
       final entry = _progress[puzzle.id];
-      switch (_filter) {
-        case _Filter.unsolved:
+      switch (_status) {
+        case _Status.unsolved:
           if (entry?.solved == true) return false;
           break;
-        case _Filter.solved:
+        case _Status.solved:
           if (entry?.solved != true) return false;
           break;
-        case _Filter.favorites:
+        case _Status.favorites:
           if (entry?.favorite != true) return false;
           break;
-        case _Filter.whiteWin:
-          if (!puzzle.marksWhiteWin) return false;
+        case _Status.all:
           break;
-        case _Filter.draw:
-          if (!puzzle.marksDraw) return false;
-          break;
-        case _Filter.blackWin:
-          if (!puzzle.marksBlackWin) return false;
-          break;
-        case _Filter.all:
-          break;
+      }
+      // Sonuç süzgeci yalnızca görünürken işliyor (oyun sonu listesi ve
+      // işaretli bulmaca var); gizliyken seçili kalmış olsa da etkisiz.
+      if (_outcomeFilters) {
+        switch (_outcome) {
+          case _Outcome.whiteWin:
+            if (!puzzle.marksWhiteWin) return false;
+            break;
+          case _Outcome.draw:
+            if (!puzzle.marksDraw) return false;
+            break;
+          case _Outcome.blackWin:
+            if (!puzzle.marksBlackWin) return false;
+            break;
+          case null:
+            break;
+        }
       }
       final range = _range;
       if (range != null) {
@@ -158,6 +167,10 @@ class _PuzzleListScreenState extends State<PuzzleListScreen> {
   bool get _hasOutcomes => _all.any(
         (p) => p.marksWhiteWin || p.marksDraw || p.marksBlackWin,
       );
+
+  /// Sonuç süzgeçleri gösteriliyor mu? Yalnızca oyun sonu listelerinde
+  /// anlamlı; başka listelerde yer kaplamasınlar.
+  bool get _outcomeFilters => widget.collection.isEndgame && _hasOutcomes;
 
   // -------------------------------------------------------------------------
   // İşlemler
@@ -554,41 +567,41 @@ class _PuzzleListScreenState extends State<PuzzleListScreen> {
             options: [
               FilterOption(
                 label: t('puzzles.filterAll'),
-                selected: _filter == _Filter.all,
-                onTap: () => _selectFilter(_Filter.all),
+                selected: _status == _Status.all,
+                onTap: () => _selectStatus(_Status.all),
               ),
               FilterOption(
                 label: t('puzzles.filterUnsolved'),
-                selected: _filter == _Filter.unsolved,
-                onTap: () => _selectFilter(_Filter.unsolved),
+                selected: _status == _Status.unsolved,
+                onTap: () => _selectStatus(_Status.unsolved),
               ),
               FilterOption(
                 label: t('puzzles.filterSolved'),
-                selected: _filter == _Filter.solved,
-                onTap: () => _selectFilter(_Filter.solved),
+                selected: _status == _Status.solved,
+                onTap: () => _selectStatus(_Status.solved),
               ),
               FilterOption(
                 label: t('puzzles.filterFavorites'),
-                selected: _filter == _Filter.favorites,
-                onTap: () => _selectFilter(_Filter.favorites),
+                selected: _status == _Status.favorites,
+                onTap: () => _selectStatus(_Status.favorites),
               ),
-              // Sonuç süzgeçleri yalnızca oyun sonu listelerinde
-              // anlamlı; başka listelerde yer kaplamasınlar.
-              if (widget.collection.isEndgame && _hasOutcomes) ...[
+              // Sonuç süzgeçleri durumla birlikte seçilebiliyor; seçili
+              // olana yeniden dokununca kalkıyor.
+              if (_outcomeFilters) ...[
                 FilterOption(
                   label: t('puzzles.filterWhiteWin'),
-                  selected: _filter == _Filter.whiteWin,
-                  onTap: () => _selectFilter(_Filter.whiteWin),
+                  selected: _outcome == _Outcome.whiteWin,
+                  onTap: () => _toggleOutcome(_Outcome.whiteWin),
                 ),
                 FilterOption(
                   label: t('puzzles.filterDraw'),
-                  selected: _filter == _Filter.draw,
-                  onTap: () => _selectFilter(_Filter.draw),
+                  selected: _outcome == _Outcome.draw,
+                  onTap: () => _toggleOutcome(_Outcome.draw),
                 ),
                 FilterOption(
                   label: t('puzzles.filterBlackWin'),
-                  selected: _filter == _Filter.blackWin,
-                  onTap: () => _selectFilter(_Filter.blackWin),
+                  selected: _outcome == _Outcome.blackWin,
+                  onTap: () => _toggleOutcome(_Outcome.blackWin),
                 ),
               ],
             ],
@@ -669,10 +682,18 @@ class _PuzzleListScreenState extends State<PuzzleListScreen> {
   /// açılıyor (ör. en son çözüleni görmek). Süzgeç değişince o niyet
   /// bitmiş oluyor; sıralama açık kalırsa kullanıcının her seferinde
   /// oku yeniden tıklaması gerekiyordu.
-  void _selectFilter(_Filter value) {
-    if (_filter == value) return;
+  void _selectStatus(_Status value) {
+    if (_status == value) return;
     setState(() {
-      _filter = value;
+      _status = value;
+      _descending = false;
+    });
+  }
+
+  /// Sonuç süzgecini seçer; seçili olana dokununca kaldırır.
+  void _toggleOutcome(_Outcome value) {
+    setState(() {
+      _outcome = _outcome == value ? null : value;
       _descending = false;
     });
   }

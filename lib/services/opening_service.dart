@@ -1,5 +1,6 @@
 import 'dart:convert';
 
+import 'package:flutter/foundation.dart' show visibleForTesting;
 
 import 'app_store.dart';
 import 'corrupt_data.dart';
@@ -140,6 +141,140 @@ class OpeningService {
     custom.add(opening);
     await _saveCustom();
     return opening;
+  }
+
+  /// "Kendi varyantını ekle" formu: hamle kutusunda alt alta birden çok
+  /// varyant olabilir.
+  ///
+  /// Eskiden kutunun tamamı tek bir oyun sayılıyordu: ikinci satırdaki
+  /// "1. e4", birinci satırın bittiği konumda oynanamadığı için okuma
+  /// orada duruyor, kalan satırlar **sessizce** atılıyor ve "N hamlelik
+  /// varyant eklendi" deniyordu. Bölme kuralı [splitVariations]'da.
+  ///
+  /// Adlar: satırın kendi adı (`ad | hamleler`) önce gelir. Yoksa tek
+  /// varyantta formdaki ad olduğu gibi, birden çok varyantta sonuna sıra
+  /// numarası eklenerek kullanılır; o da boşsa "Varyant N".
+  /// `skipped`: geçerli hamlesi olmayan varyant sayısı. `truncated`:
+  /// geçersiz bir hamlede kesilen (o hamleye kadarı eklenen) varyant
+  /// sayısı — eskiden bu da sessizce oluyordu.
+  Future<({List<Opening> added, int skipped, int truncated})> addManyFromSan({
+    required String family,
+    required String variation,
+    required String moveText,
+  }) async {
+    final drafts = splitVariations(moveText);
+    final resolvedFamily = family.isEmpty ? t('openings.ownFamily') : family;
+    final custom = await _loadCustom();
+    final stamp = DateTime.now().microsecondsSinceEpoch;
+    final added = <Opening>[];
+    var skipped = 0;
+    var truncated = 0;
+    var numbered = 0;
+    for (final draft in drafts) {
+      final position = engine.ChessGame();
+      final uci = <String>[];
+      final san = <String>[];
+      final tokens = _tokenize(draft.moves);
+      for (final token in tokens) {
+        final move = _matchSan(position, token);
+        if (move == null) break;
+        san.add(position.sanFor(move));
+        uci.add(move.uci);
+        position.makeMove(move);
+      }
+      if (uci.isEmpty) {
+        skipped++;
+        continue;
+      }
+      if (uci.length < tokens.length) truncated++;
+      String name;
+      final own = draft.name;
+      if (own != null && own.isNotEmpty) {
+        name = own;
+      } else if (variation.isEmpty) {
+        name = _autoVariationName(custom, resolvedFamily);
+      } else if (drafts.length == 1) {
+        name = variation;
+      } else {
+        numbered++;
+        name = '$variation $numbered';
+      }
+      final opening = Opening(
+        id: 'u_${stamp}_${added.length}',
+        eco: '---',
+        family: resolvedFamily,
+        variation: name,
+        uciMoves: uci,
+        sanMoves: san,
+        custom: true,
+      );
+      custom.add(opening);
+      added.add(opening);
+    }
+    if (added.isNotEmpty) await _saveCustom();
+    return (added: added, skipped: skipped, truncated: truncated);
+  }
+
+  /// Hamle metnini varyantlara böler.
+  ///
+  /// Yapıştırılan PGN'de uzun bir oyun satırlara bölünmüş olabilir
+  /// ("12. Re1 ..." ile başlayan satır). Bu yüzden her satır yeni varyant
+  /// sayılmıyor; bir satır yeni varyant başlatır, eğer:
+  /// * 1. hamleden başlıyorsa (`1.` / `1...`),
+  /// * başında bir ad varsa (`ad | hamleler`),
+  /// * önünde boş bir satır varsa,
+  /// * ya da ilk hamlesi üstteki satırın bittiği konumda oynanamıyorsa.
+  /// Aksi hâlde üstteki satırın devamıdır. Hamlesi olmayan satırlar (PGN
+  /// başlıkları) atlanır.
+  @visibleForTesting
+  static List<({String? name, String moves})> splitVariations(String text) {
+    // Yorumlar ve başlıklar satır aşabiliyor; önce bütün metinden
+    // çıkarılıyor.
+    final clean = text
+        .replaceAll(RegExp(r'\{[^}]*\}', dotAll: true), ' ')
+        .replaceAll(RegExp(r'\[[^\]]*\]'), ' ');
+    final drafts = <({String? name, StringBuffer moves})>[];
+    engine.ChessGame? position;
+    var gap = true;
+    for (final raw in const LineSplitter().convert(clean)) {
+      var line = raw.trim();
+      if (line.isEmpty) {
+        gap = true;
+        continue;
+      }
+      String? name;
+      final bar = line.indexOf('|');
+      if (bar >= 0) {
+        name = line.substring(0, bar).trim();
+        line = line.substring(bar + 1).trim();
+      }
+      final tokens = _tokenize(line);
+      if (tokens.isEmpty && name == null) continue;
+
+      final startsAtOne = RegExp(r'^1\s*\.').hasMatch(line);
+      final current = position;
+      final continues = !gap &&
+          name == null &&
+          !startsAtOne &&
+          current != null &&
+          drafts.isNotEmpty &&
+          _matchSan(current, tokens.first) != null;
+      if (!continues) {
+        drafts.add((name: name, moves: StringBuffer()));
+        position = engine.ChessGame();
+      }
+      drafts.last.moves.write(' $line');
+      final board = position!;
+      for (final token in tokens) {
+        final move = _matchSan(board, token);
+        if (move == null) break;
+        board.makeMove(move);
+      }
+      gap = false;
+    }
+    return [
+      for (final d in drafts) (name: d.name, moves: d.moves.toString().trim()),
+    ];
   }
 
   Future<void> updateCustom(Opening opening) async {
@@ -353,6 +488,38 @@ class OpeningService {
     await _saveCustom();
     await _forget(doomed);
     return doomed.length;
+  }
+
+  /// Bir ailenin (başlığın) bütün varyantlarını [to] adına taşır; kaç
+  /// varyant taşındığını döner.
+  ///
+  /// [to] zaten var olan bir aileyse varyantlar ona katılır. Birleşen
+  /// başlığın görünürlüğü kaynağınki olur: kullanıcı görünen bir başlığı
+  /// taşıyorsa sonuç da görünür kalsın (hedef gizliyse açılır), gizli
+  /// bir başlık taşınırsa gizli kalsın. İlerleme ve notlar varyant
+  /// kimliğine bağlı olduğu için olduğu gibi kalır.
+  Future<int> renameFamily(String from, String to) async {
+    final target = to.trim();
+    if (target.isEmpty || target == from) return 0;
+    final custom = await _loadCustom();
+    var moved = 0;
+    for (final opening in custom) {
+      if (opening.family != from) continue;
+      opening.family = target;
+      moved++;
+    }
+    if (moved == 0) return 0;
+    await _saveCustom();
+
+    final hidden = Set<String>.from(await hiddenFamilies());
+    final wasHidden = hidden.remove(from);
+    if (wasHidden) {
+      hidden.add(target);
+    } else {
+      hidden.remove(target);
+    }
+    await setHiddenFamilies(hidden);
+    return moved;
   }
 
   /// Bütün açılışları ve onlara bağlı her şeyi siler; kaç varyant

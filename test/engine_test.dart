@@ -222,8 +222,8 @@ void main() {
   });
   group('EngineLevel → Stockfish eşlemesi', () {
     test('skill değerleri ve Usta tam güç', () {
-      final skills = EngineLevel.all.map((e) => e.skill).toList();
-      expect(skills, [2, 5, 9, 13, 17, 20]);
+      final stockfish = EngineLevel.all.where((e) => !e.isMaia).toList();
+      expect(stockfish.map((e) => e.skill), [17, 20]);
       expect(EngineLevel.all.last.isFullStrength, isTrue);
       expect(EngineLevel.all.first.isFullStrength, isFalse);
     });

@@ -2,9 +2,16 @@
 
 Flutter 3.47 veya üzeri gerekir.
 
+İnsan gibi rakibin (Maia) ağırlık dosyası depoda değildir. Derlemeden
+önce `assets/maia/maia3-5m.bin` üretilmelidir; adımlar
+[`assets/maia/README.md`](assets/maia/README.md) içinde (PyTorch ile tek
+seferlik bir dönüştürme). Dosya olmadan uygulama derlenir ve çalışır,
+ama insan gibi seviyelerde oyun "Maia açılamadı" der (Stockfish'e
+geçilmez); Maia testleri atlanır.
+
 ```bash
 flutter pub get
-flutter test          # 451 test (3'ü yalnızca POSIX'te koşar)
+flutter test          # 502 test (3'ü yalnızca POSIX'te koşar)
 ```
 
 Windows'ta oyun listeleri, bulmacalar ve açılışlar `SharedPreferences`
@@ -15,7 +22,8 @@ yerine kendi dosyalarında duruyor (`lib/services/app_store.dart`,
 flutter test --dart-define=CL_FILE_STORE=true test/backup_test.dart \
   test/corrupt_data_test.dart test/opening_manage_test.dart \
   test/opening_san_case_test.dart test/opening_test.dart \
-  test/puzzle_scale_test.dart test/storage_test.dart test/v1020_store_test.dart
+  test/puzzle_scale_test.dart test/storage_test.dart test/v1020_store_test.dart \
+  test/v1040_openings_test.dart test/v1040_fixes_test.dart
 ```
 
 `flutter clean` sonrasında testlerin bir kısmı
@@ -125,6 +133,12 @@ ilgili paket güncellenirse kaldırılabilirler.
   sistemi süreci** olarak çalışır (Isolate değil); `engine_coordinator.dart`
   o tek sürecin sahibidir ve analiz / ipucu / oyun hamlesi isteklerini tek
   sıraya sokar.
+- Maia `lib/services/engine/maia/` altındadır: ağ (`maia_net.dart`, saf
+  Dart, Flutter'a bağlı değil), konum ve hamle kodlaması
+  (`maia_encoder.dart`) ve arka plan isolate'iyle hamle seçimi
+  (`maia_player.dart`). Stockfish sırasına girmez; kendi isolate'inde
+  çalışır. `tools/maia_reference.py` orijinal modelden
+  `test/fixtures/maia3_reference.json` dosyasını üretir.
 - Masaüstü yerleşim sınırları tek yerde toplanmıştır:
   `lib/widgets/responsive.dart` (tahta en fazla 520, içerik en fazla 760,
   geniş pencere eşiği 900).

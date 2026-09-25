@@ -3,8 +3,9 @@
 *[English](README.md) · **Türkçe***
 
 Satranç oyunlarını okumak, bulmaca çözmek, açılış çalışmak ve **tamamen
-cihazda çalışan** bir motora karşı oynamak için bir uygulama. İnternet
-bağlantısı gerekmez; hiçbir veri dışarı gönderilmez.
+cihazda çalışan** bir rakibe — insan gibi oynayan Maia'ya ya da
+Stockfish'e — karşı oynamak için bir uygulama. İnternet bağlantısı
+gerekmez; hiçbir veri dışarı gönderilmez.
 
 **Android** ve **Windows** üzerinde çalışır. Arayüz pencere genişliğine uyum
 sağlar: telefonda alt gezinme çubuğu, masaüstünde soldaki gezinme şeridi
@@ -25,8 +26,8 @@ dilidir.
 
 ## Motor (Stockfish)
 
-- **Tüm motor hamleleri** → resmi Stockfish, ayrı UCI OS süreci (Dart motoru yok)
-- **Motora karşı** → altı UI seviyesi için güç sınırı (`Skill Level` / `UCI_LimitStrength`+`UCI_Elo`). Usta = tam güç.
+- **Analiz, bulmaca ve üst iki seviye** → resmi Stockfish, ayrı UCI OS süreci (Dart ile yazılmış bir satranç motoru yok)
+- **Uzman ve Usta** → güç sınırı (`Skill Level` / `UCI_LimitStrength`+`UCI_Elo`). Usta = tam güç. Alttaki seviyeler Maia (aşağıda).
 - **Bulmaca ve canlı analiz** → tam güç Stockfish
 - **Çekirdek**: motor *hamlesi* telefonda da bilgisayarda da tek
   çekirdekle üretilir, böylece bir kademe her cihazda aynı anlama gelir.
@@ -43,12 +44,44 @@ dilidir.
 - Arama iptali süreci **yeniden kurmaz**: motora `stop` yazılır ve kendi
   `bestmove` satırı beklenir (bir saniyelik emniyetle).
 
+## İnsan gibi rakip (Maia)
+
+Stockfish'in zayıflatılmış seviyeleri insan gibi oynamıyordu: en iyi
+hamleyi arayıp arada rastgele büyük hatalar yapıyor, bir konumda derin
+bir taktik görüp başka bir konumda vezir asıyordu. Düşük puanlı bir
+oyuncu için bu hemen sırıtıyordu.
+
+- **800'den 2400'e dokuz seviye** (200'er puan) →
+  [Maia-3](https://github.com/CSSLab/maia3) (CSSLab, Toronto
+  Üniversitesi; AGPL-3.0). Puanlar Lichess puanıdır.
+- Maia en iyi hamleyi **aramaz**: o puandaki Lichess oyuncularının o
+  konumda hangi hamleleri hangi sıklıkla oynadığını tahmin eder. Hamle
+  bu dağılımdan çekilir (dağılımın en ucundaki %5'lik kuyruk atılır);
+  yani hataları da o puandaki insanların hataları. Aynı konumda hep aynı
+  hamleyi oynamaz.
+- Son **sekiz konuma** bakar: oyunun gidişatını görür, yalnızca tahtadaki
+  anlık durumu değil.
+- Model (5 milyon parametre, ~10 MB) uygulamanın içindedir; Dart ile
+  yazılmış bir ağla, **cihazda ve arka planda** çalışır. İnternet
+  gerekmez. Orijinal Python modeliyle aynı olasılıkları verdiği testle
+  doğrulanır (`test/maia_test.dart`, 110 konum, en büyük fark 0,000003).
+- Seviyeler birbirinden ayrışıyor: kendi aralarındaki 30'ar oyunda
+  400 puan yukarıdaki seviye 800→1200'de %83, 1200→1600'da %82,
+  1600→2000'de %73, 2000→2400'de %68 puan aldı. Üst uçta fark daralıyor.
+- Ağırlık dosyası **gitignore**'dadır; üretimi:
+  [`assets/maia/README.md`](assets/maia/README.md). Dosya yoksa ya da
+  açılamazsa oyun "Maia açılamadı" der ve sebebini yazar; tahta iki
+  tarafa açılır. Stockfish'e gizlice geçilmez: bir hata böyle fark
+  edilmeden kalırdı.
+
 ---
 
 ## Oyna
 
-**Motora karşı oyna** — Zorluğu altı kademeden seçersin: acemiden ustaya,
-her kademenin ne kadar hata yaptığı kısaca yazıyor. Rengini beyaz, siyah ya da **rastgele** belirleyebilirsin. İstersen
+**Motora karşı oyna** — Rakibini seçersin: 800'den 2400'e dokuz puan
+seviyesinde **insan gibi oynayan Maia** ya da **Stockfish** (Uzman, Usta).
+Seçtiğin seviyenin nasıl oynadığı kısaca yazıyor. Eski sürümdeki
+seçimin en yakın yeni seviyeye taşınır. Rengini beyaz, siyah ya da **rastgele** belirleyebilirsin. İstersen
 normal diziliş yerine **kendi kurduğun pozisyondan** başlarsın.
 
 **PGN yükle** — Bir dosyadan ya da panodan yapıştırarak. Bir dosyada
@@ -179,7 +212,9 @@ Liste oyun sonu listesi olarak işaretliyse ayrıca **beyaz
 kazanır / beraberlik / siyah kazanır** filtreleri görünür; bir bulmacanın
 sonucu satır menüsünden işaretlenir ya da alınan dosyada etiket olarak
 verilir (`beyaz-kazanir`, `beraberlik`, `siyah-kazanir`; İngilizce yazımı
-da tanınır).
+da tanınır). İki grup birlikte kullanılır: örneğin **çözülmemiş** ve
+**beyaz kazanır** aynı anda seçilebilir. Seçili sonuca yeniden dokununca
+sonuç filtresi kalkar.
 
 Arama kutusu sıra numarası (`#128`), etiketler, ad, not ve FEN üzerinde
 çalışır; Türkçe harflere duyarsızdır.
@@ -205,10 +240,27 @@ Liste boş başlar; çalışmak istediğin varyantları kendin eklersin.
 
 **Varyant ekleme** — Aile adı (ör. "İspanyol Açılışı"), varyant adı (ör.
 "Breyer Varyantı") ve hamleler (SAN ya da PGN olarak yapıştırılabilir).
-Her hamle kurallara göre doğrulanır; hatalı bir hamle varsa uyarı alırsın.
-Eklediklerin aileye göre gruplanır: aynı aile adını yazarak bir ailenin
-altına istediğin kadar varyant koyabilirsin. Varyant adını boş
-bırakırsan o ailede sıradaki numarayı alır.
+Her hamle kurallara göre doğrulanır; geçersiz bir hamlede durulur ve
+kaç varyantın orada kesildiği söylenir. Eklediklerin aileye göre
+gruplanır: aynı aile adını yazarak bir ailenin altına istediğin kadar
+varyant koyabilirsin. Aile kutusu yazarken var olan başlıkları önerir
+("isp" yazınca "İspanyol Açılışı"); öneriyi seçmek, "Ispanyol" ile
+"İspanyol" gibi yazım farkıyla ikinci bir başlık açılmasını önler. Varyant
+adını boş bırakırsan o ailede sıradaki numarayı alır.
+
+Hamle kutusuna **alt alta birden çok varyant** yazabilirsin: her biri
+yeni bir satırda, 1. hamleden başlayarak. Bir satıra ayrı ad vermek için
+başına ad ve `|` koy (`Breyer | 1. e4 e5 …`); adı olmayan satırlar
+formdaki adı sıra numarasıyla alır. Satırlara bölünmüş uzun bir PGN
+(`12. Re1 …` ile başlayan satır) tek oyun olarak kalır.
+
+**Başlık menüsü** — Her başlığın yanındaki ⋮ menüsünde:
+- **Varyant ekle**: form o başlık yazılı açılır; bir ya da alt alta
+  birden çok varyant eklersin.
+- **Başlığı yeniden adlandır**: altındaki bütün varyantlar yeni ada
+  taşınır; ilerleme ve notlar kalır. Yeni ad var olan bir başlıksa önce
+  birleştirme sorulur.
+- **Başlığı sil** (aşağıda).
 
 **Düzenleme** — Eklediğin bir varyantın adını, ailesini ve hamlelerini
 satır menüsünden değiştirebilir, notunu silebilir ya da varyantı

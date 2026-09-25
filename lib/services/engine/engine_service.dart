@@ -4,21 +4,36 @@ import 'package:flutter/foundation.dart' show kIsWeb;
 
 import '../../l10n/app_strings.dart';
 import 'engine_coordinator.dart';
+import 'maia/maia_player.dart';
 import 'search_result.dart';
 import 'stockfish_android.dart';
 import 'stockfish_uci.dart';
 
 export 'search_result.dart' show SearchResult;
 
-/// Motorun oyun gücü kademeleri.
+/// Rakibin gücü.
 ///
-/// [skill] değeri Stockfish `Skill Level` (0–20) ile birebir eşlenir.
-/// Usta (20) tam güçtür (`UCI_LimitStrength` kapalı). Daha düşük
-/// kademelerde Skill Level + LimitStrength/Elo uygulanır; arayüzde Elo
-/// metni gösterilmez.
+/// İki tür seviye var:
+/// * **İnsan gibi (Maia)**: [maiaElo] dolu. Hamleyi o puandaki insanların
+///   oyunlarından öğrenilmiş bir ağ seçiyor (bkz. `MaiaPlayer`).
+/// * **Motor (Stockfish)**: [skill] Stockfish `Skill Level` (0–20). Usta
+///   (20) tam güç (`UCI_LimitStrength` kapalı); altında Skill Level +
+///   LimitStrength/Elo.
+///
+/// 10.4.0'a kadar altı seviyenin hepsi zayıflatılmış Stockfish'ti. O
+/// yöntem motoru insanlaştırmıyordu: çoğu hamlede güçlü oynayıp arada
+/// rastgele büyük hatalar yapıyordu. Düşük ve orta seviyeler artık Maia;
+/// güçlü seviyelerde Stockfish de duruyor.
 class EngineLevel {
-  /// Çeviri tablosundaki sıra numarası (`level.<index>.name`).
+  /// [all] içindeki sıra; ayarlarda bu numara saklanıyor.
   final int index;
+
+  /// Maia seviyesiyse puan; Stockfish ise `null`.
+  final int? maiaElo;
+
+  /// Stockfish seviyelerinin çeviri anahtarı (`level.<key>.name`).
+  final String? key;
+
   final int depth;
   final int movetimeMs;
   final int skill;
@@ -28,59 +43,75 @@ class EngineLevel {
     required this.depth,
     required this.movetimeMs,
     required this.skill,
-  });
+    this.key,
+  }) : maiaElo = null;
 
-  String get name => t('level.$index.name');
+  const EngineLevel.maia(this.index, int elo)
+      : maiaElo = elo,
+        key = null,
+        depth = 0,
+        movetimeMs = 0,
+        skill = 0;
 
-  String get description => t('level.$index.desc');
+  bool get isMaia => maiaElo != null;
+
+  String get name => isMaia
+      ? t('level.maia.name', {'elo': maiaElo})
+      : t('level.$key.name');
+
+  String get description => isMaia
+      ? t('level.maia.$maiaElo')
+      : t('level.$key.desc');
+
+  /// Oyun ekranında rakibin adı.
+  String get opponentLabel => isMaia
+      ? t('game.maia', {'elo': maiaElo})
+      : t('game.engine', {'level': name});
 
   /// Tam güç (Usta): Skill 20, LimitStrength kapalı.
-  bool get isFullStrength => skill >= 20;
+  bool get isFullStrength => !isMaia && skill >= 20;
 
   static const List<EngineLevel> all = [
+    EngineLevel.maia(0, 800),
+    EngineLevel.maia(1, 1000),
+    EngineLevel.maia(2, 1200),
+    EngineLevel.maia(3, 1400),
+    EngineLevel.maia(4, 1600),
+    EngineLevel.maia(5, 1800),
+    EngineLevel.maia(6, 2000),
+    EngineLevel.maia(7, 2200),
+    EngineLevel.maia(8, 2400),
     EngineLevel(
-      index: 0,
-      depth: 1,
-      movetimeMs: 150,
-      skill: 2,
-    ),
-    EngineLevel(
-      index: 1,
-      depth: 2,
-      movetimeMs: 300,
-      skill: 5,
-    ),
-    EngineLevel(
-      index: 2,
-      depth: 4,
-      movetimeMs: 700,
-      skill: 9,
-    ),
-    EngineLevel(
-      index: 3,
-      depth: 6,
-      movetimeMs: 1400,
-      skill: 13,
-    ),
-    EngineLevel(
-      index: 4,
+      index: 9,
+      key: 'expert',
       depth: 9,
       movetimeMs: 2500,
       skill: 17,
     ),
     EngineLevel(
-      index: 5,
+      index: 10,
+      key: 'master',
       depth: 20,
       movetimeMs: 5000,
       skill: 20,
     ),
   ];
+
+  /// Yeni kullanıcının seviyesi: Maia 1200.
+  static const int defaultIndex = 2;
+
+  /// 10.3.0 ve öncesindeki altı seviyenin numarası → yeni liste.
+  ///
+  /// Acemi → 800, Çırak → 1200, Kulüp → 1400, İleri → 1800 (Maia);
+  /// Uzman ve Usta aynı adla Stockfish'te kalıyor.
+  static int fromLegacyIndex(int old) =>
+      const [0, 2, 3, 5, 9, 10][old.clamp(0, 5)];
 }
 
-/// Tüm motor hamleleri resmi Stockfish UCI sürecinden gelir.
-///
-/// Dart motoru / Isolate yoktur. SF yoksa veya çökerse boş [SearchResult]
-/// döner; arayüz asılı kalmaz.
+/// Analiz, ipucu ve Stockfish seviyelerindeki hamleler resmi Stockfish UCI
+/// sürecinden gelir; Maia seviyelerinde hamleyi cihazdaki Maia ağı seçer
+/// (`MaiaPlayer`, arka plan isolate'i). SF yoksa veya çökerse boş
+/// [SearchResult] döner; arayüz asılı kalmaz.
 class EngineService {
   static final EngineService instance = EngineService._();
   EngineService._();
@@ -184,8 +215,34 @@ class EngineService {
     return 128;
   }
 
-  /// Motora karşı oyun: seviye → Skill Level (+ LimitStrength/Elo).
-  Future<SearchResult> bestMoveForLevel(String fen, EngineLevel level) {
+  /// Motora karşı oyun.
+  ///
+  /// Maia seviyesinde hamleyi Maia seçiyor; [history] oyunun konumları
+  /// (eskiden yeniye, sonuncusu [fen]) — Maia son sekiz konuma bakıyor.
+  /// Stockfish seviyesinde Skill Level (+ LimitStrength/Elo).
+  Future<SearchResult> bestMoveForLevel(
+    String fen,
+    EngineLevel level, {
+    List<String> history = const [],
+  }) async {
+    final elo = level.maiaElo;
+    if (elo != null) {
+      final positions =
+          history.isNotEmpty && history.last == fen ? history : [fen];
+      final move = await MaiaPlayer.instance.move(positions, elo);
+      // Maia açılamazsa Stockfish'e düşülmüyor: bir hata böyle sessizce
+      // örtülür ve fark edilmezdi. Boş sonuç dönüyor; oyun ekranı
+      // "Maia açılamadı" diyor ve sebebini yazıyor
+      // (`MaiaPlayer.failure`).
+      if (move == null) return SearchResult.empty;
+      return SearchResult(
+        bestMoveUci: move.uci,
+        scoreCp: 0,
+        depth: 0,
+        nodes: 0,
+        pvUci: [move.uci],
+      );
+    }
     // Oyun hamlesi en yüksek öncelikli: analiz ya da ipucu onu kesemez.
     return _coordinator.submit(
       EngineJobKind.play,

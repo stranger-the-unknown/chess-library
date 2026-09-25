@@ -219,7 +219,8 @@ class Strings {
 
     // Ana ekran
     'home.playEngine': 'Motora karşı oyna',
-    'home.playEngineSub': 'İnternetsiz çalışan yerleşik satranç motoru',
+    'home.playEngineSub': 'İnsan gibi oynayan rakip ya da motor; '
+        'internet gerektirmez',
     'home.loadPgn': 'PGN yükle',
     'home.loadPgnSub': 'Panodan veya elle yapıştırarak oyun aç',
     'home.freeBoard': 'Serbest tahta',
@@ -227,6 +228,10 @@ class Strings {
     'home.setup': 'Pozisyon kur',
     'home.setupSub': 'Taşları elle dizip analiz et',
     'home.difficulty': 'Zorluk',
+    'home.maiaTitle': 'İnsan gibi rakip (Maia)',
+    'home.maiaHint': 'Seçilen puandaki Lichess oyuncuları gibi oynar, '
+        'hatalarıyla birlikte.',
+    'home.stockfishTitle': 'Motor (Stockfish)',
     'home.yourColor': 'Rengin',
     'home.startPosition': 'Başlangıç pozisyonu',
     'home.normalSetup': 'Normal diziliş',
@@ -263,6 +268,7 @@ class Strings {
     'game.board': 'Tahta',
     'game.vsEngine': 'Motora karşı',
     'game.engine': 'Motor · {level}',
+    'game.maia': 'Maia · {elo}',
     'game.you': 'Sen',
     'game.analysisOn': 'Motor analizi',
     'game.analysisOff': 'Analizi kapat',
@@ -282,6 +288,9 @@ class Strings {
     'game.exitConfirm': 'Çık',
     'game.engineStalled':
         'Motor cevap vermedi. Tahta iki tarafa da açıldı; oyuna sen devam edebilirsin.',
+    'game.maiaUnavailable':
+        'İnsan gibi rakip (Maia) açılamadı: {error}. Tahta iki tarafa da '
+            'açıldı; oyuna sen devam edebilirsin.',
     'game.fenCorrupt':
         'Kayıttaki konum okunamadı; başlangıç konumu kuruldu.',
     'game.newList': 'Yeni liste',
@@ -294,6 +303,8 @@ class Strings {
     'game.saved': 'Oyun kaydedildi.',
     'game.mateWhite': 'Beyaz mat ediyor ({n})',
     'game.mateBlack': 'Siyah mat ediyor ({n})',
+    'game.matedByWhite': 'Beyaz mat etti',
+    'game.matedByBlack': 'Siyah mat etti',
     'game.whiteWon': 'Beyaz kazandı',
     'game.blackWon': 'Siyah kazandı',
     'game.drawn': 'Berabere',
@@ -515,10 +526,27 @@ class Strings {
     'openings.variationHint': 'örn. Breyer Varyantı',
     'openings.moves': 'Hamleler (SAN veya PGN)',
     'openings.movesHint': '1. e4 e5 2. Nf3 Nc6 3. Bb5 a6',
+    'openings.movesHelp':
+        'Birden çok varyant için her birini yeni satıra, 1. hamleden '
+            'başlayarak yaz. Bir satıra ayrı ad vermek için başına ad ve | '
+            'koy: Breyer | 1. e4 e5 …',
+    'openings.skippedInvalid':
+        '{count} satırda geçerli hamle yoktu, eklenmedi.',
+    'openings.truncatedAtInvalid':
+        '{count} varyant geçersiz bir hamlede kesildi; o hamleden öncesi '
+            'eklendi.',
     'openings.added': '{count} hamlelik varyant eklendi.',
     'openings.deleteVariation': 'Varyantı sil',
     'openings.deleteMessage': '"{name}" silinsin mi?',
     'openings.deleteFamily': 'Başlığı sil',
+    'openings.familyMenu': 'Başlık seçenekleri',
+    'openings.addToFamily': 'Varyant ekle',
+    'openings.renameFamily': 'Başlığı yeniden adlandır',
+    'openings.mergeFamilyMessage':
+        '"{to}" başlığı zaten var. "{from}" altındaki {count} varyant ona '
+            'katılsın mı?',
+    'openings.merge': 'Birleştir',
+    'openings.familyRenamed': '{count} varyant "{name}" başlığında.',
     'openings.deleteFamilyMessage':
         '"{name}" başlığındaki {count} varyantın hepsi silinsin mi?',
     'openings.familyDeleted': '{count} varyant silindi.',
@@ -602,19 +630,21 @@ class Strings {
         'Sürüm {version} · Motor tamamen cihazda çalışır, internet '
             'gerektirmez.',
 
-    // Motor seviyeleri
-    'level.0.name': 'Acemi',
-    'level.0.desc': 'Sık hata yapar, yeni başlayanlar için',
-    'level.1.name': 'Çırak',
-    'level.1.desc': 'Basit taktikleri görür',
-    'level.2.name': 'Kulüp',
-    'level.2.desc': 'İki üç hamlelik kombinezonları bulur',
-    'level.3.name': 'İleri',
-    'level.3.desc': 'Ciddi bir rakip',
-    'level.4.name': 'Uzman',
-    'level.4.desc': 'Taktiksel olarak keskin',
-    'level.5.name': 'Usta',
-    'level.5.desc': 'Tam güç; cihaz ne kadar hızlıysa o kadar güçlü',
+    // Rakip seviyeleri: Maia (insan gibi, puanla) ve Stockfish.
+    'level.maia.name': '{elo}',
+    'level.maia.800': 'Yeni başlayan: taş asar, tehditleri çoğu zaman görmez',
+    'level.maia.1000': 'Kuralları bilir, sık sık taş kaybeder',
+    'level.maia.1200': 'Tek hamlelik tehditleri görür, daha derinini kaçırır',
+    'level.maia.1400': 'Basit taktikleri bulur, planı zayıftır',
+    'level.maia.1600': 'Ortalama bir kulüp oyuncusu',
+    'level.maia.1800': 'Taktikte sağlam, arada ciddi hata yapar',
+    'level.maia.2000': 'Güçlü kulüp oyuncusu',
+    'level.maia.2200': 'Çok güçlü; hatası az ve küçük',
+    'level.maia.2400': 'Maia\'nın en güçlü seviyesi',
+    'level.expert.name': 'Uzman',
+    'level.expert.desc': 'Kısıtlı güç; taktikte keskin, insan gibi değil',
+    'level.master.name': 'Usta',
+    'level.master.desc': 'Tam güç; cihaz ne kadar hızlıysa o kadar güçlü',
   };
 
   static const Map<String, String> _en = {
@@ -759,7 +789,8 @@ class Strings {
     'nav.lists': 'My lists',
     'nav.settings': 'Settings',
     'home.playEngine': 'Play the engine',
-    'home.playEngineSub': 'Built-in engine that works fully offline',
+    'home.playEngineSub': 'A human-like opponent or the engine; works '
+        'fully offline',
     'home.loadPgn': 'Load PGN',
     'home.loadPgnSub': 'Open a game from the clipboard or by typing it',
     'home.freeBoard': 'Free board',
@@ -767,6 +798,10 @@ class Strings {
     'home.setup': 'Set up a position',
     'home.setupSub': 'Place the pieces yourself and analyse',
     'home.difficulty': 'Difficulty',
+    'home.maiaTitle': 'Human-like opponent (Maia)',
+    'home.maiaHint': 'Plays like Lichess players at the chosen rating, '
+        'mistakes included.',
+    'home.stockfishTitle': 'Engine (Stockfish)',
     'home.yourColor': 'Your color',
     'home.startPosition': 'Starting position',
     'home.normalSetup': 'Standard setup',
@@ -801,6 +836,7 @@ class Strings {
     'game.board': 'Board',
     'game.vsEngine': 'vs engine',
     'game.engine': 'Engine · {level}',
+    'game.maia': 'Maia · {elo}',
     'game.you': 'You',
     'game.analysisOn': 'Engine analysis',
     'game.analysisOff': 'Turn analysis off',
@@ -820,6 +856,9 @@ class Strings {
     'game.exitConfirm': 'Leave',
     'game.engineStalled':
         'The engine did not answer. The board is open for both sides, so you can carry on.',
+    'game.maiaUnavailable':
+        'The human-like opponent (Maia) could not be started: {error}. The '
+            'board is open for both sides, so you can carry on.',
     'game.fenCorrupt':
         'The stored position could not be read; the starting position was set up.',
     'game.newList': 'New list',
@@ -832,6 +871,8 @@ class Strings {
     'game.saved': 'Game saved.',
     'game.mateWhite': 'White mates in {n}',
     'game.mateBlack': 'Black mates in {n}',
+    'game.matedByWhite': 'White has mated',
+    'game.matedByBlack': 'Black has mated',
     'game.whiteWon': 'White won',
     'game.blackWon': 'Black won',
     'game.drawn': 'Draw',
@@ -1045,10 +1086,26 @@ class Strings {
     'openings.variationHint': 'e.g. Breyer Variation',
     'openings.moves': 'Moves (SAN or PGN)',
     'openings.movesHint': '1. e4 e5 2. Nf3 Nc6 3. Bb5 a6',
+    'openings.movesHelp':
+        'For several lines, start each on a new row from move 1. To name a '
+            'row, put the name and | in front: Breyer | 1. e4 e5 …',
+    'openings.skippedInvalid':
+        '{count} rows had no legal move and were not added.',
+    'openings.truncatedAtInvalid':
+        '{count} lines stopped at an illegal move; the moves before it were '
+            'added.',
     'openings.added': 'Added a {count}-move line.',
     'openings.deleteVariation': 'Delete line',
     'openings.deleteMessage': 'Delete "{name}"?',
     'openings.deleteFamily': 'Delete title',
+    'openings.familyMenu': 'Title options',
+    'openings.addToFamily': 'Add line',
+    'openings.renameFamily': 'Rename title',
+    'openings.mergeFamilyMessage':
+        '"{to}" already exists. Move the {count} lines under "{from}" into '
+            'it?',
+    'openings.merge': 'Merge',
+    'openings.familyRenamed': '{count} lines are now under "{name}".',
     'openings.deleteFamilyMessage':
         'Delete all {count} lines under "{name}"?',
     'openings.familyDeleted': '{count} lines deleted.',
@@ -1129,18 +1186,20 @@ class Strings {
     'settings.aboutText':
         'Version {version} · The engine runs entirely on your device, no '
             'internet required.',
-    'level.0.name': 'Beginner',
-    'level.0.desc': 'Blunders often, good for starting out',
-    'level.1.name': 'Novice',
-    'level.1.desc': 'Spots simple tactics',
-    'level.2.name': 'Club',
-    'level.2.desc': 'Finds two or three move combinations',
-    'level.3.name': 'Advanced',
-    'level.3.desc': 'A serious opponent',
-    'level.4.name': 'Expert',
-    'level.4.desc': 'Tactically sharp',
-    'level.5.name': 'Master',
-    'level.5.desc': 'Full strength; as strong as your device allows',
+    'level.maia.name': '{elo}',
+    'level.maia.800': 'Beginner: hangs pieces, often misses threats',
+    'level.maia.1000': 'Knows the rules, loses material often',
+    'level.maia.1200': 'Sees one-move threats, misses deeper ones',
+    'level.maia.1400': 'Finds simple tactics, weak at planning',
+    'level.maia.1600': 'An average club player',
+    'level.maia.1800': 'Solid tactically, still makes serious mistakes',
+    'level.maia.2000': 'A strong club player',
+    'level.maia.2200': 'Very strong; few and small mistakes',
+    'level.maia.2400': 'Maia\'s strongest level',
+    'level.expert.name': 'Expert',
+    'level.expert.desc': 'Limited strength; tactically sharp, not human-like',
+    'level.master.name': 'Master',
+    'level.master.desc': 'Full strength; as strong as your device allows',
   };
 }
 
