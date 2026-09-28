@@ -11,6 +11,7 @@ import 'package:chess_pgn_reader/screens/playlist_detail_screen.dart';
 import 'package:chess_pgn_reader/services/pgn_import_service.dart';
 import 'package:chess_pgn_reader/services/settings_service.dart';
 import 'package:chess_pgn_reader/services/storage_service.dart';
+import 'package:chess_pgn_reader/widgets/responsive.dart';
 
 /// Oyun listesi kartı, sıralaması, tarihi ve araması.
 
@@ -110,17 +111,25 @@ void main() {
   });
 
   group('Kart adı', () {
-    test('First Last ve Last, First aynı soyadı verir', () {
-      expect(playerLastName('Magnus Carlsen'), 'Carlsen');
-      expect(playerLastName('Carlsen, Magnus'), 'Carlsen');
-      expect(playerLastName('GM Magnus Carlsen'), 'Carlsen');
+    test('kartta adın tamamı, PGN içinde yazdığı gibi', () {
+      SavedGame game(String white) => SavedGame(
+            name: 'x',
+            uciMoves: const [],
+            createdAt: DateTime(2020),
+            white: white,
+            black: 'Carlsen, Magnus',
+          );
+      expect(game('Magnus Carlsen').cardWhite, 'Magnus Carlsen');
+      expect(game('GM Magnus Carlsen').cardWhite, 'GM Magnus Carlsen');
+      expect(game('Hikaru').cardBlack, 'Carlsen, Magnus');
+      expect(game('?').cardWhite, '');
     });
 
-    test('tek parça kullanıcı adı olduğu gibi kalır', () {
-      expect(playerLastName('Hikaru'), 'Hikaru');
-      expect(playerLastName('DrNykterstein'), 'DrNykterstein');
-      expect(playerLastName('?'), '');
-      expect(playerLastName(''), '');
+    test('ad puntosu ekran genişliğine göre', () {
+      expect(Layout.listNameFontSize(340), 13);
+      expect(Layout.listNameFontSize(390), 14);
+      expect(Layout.listNameFontSize(412), 15);
+      expect(Layout.listNameFontSize(1200), 15);
     });
   });
 
@@ -182,15 +191,58 @@ void main() {
   });
 
   group('Kart', () {
-    testWidgets('kartta soyad görünür, tam ad durur', (tester) async {
-      const white = 'Çok Uzun Bir Beyaz Oyuncu Adı';
-      const black = 'Çok Uzun Bir Siyah Oyuncu Adı';
+    testWidgets('kartta adın tamamı görünür', (tester) async {
+      // Bir süre yalnızca soyad yazıyordu; kullanıcı tamamını istedi.
+      const white = 'Magnus Carlsen';
+      const black = 'Ian Nepomniachtchi';
       final playlist = await _seed(_pgn(white: white, black: black));
       await _pump(tester, playlist.id);
 
-      expect(find.text('Adı'), findsNWidgets(2));
-      expect(find.text(white), findsNothing);
-      expect(find.text(black), findsNothing);
+      expect(find.text(white), findsOneWidget);
+      expect(find.text(black), findsOneWidget);
+      expect(find.text('Carlsen'), findsNothing);
+    });
+
+    testWidgets('dikey telefonda solda daha az boşluk, küçük punto',
+        (tester) async {
+      final playlist = await _seed(_pgn(white: 'Ali Yılmaz', black: 'Veli'));
+      Future<(double, double)> measure(Size size) async {
+        tester.view.devicePixelRatio = 1;
+        tester.view.physicalSize = size;
+        await tester.pumpWidget(
+          MaterialApp(home: PlaylistDetailScreen(playlistId: playlist.id)),
+        );
+        await tester.pumpAndSettle();
+        final name = find.text('Ali Yılmaz');
+        final left = tester.getTopLeft(name).dx;
+        final size_ = tester.widget<Text>(name).style!.fontSize!;
+        return (left, size_);
+      }
+
+      addTearDown(tester.view.reset);
+      final (phoneLeft, phoneSize) = await measure(const Size(360, 800));
+      final (tabletLeft, tabletSize) = await measure(const Size(700, 1000));
+      expect(phoneSize, 14);
+      expect(tabletSize, 15);
+      // Kartın sol kenarı ile adın başı arasındaki pay: telefonda soldaki
+      // iki düğme sıkışık. (Tablette içerik ortalanıyor; karşılaştırma
+      // kartın kendi sol kenarına göre.)
+      Future<double> cardInset(Size size) async {
+        tester.view.physicalSize = size;
+        await tester.pumpAndSettle();
+        final card = find.ancestor(
+          of: find.text('Ali Yılmaz'),
+          matching: find.byType(InkWell),
+        ).first;
+        return tester.getTopLeft(find.text('Ali Yılmaz')).dx -
+            tester.getTopLeft(card).dx;
+      }
+
+      final phoneInset = await cardInset(const Size(360, 800));
+      final tabletInset = await cardInset(const Size(700, 1000));
+      expect(phoneInset, lessThan(tabletInset - 20),
+          reason: 'telefonda adlara daha çok yer kalmalı');
+      expect(phoneLeft, lessThan(tabletLeft));
     });
 
     testWidgets('kullanıcı adı soyad gibi kesilmez', (tester) async {
@@ -205,8 +257,8 @@ void main() {
       await _pump(tester, playlist.id);
       await tester.enterText(find.byType(TextField), 'magnus');
       await tester.pumpAndSettle();
-      expect(find.text('Carlsen'), findsOneWidget);
-      expect(find.text('Nepomniachtchi'), findsOneWidget);
+      expect(find.text('Magnus Carlsen'), findsOneWidget);
+      expect(find.text('Ian Nepomniachtchi'), findsOneWidget);
     });
 
     testWidgets('tarih kartta görünüyor', (tester) async {

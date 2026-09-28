@@ -30,11 +30,12 @@ class PrefsRecovery {
 
   /// Tercih dosyasını bulur ve bozuksa kenara alır.
   ///
-  /// Yalnızca Windows'ta anlamlı: Android'in kendi tercih dosyası yazmada
-  /// yedek dosya kullanıyor ve yarım kalmıyor. Kenara alınan dosyanın
-  /// yeni yolunu, bir şey yapılmadıysa `null` döndürür.
+  /// Windows ve Linux'ta anlamlı (ikisinin tercih eklentisi de aynı yerde
+  /// tek bir JSON dosyası tutuyor): Android'in kendi tercih dosyası
+  /// yazmada yedek dosya kullanıyor ve yarım kalmıyor. Kenara alınan
+  /// dosyanın yeni yolunu, bir şey yapılmadıysa `null` döndürür.
   static Future<String?> recover() async {
-    if (kIsWeb || !Platform.isWindows) return null;
+    if (kIsWeb || !(Platform.isWindows || Platform.isLinux)) return null;
     try {
       final dir = await getApplicationSupportDirectory();
       final file = File(

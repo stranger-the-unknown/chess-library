@@ -7,7 +7,7 @@ cihazda çalışan** bir rakibe — insan gibi oynayan Maia'ya ya da
 Stockfish'e — karşı oynamak için bir uygulama. İnternet bağlantısı
 gerekmez; hiçbir veri dışarı gönderilmez.
 
-**Android** ve **Windows** üzerinde çalışır. Arayüz pencere genişliğine uyum
+**Android**, **Windows** ve **Linux** üzerinde çalışır. Arayüz pencere genişliğine uyum
 sağlar: telefonda alt gezinme çubuğu, masaüstünde soldaki gezinme şeridi
 kullanılır. Geniş pencerede oyun ekranı iki sütuna ayrılır — solda tahta,
 sağda hamle listesi ve düğmeler. Aynı yerleşim bulmaca çözerken ve
@@ -257,10 +257,23 @@ formdaki adı sıra numarasıyla alır. Satırlara bölünmüş uzun bir PGN
 **Başlık menüsü** — Her başlığın yanındaki ⋮ menüsünde:
 - **Varyant ekle**: form o başlık yazılı açılır; bir ya da alt alta
   birden çok varyant eklersin.
+- **Siyah tarafından çalış** (işaret): o başlığın varyantları siyahın
+  gözünden açılır; alıştırmada siyahı sen oynarsın ve "analiz tahtasında
+  aç" da siyahın gözünden açar. İşaretli başlığın kartında **Siyah**
+  yazar. Varsayılan beyaz tarafı.
+- **Varyantları sırala** ve **En üste taşı** (aşağıda, "Sıralama").
 - **Başlığı yeniden adlandır**: altındaki bütün varyantlar yeni ada
   taşınır; ilerleme ve notlar kalır. Yeni ad var olan bir başlıksa önce
   birleştirme sorulur.
 - **Başlığı sil** (aşağıda).
+
+**Sıralama** — Başlıkların sırası üst menüdeki **Başlıkları sırala**
+ekranından, bir başlığın içindeki varyantların sırası o başlığın
+menüsündeki **Varyantları sırala** ekranından değiştirilir: satırı
+soldaki tutamaçtan sürükle, sağdaki düğme en üste taşır. Binlerce
+başlıkta sürüklemek yerine başlığı aramayla bulup menüsünden **En üste
+taşı** da diyebilirsin. Her değişiklik hemen kaydedilir; sıra metin
+dosyasında ve yedekte de korunur.
 
 **Düzenleme** — Eklediğin bir varyantın adını, ailesini ve hamlelerini
 satır menüsünden değiştirebilir, notunu silebilir ya da varyantı
@@ -303,13 +316,17 @@ C95|İspanyol Açılışı|Breyer Varyantı|1. e4 e5 2. Nf3 Nc6 3. Bb5 a6
 
 Yani `ECO|aile|varyant|hamleler` ya da ECO'suz üç alan.
 
-**İzle** — Varyantı adım adım ya da otomatik oynatarak izlersin.
+**İzle** — Varyantı adım adım ya da otomatik oynatarak izlersin. Geri
+alırken hamle yeniden oynatılmaz; yalnızca bir hamle ileri gidince
+canlanır.
 
 **Alıştırma** — Hamleleri sen oynarsın, yanlışta uyarı alırsın. Hatasız iki
 tamamlamada varyant "öğrenildi" sayılır.
 
 Her varyantta not, favori, "bu konumdan motora karşı oyna" ve "analiz
-tahtasında aç" seçenekleri vardır.
+tahtasında aç" seçenekleri vardır. Üstteki grafik simgesi **motoru**
+açar: tahtanın altında skor ve ana varyant, ayar açıksa en iyi hamle oku
+(oyun ekranındakiyle aynı).
 
 ---
 
@@ -339,9 +356,10 @@ taşıma, silme.
   varsayılana döner.
 - **Aralık göster**: listeyi belirli bir numara aralığına daraltır, üstteki
   şeritten kapatılır.
-- Kartta oyuncuların soyadları görünür (çevrimiçi kullanıcı adları
-  olduğu gibi kalır); asıl adlar kayıtta durur, arama ve filtre onlara
-  bakar. Beyaz üstte, siyah altta; beyazın kaç hamle yaptığı yazar;
+- Kartta oyuncuların adı tamamıyla, PGN'de yazdığı gibi görünür.
+  Punto ekran genişliğine göre: küçük telefonda daha küçük. Dikey
+  telefonda soldaki iki düğme sıkışık durur, adlara daha çok yer kalır.
+  (Oyun ekranındaki adlar bundan etkilenmez.) Beyaz üstte, siyah altta; beyazın kaç hamle yaptığı yazar;
   PGN'de tarih varsa o da yazılır (tam tarih yoksa yalnızca yıl, yıl
   da yoksa hiçbir şey).
 - Satır menüsündeki **oyun bilgileri** PGN başlıklarını gösterir: turnuva,
@@ -453,6 +471,24 @@ kapatmak, geri düğmesinde olduğu gibi onay sorar.
 > Windows ilk açılışta "Bilgisayarınızı korudu" uyarısı gösterebilir:
 > uygulama kod imzalama sertifikasıyla imzalı değil. **Ek bilgi →
 > Yine de çalıştır** ile geçebilirsiniz.
+
+**Linux** (x86-64) — `Chess Library <sürüm> Linux.tar.gz` dosyasını
+açın ve klasördeki `chess_library` dosyasını çalıştırın. Kurulum
+gerekmez. Uygulama menüsünde görünsün isterseniz aynı klasörde
+`./desktop-entry.sh` komutunu çalıştırın (kaldırmak için
+`./desktop-entry.sh --remove`).
+
+- GTK 3 gerekir (masaüstü dağıtımlarında hazır gelir).
+- Sesleri sistemin komutu çalar: `paplay`, `pw-play` ya da `aplay`.
+  Hiçbiri yoksa ses çalınmaz ve Ayarlar'da ses seçeneğinin altında bu
+  yazar.
+- Dosya seçme pencereleri için `zenity` ya da `kdialog` gerekir.
+- Stockfish pakette gelir (yürütülebilir dosyanın yanında).
+- Veriler `~/.local/share/io.github.strangertheunknown.ChessLibrary`
+  altında, Windows'taki düzenle (`veri` klasörü).
+
+Linux'ta da uygulama tek pencerede çalışır ve kaydedilmemiş hamleleri olan
+bir oyun açıkken pencereyi kapatmak onay sorar.
 
 ---
 

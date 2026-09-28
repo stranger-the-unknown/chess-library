@@ -86,6 +86,13 @@ class BackupService {
     'openings_custom_v1': 'id',
   };
 
+  /// Birleştirmede birleşimi alınan küme listeleri.
+  ///
+  /// Siyah tarafından çalışılan başlıklar: yedekteki işaretler cihazdakilere
+  /// ekleniyor. (Gizli başlıklar bilerek dışarıda: birleştirmede cihazın
+  /// kendi görünümü kalıyor.)
+  static const List<String> _mergeableSets = ['openings_black_v1'];
+
   /// Birleştirmede anahtar/değer olarak katılan haritalar.
   static const List<String> _mergeableMaps = [
     'puzzle_overrides_v1',
@@ -432,6 +439,13 @@ class BackupService {
       final merged = Map<String, dynamic>.from(jsonDecode(current) as Map)
         ..addAll(Map<String, dynamic>.from(jsonDecode(incoming) as Map));
       return jsonEncode(merged);
+    }
+
+    if (_mergeableSets.contains(key)) {
+      if (incoming is! List) return null;
+      final current = await AppStore.instance.getStringList(key) ?? const [];
+      return ({...current, for (final item in incoming) '$item'}.toList()
+        ..sort());
     }
 
     // Ayarlar ve tanınmayan anahtarlar: cihazın kendi tercihi kalsın.

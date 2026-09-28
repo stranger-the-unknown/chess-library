@@ -851,6 +851,20 @@ class _PlaylistDetailScreenState extends State<PlaylistDetailScreen> {
   }
 
   Widget _gameTile(SavedGame game, ColorScheme scheme) {
+    final width = MediaQuery.sizeOf(context).width;
+    // Ad puntosu ekran genişliğine göre; dikey telefonda soldaki iki düğme
+    // sıkışık, adlara daha çok harf sığsın. Oyun ekranındaki adlar ayrı.
+    final nameSize = Layout.listNameFontSize(width);
+    final compact = Layout.compactListCard(width);
+    // Material 3 düğmesi `constraints` verilse de 48 piksellik dokunma
+    // alanını koruyor; daraltmak için biçem gerekiyor.
+    final buttonStyle = compact
+        ? IconButton.styleFrom(
+            minimumSize: const Size(34, 40),
+            padding: EdgeInsets.zero,
+            tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+          )
+        : null;
     return Material(
       color: scheme.surfaceContainer,
       borderRadius: BorderRadius.circular(14),
@@ -860,10 +874,11 @@ class _PlaylistDetailScreenState extends State<PlaylistDetailScreen> {
         onTap: () =>
             _openGame(game),
         child: Padding(
-          padding: const EdgeInsets.fromLTRB(6, 10, 6, 10),
+          padding: EdgeInsets.fromLTRB(compact ? 2 : 6, 10, 6, 10),
           child: Row(
             children: [
               IconButton(
+                style: buttonStyle,
                 tooltip:
                     game.read ? t('lists.markUnread') : t('lists.markRead'),
                 icon: Icon(
@@ -876,6 +891,7 @@ class _PlaylistDetailScreenState extends State<PlaylistDetailScreen> {
                 onPressed: () => _toggleRead(game),
               ),
               IconButton(
+                style: buttonStyle,
                 tooltip: game.favorite
                     ? t('common.favoriteRemove')
                     : t('common.favoriteAdd'),
@@ -925,7 +941,7 @@ class _PlaylistDetailScreenState extends State<PlaylistDetailScreen> {
                                 maxLines: 1,
                                 overflow: TextOverflow.ellipsis,
                                 style: TextStyle(
-                                  fontSize: 15,
+                                  fontSize: nameSize,
                                   fontWeight: FontWeight.w600,
                                   color: game.read
                                       ? scheme.onSurfaceVariant
@@ -940,7 +956,7 @@ class _PlaylistDetailScreenState extends State<PlaylistDetailScreen> {
                                     maxLines: 1,
                                     overflow: TextOverflow.ellipsis,
                                     style: TextStyle(
-                                      fontSize: 15,
+                                      fontSize: nameSize,
                                       fontWeight: FontWeight.w600,
                                       color: game.read
                                           ? scheme.onSurfaceVariant

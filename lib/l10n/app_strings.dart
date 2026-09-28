@@ -540,6 +540,16 @@ class Strings {
     'openings.deleteMessage': '"{name}" silinsin mi?',
     'openings.deleteFamily': 'Başlığı sil',
     'openings.familyMenu': 'Başlık seçenekleri',
+    'openings.engineThinking': 'Motor düşünüyor…',
+    'openings.blackSide': 'Siyah tarafından çalış',
+    'openings.blackSideShort': 'Siyah tarafından çalışılıyor',
+    'openings.orderFamilies': 'Başlıkları sırala',
+    'openings.orderVariations': 'Varyantları sırala',
+    'openings.orderVariationsOf': '{family}: varyantların sırası',
+    'openings.moveToTop': 'En üste taşı',
+    'openings.orderHint':
+        'Soldaki tutamaçtan sürükle; sağdaki düğme en üste taşır. '
+            'Değişiklik hemen kaydedilir.',
     'openings.addToFamily': 'Varyant ekle',
     'openings.renameFamily': 'Başlığı yeniden adlandır',
     'openings.mergeFamilyMessage':
@@ -625,6 +635,8 @@ class Strings {
     'settings.vibration': 'Titreşim',
     'settings.sound': 'Hamle sesleri',
     'settings.soundSub': 'Kapalıyken titreşim de verilmez.',
+    'settings.soundPlayerMissing':
+        'Ses çalınamıyor: bu sistemde {players} komutlarından hiçbiri yok.',
     'settings.about': 'Hakkında',
     'settings.aboutText':
         'Sürüm {version} · Motor tamamen cihazda çalışır, internet '
@@ -1099,6 +1111,16 @@ class Strings {
     'openings.deleteMessage': 'Delete "{name}"?',
     'openings.deleteFamily': 'Delete title',
     'openings.familyMenu': 'Title options',
+    'openings.engineThinking': 'Engine is thinking…',
+    'openings.blackSide': 'Study from Black’s side',
+    'openings.blackSideShort': 'Studied from Black’s side',
+    'openings.orderFamilies': 'Reorder titles',
+    'openings.orderVariations': 'Reorder lines',
+    'openings.orderVariationsOf': '{family}: order of lines',
+    'openings.moveToTop': 'Move to top',
+    'openings.orderHint':
+        'Drag by the handle on the left; the button on the right moves a '
+            'row to the top. Changes are saved right away.',
     'openings.addToFamily': 'Add line',
     'openings.renameFamily': 'Rename title',
     'openings.mergeFamilyMessage':
@@ -1182,6 +1204,8 @@ class Strings {
     'settings.vibration': 'Vibration',
     'settings.sound': 'Move sounds',
     'settings.soundSub': 'Vibration is off as well when this is off.',
+    'settings.soundPlayerMissing':
+        'Sounds cannot play: none of {players} is installed on this system.',
     'settings.about': 'About',
     'settings.aboutText':
         'Version {version} · The engine runs entirely on your device, no '

@@ -388,7 +388,7 @@ void main() {
         ),
       );
       await tester.pumpAndSettle();
-      expect(find.text('Aronian'), findsOneWidget);
+      expect(find.text('Levon Aronian'), findsOneWidget);
 
       // Oyun kartlarının da menüsü var; aranan başlıktaki.
       await tester.tap(
@@ -411,10 +411,10 @@ void main() {
       await tester.tap(find.widgetWithText(FilledButton, 'Filtrele'));
       await tester.pumpAndSettle();
 
-      expect(find.text('Aronian'), findsNothing,
+      expect(find.text('Levon Aronian'), findsNothing,
           reason: 'filtreye takılan oyun listede kalmamalı');
-      expect(find.text('Nepomniachtchi'), findsOneWidget);
-      expect(find.text('Caruana'), findsOneWidget);
+      expect(find.text('Ian Nepomniachtchi'), findsOneWidget);
+      expect(find.text('Fabiano Caruana'), findsOneWidget);
       expect(find.textContaining('Beyaz oyuncu: carl'), findsOneWidget,
           reason: 'şerit hangi filtrenin açık olduğunu yazmalı');
       expect(find.textContaining('2 oyun'), findsOneWidget,
@@ -423,7 +423,7 @@ void main() {
       // Şeritteki çarpı filtreyi kaldırıyor.
       await tester.tap(find.byTooltip('Filtreyi temizle'));
       await tester.pumpAndSettle();
-      expect(find.text('Aronian'), findsOneWidget);
+      expect(find.text('Levon Aronian'), findsOneWidget);
     });
 
     testWidgets('dar telefonda taşmıyor', (tester) async {
@@ -501,9 +501,9 @@ void main() {
       await tester.tap(find.widgetWithText(FilledButton, 'Filtrele'));
       await tester.pumpAndSettle();
 
-      expect(find.text('Aronian'), findsOneWidget);
-      expect(find.text('Carlsen'), findsOneWidget);
-      expect(find.text('Nepomniachtchi'), findsNothing);
+      expect(find.text('Levon Aronian'), findsOneWidget);
+      expect(find.text('Magnus Carlsen'), findsOneWidget);
+      expect(find.text('Ian Nepomniachtchi'), findsNothing);
       expect(find.textContaining('1 oyun'), findsOneWidget);
     });
   });

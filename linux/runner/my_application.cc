@@ -10,6 +10,13 @@
 struct _MyApplication {
   GtkApplication parent_instance;
   char** dart_entrypoint_arguments;
+
+  // Pencere kapatma: Dart'a "kaydedilmemiş oyun var mı" diye soruluyor
+  // (Windows'taki flutter_window.cpp ile aynı kanal ve aynı kural).
+  FlMethodChannel* window_channel;
+  GtkWindow* window;
+  gboolean close_approved;
+  gboolean close_pending;
 };
 
 G_DEFINE_TYPE(MyApplication, my_application, GTK_TYPE_APPLICATION)
@@ -19,11 +26,77 @@ static void first_frame_cb(MyApplication* self, FlView* view) {
   gtk_widget_show(gtk_widget_get_toplevel(GTK_WIDGET(view)));
 }
 
+// Dart'ın kapatma cevabı. Yalnızca açık bir "false" pencereyi açık tutar;
+// cevap yoksa ya da hata varsa kapatılıyor: kullanıcı pencerede
+// hapsolmasın.
+static void request_close_cb(GObject* object, GAsyncResult* result,
+                             gpointer user_data) {
+  MyApplication* self = MY_APPLICATION(user_data);
+  self->close_pending = FALSE;
+
+  gboolean allow = TRUE;
+  g_autoptr(GError) error = nullptr;
+  g_autoptr(FlMethodResponse) response = fl_method_channel_invoke_method_finish(
+      FL_METHOD_CHANNEL(object), result, &error);
+  if (response != nullptr && FL_IS_METHOD_SUCCESS_RESPONSE(response)) {
+    FlValue* value = fl_method_success_response_get_result(
+        FL_METHOD_SUCCESS_RESPONSE(response));
+    if (value != nullptr && fl_value_get_type(value) == FL_VALUE_TYPE_BOOL &&
+        !fl_value_get_bool(value)) {
+      allow = FALSE;
+    }
+  }
+
+  if (allow && self->window != nullptr) {
+    self->close_approved = TRUE;
+    gtk_window_close(self->window);
+  }
+}
+
+// Pencerenin kapatma düğmesi. Onay yoksa Dart'a sorulup bekleniyor.
+static gboolean delete_event_cb(GtkWidget* widget, GdkEvent* event,
+                                gpointer user_data) {
+  MyApplication* self = MY_APPLICATION(user_data);
+  if (self->close_approved || self->window_channel == nullptr) {
+    return FALSE;
+  }
+  // Pencere simge durumundaysa soru görünmez; öne getir.
+  gtk_window_present(GTK_WINDOW(widget));
+  if (!self->close_pending) {
+    self->close_pending = TRUE;
+    fl_method_channel_invoke_method(self->window_channel, "requestClose",
+                                    nullptr, nullptr, request_close_cb, self);
+  }
+  return TRUE;
+}
+
+// Pencere simgesi: yürütülebilir dosyanın yanındaki data/ klasöründen.
+static void set_window_icon(GtkWindow* window) {
+  g_autofree gchar* exe = g_file_read_link("/proc/self/exe", nullptr);
+  if (exe == nullptr) {
+    return;
+  }
+  g_autofree gchar* dir = g_path_get_dirname(exe);
+  g_autofree gchar* icon =
+      g_build_filename(dir, "data", "chess_library.png", nullptr);
+  if (g_file_test(icon, G_FILE_TEST_EXISTS)) {
+    gtk_window_set_icon_from_file(window, icon, nullptr);
+  }
+}
+
 // Implements GApplication::activate.
 static void my_application_activate(GApplication* application) {
   MyApplication* self = MY_APPLICATION(application);
+  // Tek pencere: uygulama açıkken yeniden başlatılırsa açık pencere öne
+  // geliyor (Windows'taki gibi). İki kopya aynı veri dosyalarına yazıp
+  // birbirinin değişikliğini ezebilirdi.
+  if (self->window != nullptr) {
+    gtk_window_present(self->window);
+    return;
+  }
   GtkWindow* window =
       GTK_WINDOW(gtk_application_window_new(GTK_APPLICATION(application)));
+  self->window = window;
 
   // Use a header bar when running in GNOME as this is the common style used
   // by applications and is the setup most users will be using (e.g. Ubuntu
@@ -45,14 +118,16 @@ static void my_application_activate(GApplication* application) {
   if (use_header_bar) {
     GtkHeaderBar* header_bar = GTK_HEADER_BAR(gtk_header_bar_new());
     gtk_widget_show(GTK_WIDGET(header_bar));
-    gtk_header_bar_set_title(header_bar, "chess_pgn_reader");
+    gtk_header_bar_set_title(header_bar, "Chess Library");
     gtk_header_bar_set_show_close_button(header_bar, TRUE);
     gtk_window_set_titlebar(window, GTK_WIDGET(header_bar));
   } else {
-    gtk_window_set_title(window, "chess_pgn_reader");
+    gtk_window_set_title(window, "Chess Library");
   }
 
-  gtk_window_set_default_size(window, 1280, 720);
+  // Windows sürümüyle aynı açılış boyutu.
+  gtk_window_set_default_size(window, 1180, 820);
+  set_window_icon(window);
 
   g_autoptr(FlDartProject) project = fl_dart_project_new();
   fl_dart_project_set_dart_entrypoint_arguments(
@@ -74,6 +149,14 @@ static void my_application_activate(GApplication* application) {
   gtk_widget_realize(GTK_WIDGET(view));
 
   fl_register_plugins(FL_PLUGIN_REGISTRY(view));
+
+  // Kapatma isteği Dart'a soruluyor (bkz. lib/main.dart, _onWindowCall).
+  FlEngine* engine = fl_view_get_engine(view);
+  g_autoptr(FlStandardMethodCodec) codec = fl_standard_method_codec_new();
+  self->window_channel = fl_method_channel_new(
+      fl_engine_get_binary_messenger(engine), "chess_library/window",
+      FL_METHOD_CODEC(codec));
+  g_signal_connect(window, "delete-event", G_CALLBACK(delete_event_cb), self);
 
   gtk_widget_grab_focus(GTK_WIDGET(view));
 }
@@ -121,6 +204,8 @@ static void my_application_shutdown(GApplication* application) {
 static void my_application_dispose(GObject* object) {
   MyApplication* self = MY_APPLICATION(object);
   g_clear_pointer(&self->dart_entrypoint_arguments, g_strfreev);
+  g_clear_object(&self->window_channel);
+  self->window = nullptr;
   G_OBJECT_CLASS(my_application_parent_class)->dispose(object);
 }
 
@@ -133,7 +218,12 @@ static void my_application_class_init(MyApplicationClass* klass) {
   G_OBJECT_CLASS(klass)->dispose = my_application_dispose;
 }
 
-static void my_application_init(MyApplication* self) {}
+static void my_application_init(MyApplication* self) {
+  self->window_channel = nullptr;
+  self->window = nullptr;
+  self->close_approved = FALSE;
+  self->close_pending = FALSE;
+}
 
 MyApplication* my_application_new() {
   // Set the program name to the application ID, which helps various systems
@@ -142,7 +232,10 @@ MyApplication* my_application_new() {
   // the application to be recognized beyond its binary name.
   g_set_prgname(APPLICATION_ID);
 
+  // Bayrak yok (0): uygulama tekil, ikinci başlatma ilkini öne getirir.
+  // G_APPLICATION_DEFAULT_FLAGS eski GLib'de yok, G_APPLICATION_FLAGS_NONE
+  // yenisinde "kullanımdan kalktı" uyarısı veriyor (-Werror ile hata).
   return MY_APPLICATION(g_object_new(my_application_get_type(),
                                      "application-id", APPLICATION_ID, "flags",
-                                     G_APPLICATION_NON_UNIQUE, nullptr));
+                                     (GApplicationFlags)0, nullptr));
 }

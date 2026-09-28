@@ -1,7 +1,10 @@
-import 'package:flutter/foundation.dart' show visibleForTesting;
+import 'dart:io' show Platform;
+
+import 'package:flutter/foundation.dart' show kIsWeb, visibleForTesting;
 import 'package:flutter/services.dart';
 import 'package:just_audio/just_audio.dart';
 
+import 'linux_sound.dart';
 import 'settings_service.dart';
 
 /// Hamle sesleri ve titreşim.
@@ -73,11 +76,18 @@ class SoundService {
     });
   }
 
+  /// Linux'ta sesleri sistemin komutu çalıyor (bkz. [LinuxSound]);
+  /// `just_audio`'nun orada gerçekleştirmesi yok. Ayarlar ekranı da
+  /// okuyor; testler değiştirebilir.
+  static bool useSystemPlayer = !kIsWeb && Platform.isLinux;
+
   /// Bütün sesleri önceden hazırlar (uygulama açılışında çağrılır).
   ///
   /// Paralel yüklenir: sırayla yüklemek ilk hamleye kadar geçen süreyi
   /// gereksiz yere uzatıyordu.
-  Future<void> init() => Future.wait(_names.map(_playerFor));
+  Future<void> init() => useSystemPlayer
+      ? LinuxSound.instance.init(_names)
+      : Future.wait(_names.map(_playerFor));
 
   /// Testler için: çalınan her sesin adını bildirir.
   ///
@@ -89,6 +99,10 @@ class SoundService {
   Future<void> play(String name) async {
     if (!SettingsService.instance.soundEnabled) return;
     debugOnPlay?.call(name);
+    if (useSystemPlayer) {
+      await LinuxSound.instance.play(name, _names);
+      return;
+    }
 
     // Yalnızca bu sesin hazır olmasını bekler; diğerleri hâlâ
     // yükleniyor olabilir.

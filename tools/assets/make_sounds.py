@@ -3,11 +3,14 @@
 
 Tahta tasin tahtaya vurusu, kisa ve inharmonik modlarin ustuste binmesiyle
 modellenir: her mod ussel olarak soner, en tepede kisa bir gurultu patlamasi
-"tik" vurusunu verir. Cikti mono 44.1 kHz MP3'tur.
+"tik" vurusunu verir. Cikti mono 44.1 kHz MP3'tur; ayni dalgalar
+`wav/` alt klasorune 16 bit WAV olarak da yazilir (Linux'ta sesi sistemin
+paplay/pw-play/aplay komutu caliyor ve onlar MP3'u her dagitimda acamiyor).
 """
 import math
 import os
 import sys
+import wave
 
 import numpy as np
 import lameenc
@@ -98,6 +101,22 @@ def normalize(x, peak=0.80):
     return x / m * peak
 
 
+def _pcm16(x):
+    x = soften(normalize(x))
+    pcm = np.clip(x, -1.0, 1.0)
+    return (pcm * 32767).astype('<i2')
+
+
+def write_wav(path, x):
+    pcm = _pcm16(x)
+    with wave.open(path, 'wb') as f:
+        f.setnchannels(1)
+        f.setsampwidth(2)
+        f.setframerate(SR)
+        f.writeframes(pcm.tobytes())
+    return os.path.getsize(path)
+
+
 def write_mp3(path, x, bitrate=128):
     x = soften(normalize(x))
     pcm = np.clip(x, -1.0, 1.0)
@@ -164,13 +183,18 @@ def build(out_dir):
     sounds['notify'] = chime([880.00, 1174.66], seconds=0.55,
                              decay=0.18, amp=0.38)
 
+    wav_dir = os.path.join(out_dir, 'wav')
+    os.makedirs(wav_dir, exist_ok=True)
     total = 0
-    for name, wave in sorted(sounds.items()):
+    wav_total = 0
+    for name, samples in sorted(sounds.items()):
         path = os.path.join(out_dir, name + '.mp3')
-        size = write_mp3(path, wave)
+        size = write_mp3(path, samples)
         total += size
-        print('  %-16s %6.2f s  %6d bayt' % (name, len(wave) / SR, size))
-    print('toplam %d dosya, %.1f KB' % (len(sounds), total / 1024))
+        wav_total += write_wav(os.path.join(wav_dir, name + '.wav'), samples)
+        print('  %-16s %6.2f s  %6d bayt' % (name, len(samples) / SR, size))
+    print('toplam %d dosya, %.1f KB (WAV %.1f KB)'
+          % (len(sounds), total / 1024, wav_total / 1024))
 
 
 if __name__ == '__main__':

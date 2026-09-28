@@ -8,6 +8,8 @@ import '../widgets/responsive.dart';
 import '../l10n/app_strings.dart';
 import '../models/chess_engine.dart' as engine;
 import '../services/backup_service.dart';
+import '../services/linux_sound.dart';
+import '../services/sound_service.dart';
 import '../services/settings_service.dart';
 import '../services/file_pick.dart';
 import '../services/text_file_service.dart';
@@ -222,9 +224,19 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   secondary: const Icon(Icons.volume_up_rounded),
                   title: Text(t('settings.sound')),
                   // Açıklama yalnızca titreşimin olduğu yerde anlamlı.
-                  subtitle: SettingsService.vibrationSupported
-                      ? Text(t('settings.soundSub'))
-                      : null,
+                  // Linux'ta ses çalacak komut bulunamadıysa bu yazıyor:
+                  // anahtar açıkken sessizlik bir hata gibi görünmesin.
+                  subtitle: SoundService.useSystemPlayer &&
+                          LinuxSound.instance.unavailable
+                      ? Text(
+                          t('settings.soundPlayerMissing', {
+                            'players': LinuxSound.players.join(', '),
+                          }),
+                          style: TextStyle(color: scheme.error),
+                        )
+                      : SettingsService.vibrationSupported
+                          ? Text(t('settings.soundSub'))
+                          : null,
                   value: _settings.soundEnabled,
                   onChanged: (value) => _settings.soundEnabled = value,
                 ),

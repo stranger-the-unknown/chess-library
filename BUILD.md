@@ -11,19 +11,21 @@ geçilmez); Maia testleri atlanır.
 
 ```bash
 flutter pub get
-flutter test          # 502 test (3'ü yalnızca POSIX'te koşar)
+flutter test          # 524 test (3'ü yalnızca POSIX'te koşar)
 ```
 
-Windows'ta oyun listeleri, bulmacalar ve açılışlar `SharedPreferences`
-yerine kendi dosyalarında duruyor (`lib/services/app_store.dart`,
-`FileStore`). Servis testleri iki depoyla da koşmalı:
+Windows ve Linux'ta oyun listeleri, bulmacalar ve açılışlar
+`SharedPreferences` yerine kendi dosyalarında duruyor
+(`lib/services/app_store.dart`, `FileStore`). Servis testleri iki depoyla
+da koşmalı:
 
 ```bash
 flutter test --dart-define=CL_FILE_STORE=true test/backup_test.dart \
   test/corrupt_data_test.dart test/opening_manage_test.dart \
   test/opening_san_case_test.dart test/opening_test.dart \
   test/puzzle_scale_test.dart test/storage_test.dart test/v1020_store_test.dart \
-  test/v1040_openings_test.dart test/v1040_fixes_test.dart
+  test/v1040_openings_test.dart test/v1040_fixes_test.dart \
+  test/v1050_openings_test.dart
 ```
 
 `flutter clean` sonrasında testlerin bir kısmı
@@ -97,6 +99,43 @@ ISCC.exe windows\installer\chess_library.iss
 Çıktı: `windows/installer/output/ChessLibrary-Kurulum-<sürüm>.exe`.
 Sürüm numarası betiğin başındaki `AppVersion` satırındadır; `pubspec.yaml`
 ile birlikte güncellenmelidir.
+
+## Linux
+
+Linux paketi GitHub Actions'ta derleniyor
+(`.github/workflows/linux.yml`; `release-*` dallarına gönderimde ya da
+elle). İş akışı depoda olmayan iki ikiliyi indirip SHA-256 ile doğruluyor:
+Maia ağırlıklarını HuggingFace'teki orijinal dosyadan `tools/maia_export.py`
+ile üretiyor (sonuç Windows'ta üretilenle aynı olmalı) ve Stockfish 19'un
+resmi Linux ikilisini alıyor. Ardından testleri iki depoyla koşuyor,
+derliyor, uygulamayı sanal bir ekranda (xvfb) 25 saniye açık tutup
+çökmediğine ve veri klasörünü kurduğuna bakıyor, paketi
+(`Chess Library <sürüm> Linux.tar.gz`) "artifact" olarak bırakıyor.
+
+Yerelde (Ubuntu/Debian):
+
+```bash
+sudo apt-get install clang cmake ninja-build pkg-config libgtk-3-dev liblzma-dev
+# Stockfish: linux/stockfish/README.md
+flutter build linux --release
+```
+
+Çıktı: `build/linux/x64/release/bundle/` (yürütülebilir dosya
+`chess_library`, yanında `stockfish`, `lib/` ve `data/`). Dağıtırken
+klasörün tamamı gider; `linux/packaging/desktop-entry.sh` uygulama
+menüsüne girdi ekliyor.
+
+Linux'a özgü noktalar:
+- Sesler: `just_audio`'nun Linux gerçekleştirmesi yok. `LinuxSound`
+  sesleri `paplay` / `pw-play` / `aplay` ile çalıyor; MP3'ler bu
+  komutlarda her dağıtımda açılmadığı için aynı sesler
+  `assets/sounds/wav/` altında WAV olarak da duruyor
+  (`tools/assets/make_sounds.py` ikisini birden üretiyor).
+- Pencere kapatma: `linux/runner/my_application.cc`, Windows'taki gibi
+  `chess_library/window` kanalından Dart'a soruyor (kaydedilmemiş oyun).
+- Uygulama tekil (ikinci başlatma açık pencereyi öne getirir); uygulama
+  kimliği `io.github.strangertheunknown.ChessLibrary`, veri klasörü
+  `~/.local/share/io.github.strangertheunknown.ChessLibrary`.
 
 ## Uygulama simgesi
 

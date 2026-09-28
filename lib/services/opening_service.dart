@@ -34,11 +34,13 @@ class OpeningService {
   static const _progressKey = 'openings_progress_v1';
   static const _notesKey = 'openings_notes_v1';
   static const _hiddenKey = 'openings_hidden_v1';
+  static const _blackKey = 'openings_black_v1';
 
   List<Opening>? _custom;
   Map<String, OpeningProgress>? _progress;
   Map<String, String>? _notes;
   Set<String>? _hidden;
+  Set<String>? _black;
 
   // ---------------------------------------------------------------------
 
@@ -50,6 +52,7 @@ class OpeningService {
     _progress = null;
     _notes = null;
     _hidden = null;
+    _black = null;
   }
 
   Future<List<Opening>> all() async {
@@ -374,9 +377,14 @@ class OpeningService {
     // sırayla aynı pozisyona varanlar (transpozisyon) ayrı dizi
     // oldukları için ayrı varyant sayılır.
     final known = custom.map((o) => o.uciMoves.join(' ')).toSet();
+    final blackInFile = <String>{};
 
     for (int i = 0; i < lines.length; i++) {
       final text = lines[i].trim();
+      if (text.startsWith(_blackSideLine)) {
+        final family = text.substring(_blackSideLine.length).trim();
+        if (family.isNotEmpty) blackInFile.add(family);
+      }
       if (text.isNotEmpty && !text.startsWith('#')) {
         final parts = text.split('|');
         String eco = '---';
@@ -443,6 +451,11 @@ class OpeningService {
     if (added > 0 && !await _saveCustom()) {
       throw StateError('açılışlar diske yazılamadı');
     }
+    // Dosyada siyah tarafından çalışılan başlıklar: işaret ekleniyor,
+    // cihazdaki başka başlıkların ayarına dokunulmuyor.
+    for (final family in blackInFile) {
+      await setFamilyBlack(family, true);
+    }
     return ImportResult(added: added, skipped: skipped);
   }
 
@@ -455,12 +468,26 @@ class OpeningService {
     final buffer = StringBuffer()
       ..writeln('# ${t('openings.title')}')
       ..writeln('# eco|aile|varyant|hamleler');
+    // Siyah tarafından çalışılan başlıklar. `#` ile başladığı için eski
+    // sürümler bu satırları yorum sayıp atlıyor; dosya onlarda da
+    // açılıyor.
+    final families = {for (final o in custom) o.family};
+    final black = (await blackFamilies()).where(families.contains).toList()
+      ..sort();
+    for (final family in black) {
+      buffer.writeln('$_blackSideLine$family');
+    }
     for (final o in custom) {
       buffer.writeln(
           '${o.eco}|${o.family}|${o.variation}|${o.sanMoves.join(' ')}');
     }
     return buffer.toString();
   }
+
+  /// Metin dosyasında "bu başlık siyah tarafından çalışılıyor" satırı.
+  /// Dile bağlı değil: Türkçe arayüzde verilen dosya İngilizcede de
+  /// okunmalı.
+  static const String _blackSideLine = '#side|black|';
 
   /// Toplu alma sırasında kaç satırda bir arayüze yol verileceği.
   static const int _importChunk = 100;
@@ -487,6 +514,10 @@ class OpeningService {
     custom.removeWhere((o) => o.family == family);
     await _saveCustom();
     await _forget(doomed);
+    // Başlığa bağlı ayarlar da gidiyor: aynı adla sonradan eklenen bir
+    // başlık gizli ya da siyah tarafından başlamasın.
+    await setFamilyHidden(family, false);
+    await setFamilyBlack(family, false);
     return doomed.length;
   }
 
@@ -519,6 +550,10 @@ class OpeningService {
       hidden.remove(target);
     }
     await setHiddenFamilies(hidden);
+    // Siyah tarafı ayarı da aynı kuralla: taşınan başlığınki geçerli.
+    final wasBlack = (await blackFamilies()).contains(from);
+    await setFamilyBlack(from, false);
+    await setFamilyBlack(target, wasBlack);
     return moved;
   }
 
@@ -539,7 +574,105 @@ class OpeningService {
     await writeString(_notesKey, jsonEncode(_notes));
     _hidden = <String>{};
     await AppStore.instance.setStringList(_hiddenKey, const []);
+    _black = <String>{};
+    await AppStore.instance.setStringList(_blackKey, const []);
     return count;
+  }
+
+  // ---------------------------------------------------------------------
+  // Siyah tarafından çalışma
+  // ---------------------------------------------------------------------
+
+  /// Siyah tarafından çalışılan açılış aileleri.
+  ///
+  /// Varsayılan beyaz: tahta beyazın gözünden açılıyor. Başlığın
+  /// menüsündeki "Siyah tarafından çalış" işaretliyse o ailenin
+  /// varyantları siyahın gözünden açılıyor; "Analiz tahtasında aç" da o
+  /// yönde açıyor. Gizlilik gibi **aile adına** bağlı (bkz.
+  /// [hiddenFamilies]).
+  Future<Set<String>> blackFamilies() async {
+    if (_black != null) return _black!;
+    _black = (await AppStore.instance.getStringList(_blackKey) ??
+            const <String>[])
+        .toSet();
+    return _black!;
+  }
+
+  Future<void> setFamilyBlack(String family, bool black) async {
+    final current = Set<String>.from(await blackFamilies());
+    final changed = black ? current.add(family) : current.remove(family);
+    if (!changed) return;
+    _black = current;
+    await AppStore.instance.setStringList(_blackKey, current.toList()..sort());
+  }
+
+  // ---------------------------------------------------------------------
+  // Sıralama
+  // ---------------------------------------------------------------------
+
+  /// Başlıkların sırasını değiştirir.
+  ///
+  /// Liste ekranı başlıkları kayıttaki sırayla (her başlığın ilk
+  /// varyantının yerine göre) gösteriyor; burada kayıt, başlıklar
+  /// [families] sırasıyla art arda gelecek şekilde yeniden diziliyor.
+  /// Her başlığın içindeki sıra korunuyor. Listede adı geçmeyen başlıklar
+  /// eski sıralarıyla en sona.
+  Future<void> reorderFamilies(List<String> families) async {
+    final custom = await _loadCustom();
+    final byFamily = <String, List<Opening>>{};
+    for (final opening in custom) {
+      byFamily.putIfAbsent(opening.family, () => <Opening>[]).add(opening);
+    }
+    final ordered = <Opening>[
+      for (final family in families) ...?byFamily.remove(family),
+      for (final rest in byFamily.values) ...rest,
+    ];
+    if (_sameOrder(custom, ordered)) return;
+    custom
+      ..clear()
+      ..addAll(ordered);
+    await _saveCustom();
+  }
+
+  /// Bir başlığın içindeki varyantların sırasını değiştirir.
+  ///
+  /// [ids] o başlığın varyant kimlikleri, yeni sırayla. Varyantlar
+  /// başlığın ilk varyantının durduğu yerde art arda toplanıyor; başka
+  /// başlıkların yeri değişmiyor. Listede olmayan varyantlar sona.
+  Future<void> reorderVariations(String family, List<String> ids) async {
+    final custom = await _loadCustom();
+    final members = custom.where((o) => o.family == family).toList();
+    if (members.isEmpty) return;
+    final byId = {for (final o in members) o.id: o};
+    final sorted = <Opening>[];
+    for (final id in ids) {
+      final opening = byId.remove(id);
+      if (opening != null) sorted.add(opening);
+    }
+    sorted.addAll(members.where((o) => byId.containsKey(o.id)));
+    final ordered = <Opening>[];
+    var placed = false;
+    for (final opening in custom) {
+      if (opening.family != family) {
+        ordered.add(opening);
+      } else if (!placed) {
+        ordered.addAll(sorted);
+        placed = true;
+      }
+    }
+    if (_sameOrder(custom, ordered)) return;
+    custom
+      ..clear()
+      ..addAll(ordered);
+    await _saveCustom();
+  }
+
+  static bool _sameOrder(List<Opening> a, List<Opening> b) {
+    if (a.length != b.length) return false;
+    for (var i = 0; i < a.length; i++) {
+      if (!identical(a[i], b[i])) return false;
+    }
+    return true;
   }
 
   // ---------------------------------------------------------------------

@@ -98,11 +98,15 @@ class SavedGame {
       _meaningfulPlayer(tags['Black']) ??
       _playersFromName?.$2;
 
-  /// Kartta beyazın soyadı (ya da kullanıcı adı).
-  String get cardWhite => playerLastName(resolvedWhite);
+  /// Kartta beyazın adı, PGN'de yazdığı gibi tamamı.
+  ///
+  /// Bir süre yalnızca soyad gösterildi; kullanıcı adın tamamını istedi.
+  /// Sığmayan ad kartta üç noktayla kısalıyor, punto ekran genişliğine
+  /// göre (`Layout.listNameFontSize`).
+  String get cardWhite => resolvedWhite ?? '';
 
-  /// Kartta siyahın soyadı (ya da kullanıcı adı).
-  String get cardBlack => playerLastName(resolvedBlack);
+  /// Kartta siyahın adı, tamamı.
+  String get cardBlack => resolvedBlack ?? '';
 
   static String? _meaningfulPlayer(String? value) {
     if (value == null) return null;
@@ -160,33 +164,6 @@ class SavedGame {
             ) ??
             const <String, String>{},
       );
-}
-
-/// Kartta gösterilecek oyuncu adı: soyad.
-///
-/// PGN'de hem "Magnus Carlsen" hem "Carlsen, Magnus" geçer. Çevrimiçi
-/// oyunlarda ise ad çoğu zaman tek parça bir kullanıcı adıdır; onu
-/// kesmek kartı boş bırakırdı, o yüzden tek kelime olduğu gibi kalır.
-String playerLastName(String? full) {
-  if (full == null) return '';
-  var name = full.trim();
-  if (name.isEmpty || name == '?' || name == '-') return '';
-
-  name = name.replaceFirst(
-    RegExp(r'^(?:W?GM|W?IM|W?FM|W?CM|NM|WH)\s+', caseSensitive: false),
-    '',
-  );
-
-  final comma = name.indexOf(',');
-  if (comma >= 0) {
-    final last = name.substring(0, comma).trim();
-    return last.isEmpty ? name : last;
-  }
-
-  final parts =
-      name.split(RegExp(r'\s+')).where((part) => part.isNotEmpty).toList();
-  if (parts.length <= 1) return name;
-  return parts.last;
 }
 
 /// Oyun listesi (kullanıcının kendi klasörü).

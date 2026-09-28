@@ -93,6 +93,23 @@ class Layout {
   static double engineFontSize(double? boardSide) =>
       boardSide == null ? 14.0 : (boardSide / 640 * 14.0).clamp(13.0, 17.0);
 
+  /// Oyun listesi kartındaki oyuncu adlarının puntosu, ekran genişliğine
+  /// göre.
+  ///
+  /// Kartta artık adın tamamı yazıyor (eskiden yalnızca soyad); küçük
+  /// telefonda 15 punto uzun adları erkenden üç noktaya düşürüyordu.
+  /// Tablet ve masaüstünde eski değer. Oyun ekranındaki adlar bundan
+  /// etkilenmiyor.
+  static double listNameFontSize(double width) {
+    if (width < 360) return 13;
+    if (width < 400) return 14;
+    return 15;
+  }
+
+  /// Liste kartlarında sol düğmelerin sıkışık hâli (dikey telefon):
+  /// adlara yer kalsın.
+  static bool compactListCard(double width) => width < 600;
+
   /// Dar yerleşimde tahtanın üst sınırı.
   ///
   /// Masaüstünde dar pencere bir **tercih**, telefonun ve küçük

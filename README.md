@@ -7,7 +7,7 @@ playing against an opponent that runs **entirely on your device** — the
 human-like Maia or Stockfish. No internet connection is needed; no data
 ever leaves the device.
 
-Runs on **Android** and **Windows**. The interface adapts to the window
+Runs on **Android**, **Windows** and **Linux**. The interface adapts to the window
 width: a bottom navigation bar on a phone, a rail down the left side on
 the desktop. In a wide window the game screen splits into two columns —
 the board on the left, the move list and controls on the right. The same
@@ -268,10 +268,23 @@ starting `12. Re1 …`) stays one game.
 **Title menu** — The ⋮ menu next to each title offers:
 - **Add line**: the form opens with that title filled in; add one line or
   several one under another.
+- **Study from Black’s side** (check mark): the lines of that title open
+  from Black’s point of view; in practice you play Black, and "open in the
+  analysis board" opens from Black’s side too. A checked title shows
+  **Black** on its card. The default is White’s side.
+- **Reorder lines** and **Move to top** (below, "Ordering").
 - **Rename title**: every line under it moves to the new name; progress
   and notes stay. If the new name is an existing title, you are asked
   before the two are merged.
 - **Delete title** (below).
+
+**Ordering** — The order of titles is changed on the **Reorder titles**
+screen in the top menu, the order of lines inside a title on **Reorder
+lines** in that title’s menu: drag a row by the handle on the left; the
+button on the right moves it to the top. With thousands of titles you can
+also find one with the search and choose **Move to top** from its menu.
+Every change is saved at once; the order is kept in the text file and in
+backups.
 
 **Editing** — The name, family and moves of a line you added can be
 changed from the row menu, its note deleted, or the line removed.
@@ -318,13 +331,16 @@ Ruy Lopez|Breyer Variation|1. e4 e5 2. Nf3 Nc6 3. Bb5 a6
 That is `ECO|family|variation|moves`, or the same three fields without
 the ECO code.
 
-**Watch** — Step through the line by hand or let it play itself.
+**Watch** — Step through the line by hand or let it play itself. Going
+back does not replay the move; only a single step forward is animated.
 
 **Practice** — You play the moves and are warned when one is wrong. Two
 clean runs mark the line as learned.
 
 Every line also offers a note, a favorite mark, "play the engine from
-here" and "open in the analysis board".
+here" and "open in the analysis board". The chart icon at the top turns
+the **engine** on: score and main line under the board, and the best-move
+arrow if that setting is on (same as on the game screen).
 
 ---
 
@@ -355,8 +371,10 @@ delete them.
   to the default when the filter changes.
 - **Show a range** narrows the list to a stretch of numbers and is closed
   again from the banner at the top.
-- The card shows last names (online usernames stay as they are); full
-  names stay stored for search and filters. White is on top, black
+- The card shows the players’ full names, as written in the PGN. The
+  font size follows the screen width: smaller on a small phone. On a
+  phone in portrait the two buttons on the left are tighter, leaving
+  more room for the names. (Names on the game screen are unaffected.) White is on top, black
   underneath. It also shows the number of moves White
   played, and the date from the PGN if there is one (the year alone if
   the date is incomplete, nothing if there is no year).
@@ -468,6 +486,23 @@ unsaved moves is open asks first, like the back button does.
 > Windows may show a "Windows protected your PC" warning the first time:
 > the app is not signed with a code signing certificate. Get past it with
 > **More info → Run anyway**.
+
+**Linux** (x86-64) — Extract `Chess Library <version> Linux.tar.gz` and
+run `chess_library` in the folder. Nothing to install. To get it into the
+application menu, run `./desktop-entry.sh` in the same folder (remove with
+`./desktop-entry.sh --remove`).
+
+- Needs GTK 3 (preinstalled on desktop distributions).
+- Sounds are played by a system command: `paplay`, `pw-play` or `aplay`.
+  If none is installed there is no sound, and Settings says so under the
+  sound option.
+- File dialogs need `zenity` or `kdialog`.
+- Stockfish ships in the package (next to the executable).
+- Data lives in `~/.local/share/io.github.strangertheunknown.ChessLibrary`,
+  with the same layout as on Windows (the `veri` folder).
+
+On Linux too the app runs in a single window, and closing the window
+while a game with unsaved moves is open asks first.
 
 ---
 

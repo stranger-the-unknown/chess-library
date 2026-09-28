@@ -6,6 +6,7 @@ import '../../l10n/app_strings.dart';
 import '../../models/opening.dart';
 import '../../models/puzzle_search.dart' show foldForSearch;
 import '../../services/opening_service.dart';
+import 'opening_order_screen.dart';
 import 'opening_visibility_screen.dart';
 import '../../theme/app_theme.dart';
 import '../../widgets/app_dialogs.dart';
@@ -29,6 +30,9 @@ class _OpeningListScreenState extends State<OpeningListScreen> {
   List<Opening> _all = [];
   Map<String, OpeningProgress> _progress = {};
   Set<String> _hidden = <String>{};
+
+  /// Siyah tarafından çalışılan başlıklar.
+  Set<String> _black = <String>{};
   String _query = '';
   bool _onlyFavorites = false;
   bool _loading = true;
@@ -72,11 +76,13 @@ class _OpeningListScreenState extends State<OpeningListScreen> {
     final all = await _service.all();
     final progress = await _service.progressMap();
     final hidden = await _service.hiddenFamilies();
+    final black = await _service.blackFamilies();
     if (!mounted) return;
     setState(() {
       _all = all;
       _progress = progress;
       _hidden = Set<String>.from(hidden);
+      _black = Set<String>.from(black);
       _loading = false;
     });
   }
@@ -110,7 +116,12 @@ class _OpeningListScreenState extends State<OpeningListScreen> {
   Future<void> _open(Opening opening) async {
     await Navigator.push(
       context,
-      MaterialPageRoute(builder: (_) => OpeningStudyScreen(opening: opening)),
+      MaterialPageRoute(
+        builder: (_) => OpeningStudyScreen(
+          opening: opening,
+          blackSide: _black.contains(opening.family),
+        ),
+      ),
     );
     await _load();
   }
@@ -329,6 +340,41 @@ class _OpeningListScreenState extends State<OpeningListScreen> {
     );
   }
 
+  /// Başlığı siyah tarafından çalışılır yapar ya da geri alır.
+  Future<void> _toggleBlack(String family) async {
+    final black = !_black.contains(family);
+    await _service.setFamilyBlack(family, black);
+    if (!mounted) return;
+    setState(() {
+      if (black) {
+        _black.add(family);
+      } else {
+        _black.remove(family);
+      }
+    });
+  }
+
+  /// Sıralama ekranı: [family] boşsa başlıklar, doluysa o başlığın
+  /// varyantları.
+  Future<void> _openOrder({String? family}) async {
+    await Navigator.push(
+      context,
+      MaterialPageRoute(builder: (_) => OpeningOrderScreen(family: family)),
+    );
+    await _load();
+  }
+
+  /// Başlığı listenin en üstüne taşır. Binlerce başlıkta sürüklemek
+  /// yerine: aramayla bul, menüden en üste al.
+  Future<void> _moveFamilyToTop(String family) async {
+    final families = <String>[family];
+    for (final opening in _all) {
+      if (!families.contains(opening.family)) families.add(opening.family);
+    }
+    await _service.reorderFamilies(families);
+    await _load();
+  }
+
   Future<void> _deleteFamily(String family) async {
     // Onay, **süzgeçsiz** sayıyı söylemeli: ekrandaki liste aramaya ve
     // "yalnızca favoriler"e göre daralıyor ama silme o ailenin tümünü
@@ -391,6 +437,7 @@ class _OpeningListScreenState extends State<OpeningListScreen> {
               if (value == 'import') _importFromFile();
               if (value == 'export') _exportToFile();
               if (value == 'visibility') _manageVisibility();
+              if (value == 'order') _openOrder();
               if (value == 'deleteAll') _deleteAll();
             },
             itemBuilder: (context) => [
@@ -421,6 +468,14 @@ class _OpeningListScreenState extends State<OpeningListScreen> {
                 child: ListTile(
                   leading: const Icon(Icons.ios_share_rounded),
                   title: Text(t('openings.exportFile')),
+                ),
+              ),
+              PopupMenuItem(
+                value: 'order',
+                enabled: _all.isNotEmpty,
+                child: ListTile(
+                  leading: const Icon(Icons.swap_vert_rounded),
+                  title: Text(t('openings.orderFamilies')),
                 ),
               ),
               PopupMenuItem(
@@ -630,6 +685,29 @@ class _OpeningListScreenState extends State<OpeningListScreen> {
                     ),
                   ),
                 ),
+                if (_black.contains(family))
+                  Tooltip(
+                    message: t('openings.blackSideShort'),
+                    child: Container(
+                      margin: const EdgeInsets.only(left: 6),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 7,
+                        vertical: 2,
+                      ),
+                      decoration: BoxDecoration(
+                        color: scheme.inverseSurface,
+                        borderRadius: BorderRadius.circular(6),
+                      ),
+                      child: Text(
+                        t('common.black'),
+                        style: TextStyle(
+                          fontSize: 11,
+                          fontWeight: FontWeight.w700,
+                          color: scheme.onInverseSurface,
+                        ),
+                      ),
+                    ),
+                  ),
                 // Menü dokunuşu kendine alıyor, başlık açılıp kapanmıyor.
                 PopupMenuButton<String>(
                   tooltip: t('openings.familyMenu'),
@@ -642,6 +720,12 @@ class _OpeningListScreenState extends State<OpeningListScreen> {
                     switch (value) {
                       case 'add':
                         _openEditor(family: family);
+                      case 'black':
+                        _toggleBlack(family);
+                      case 'orderVariations':
+                        _openOrder(family: family);
+                      case 'toTop':
+                        _moveFamilyToTop(family);
                       case 'rename':
                         _renameFamily(family);
                       case 'deleteFamily':
@@ -655,6 +739,30 @@ class _OpeningListScreenState extends State<OpeningListScreen> {
                         contentPadding: EdgeInsets.zero,
                         leading: const Icon(Icons.playlist_add_rounded),
                         title: Text(t('openings.addToFamily')),
+                      ),
+                    ),
+                    // İşaretliyse bu başlığın varyantları siyahın
+                    // gözünden açılıyor.
+                    CheckedPopupMenuItem<String>(
+                      value: 'black',
+                      checked: _black.contains(family),
+                      child: Text(t('openings.blackSide')),
+                    ),
+                    PopupMenuItem<String>(
+                      value: 'orderVariations',
+                      enabled: openings.length > 1,
+                      child: ListTile(
+                        contentPadding: EdgeInsets.zero,
+                        leading: const Icon(Icons.swap_vert_rounded),
+                        title: Text(t('openings.orderVariations')),
+                      ),
+                    ),
+                    PopupMenuItem<String>(
+                      value: 'toTop',
+                      child: ListTile(
+                        contentPadding: EdgeInsets.zero,
+                        leading: const Icon(Icons.vertical_align_top_rounded),
+                        title: Text(t('openings.moveToTop')),
                       ),
                     ),
                     PopupMenuItem<String>(

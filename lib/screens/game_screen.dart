@@ -69,7 +69,13 @@ class GameScreen extends StatefulWidget {
     this.whiteName,
     this.blackName,
     this.initialWarning,
+    this.startFlipped = false,
   });
+
+  /// Tahta siyahın gözünden açılsın (ör. siyah tarafından çalışılan bir
+  /// açılıştan "Analiz tahtasında aç"). Motora karşı oyunda siyah
+  /// oynayınca zaten çevrili.
+  final bool startFlipped;
 
   /// Açılışta gösterilecek uyarı (ör. eksik okunan PGN).
   ///
@@ -82,8 +88,7 @@ class GameScreen extends StatefulWidget {
   /// pozitifse o taraf mat ediyor, negatifse mat oluyor, **sıfırsa zaten
   /// mat olmuş**. Sıfırın işareti yok; eskiden "mat eden" diye sırası
   /// gelen tarafın rakibi yerine kendisi yazılıyordu: beyaz mat edince
-  /// "Siyah mat ediyor (0)" çıkıyordu.
-  @visibleForTesting
+  /// "Siyah mat ediyor (0)" çıkıyordu. Açılış çalışma ekranı da kullanıyor.
   static String mateText(int mate, engine.Color sideToMove) {
     final sideToMoveMates = mate > 0;
     final whiteMates = (sideToMove == engine.Color.white) == sideToMoveMates;
@@ -221,8 +226,9 @@ class _GameScreenState extends State<GameScreen> {
     if (widget.mode == GameMode.versusEngine && _level.isMaia) {
       unawaited(MaiaPlayer.instance.warmUp());
     }
-    _flipped = widget.playerColor == engine.Color.black &&
-        widget.mode == GameMode.versusEngine;
+    _flipped = widget.startFlipped ||
+        (widget.playerColor == engine.Color.black &&
+            widget.mode == GameMode.versusEngine);
     _resultText = widget.initialResult;
     _loadInitialPosition();
     // Pencere kapatılırken (Windows) kaydedilmemiş hamle var mı diye
@@ -485,6 +491,22 @@ class _GameScreenState extends State<GameScreen> {
     return null;
   }
 
+  /// Motora karşı oyunda motor şimdi hamle yapacak mı?
+  ///
+  /// Yalnızca **canlı konumda** (hamle listesinin sonunda), oyun
+  /// bitmemişken ve sıra motordayken. Analiz ve ok o anda başlamıyor:
+  /// motorun hamlesini beklerken göstermenin anlamı yok ve ok rakibe akıl
+  /// verirdi. Eskiden kural yalnızca "sıra motorda mı" diye bakıyordu;
+  /// eski bir hamleye gidilince, o konumda sıra motordaysa motor
+  /// açılmıyordu ("bazen çalışmıyor": yalnızca motorun sırasındaki
+  /// konumlarda).
+  bool get _engineAboutToMove =>
+      widget.mode == GameMode.versusEngine &&
+      _resultText == null &&
+      !_resigned &&
+      _cursor == _history.length - 1 &&
+      _game.sideToMove != widget.playerColor;
+
   void _afterPositionChanged() {
     if (!_analysisOn) return;
     _analysisDebounce?.cancel();
@@ -513,11 +535,7 @@ class _GameScreenState extends State<GameScreen> {
     // Oyun bittiyse kural işlemiyor: orada artık inceleme yapılıyor ve
     // motorun oynayacağı bir hamle yok. Eskiden mat olduktan sonra geri
     // sarınca motorun hamlelerinde analiz şeridi boş kalıyordu.
-    if (widget.mode == GameMode.versusEngine &&
-        _resultText == null &&
-        _game.sideToMove != widget.playerColor) {
-      return;
-    }
+    if (_engineAboutToMove) return;
 
     _analysisDebounce = Timer(const Duration(milliseconds: 700), _runAnalysis);
   }
@@ -1028,8 +1046,7 @@ class _GameScreenState extends State<GameScreen> {
     // Motora karşı oyunda ok yalnızca senin sıranda çiziliyor: gösterilen
     // konumda sıra motordaysa o ok motorun hamlesini önerir, yani rakibe
     // akıl verir. Analiz/PGN okuma kipinde iki taraf için de anlamlı.
-    final arrowAllowed = widget.mode != GameMode.versusEngine ||
-        _game.sideToMove == widget.playerColor;
+    final arrowAllowed = !_engineAboutToMove;
     if (_analysisOn &&
         arrowAllowed &&
         SettingsService.instance.showEngineArrows &&
@@ -1099,9 +1116,7 @@ class _GameScreenState extends State<GameScreen> {
                 // Sıra motordayken analiz başlatmak motorun aramasını
                 // keser ve motor daha zayıf bir hamle oynar. Motor
                 // oynayınca analiz kendiliğinden başlıyor.
-                final engineTurn = widget.mode == GameMode.versusEngine &&
-                    _game.sideToMove != widget.playerColor;
-                if (!engineTurn) _runAnalysis();
+                if (!_engineAboutToMove) _runAnalysis();
               } else {
                 _analysisToken++;
                 // `stopAnalysis` artık yalnızca analiz/ipucu isteklerini

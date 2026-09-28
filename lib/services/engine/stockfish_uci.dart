@@ -586,7 +586,17 @@ class StockfishUci {
         ].join(sep),
       );
     } else {
-      // Linux/macOS: smoke / CI
+      // Linux (ve macOS): önce paketle gelen ikili, yürütülebilir dosyanın
+      // yanında (bkz. linux/CMakeLists.txt). Sonra geliştirme sırasındaki
+      // yer ve çalışma klasörü; en son sistemin kendi Stockfish'i.
+      try {
+        final exeDir = File(Platform.resolvedExecutable).parent.path;
+        candidates.add(<String>[exeDir, 'stockfish'].join(sep));
+      } catch (_) {}
+      candidates.add(
+        <String>[Directory.current.path, 'linux', 'stockfish', 'stockfish']
+            .join(sep),
+      );
       candidates.add(
         <String>[Directory.current.path, 'stockfish'].join(sep),
       );

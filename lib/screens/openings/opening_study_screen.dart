@@ -7,6 +7,7 @@ import '../../widgets/responsive.dart';
 import '../../l10n/app_strings.dart';
 import '../../models/chess_engine.dart' as engine;
 import '../../models/opening.dart';
+import '../../services/engine/engine_service.dart';
 import '../../services/opening_service.dart';
 import '../../services/sound_service.dart';
 import '../../theme/app_theme.dart';
@@ -30,7 +31,19 @@ enum StudyMode {
 class OpeningStudyScreen extends StatefulWidget {
   final Opening opening;
 
-  const OpeningStudyScreen({super.key, required this.opening});
+  /// Başlık "siyah tarafından çalış" olarak işaretli: tahta siyahın
+  /// gözünden açılıyor (alıştırmada siyahı sen oynuyorsun).
+  final bool blackSide;
+
+  const OpeningStudyScreen({
+    super.key,
+    required this.opening,
+    this.blackSide = false,
+  });
+
+  /// Testler için canlı analizin yerine geçer.
+  @visibleForTesting
+  static Future<SearchResult> Function(String fen)? debugAnalyze;
 
   @override
   State<OpeningStudyScreen> createState() => _OpeningStudyScreenState();
@@ -45,8 +58,17 @@ class _OpeningStudyScreenState extends State<OpeningStudyScreen> {
 
   late engine.ChessGame _game;
   int _cursor = -1;
+
+  /// Tahtanın son çizildiği hamle sırası; animasyon kararı için.
+  int _drawnCursor = -1;
   StudyMode _mode = StudyMode.watch;
-  bool _flipped = false;
+  late bool _flipped = widget.blackSide;
+
+  /// Motor analizi açık mı; sonucu ve geçersiz kılma jetonu.
+  bool _analysisOn = false;
+  SearchResult? _analysis;
+  int _analysisToken = 0;
+  Timer? _analysisDebounce;
   bool _autoPlaying = false;
   bool _mistakeMade = false;
   String? _message;
@@ -82,7 +104,119 @@ class _OpeningStudyScreenState extends State<OpeningStudyScreen> {
   @override
   void dispose() {
     _autoTimer?.cancel();
+    _analysisDebounce?.cancel();
+    if (_analysisOn) EngineService.instance.stopAnalysis();
     super.dispose();
+  }
+
+  // -------------------------------------------------------------------------
+  // Motor
+  // -------------------------------------------------------------------------
+
+  /// Motoru açar ya da kapatır. Oyun ekranındakiyle aynı analiz: skor,
+  /// ana varyant ve (ayar açıksa) en iyi hamle oku.
+  void _toggleAnalysis() {
+    setState(() {
+      _analysisOn = !_analysisOn;
+      _analysis = null;
+    });
+    if (_analysisOn) {
+      _runAnalysis();
+    } else {
+      _analysisToken++;
+      _analysisDebounce?.cancel();
+      EngineService.instance.stopAnalysis();
+    }
+  }
+
+  /// Konum değişti: eski sonuç hemen kalkıyor (ok yanlış konumu
+  /// göstermesin), yenisi kısa bir beklemeden sonra isteniyor; hamleler
+  /// hızlı geçilirken her konum motora sorulmasın.
+  void _afterPositionChanged() {
+    if (!_analysisOn) return;
+    _analysisToken++;
+    _analysisDebounce?.cancel();
+    EngineService.instance.stopAnalysis();
+    _analysis = null;
+    _analysisDebounce =
+        Timer(const Duration(milliseconds: 400), _runAnalysis);
+  }
+
+  Future<void> _runAnalysis() async {
+    if (!_analysisOn) return;
+    final fen = _game.fen;
+    final token = ++_analysisToken;
+    final debug = OpeningStudyScreen.debugAnalyze;
+    final result = debug != null
+        ? await debug(fen)
+        : await EngineService.instance.analyze(
+            fen,
+            depth: 22,
+            movetimeMs: 800,
+          );
+    if (!mounted || token != _analysisToken || !_analysisOn) return;
+    if (result.cancelled) return;
+    setState(() => _analysis = result);
+  }
+
+  /// Motor satırının yazısı: skor (beyazın gözünden) ve ana varyant.
+  String _describeAnalysis(SearchResult analysis) {
+    final side = _game.sideToMove;
+    final mate = analysis.mateIn;
+    final String evaluation;
+    if (mate != null) {
+      evaluation = GameScreen.mateText(mate, side);
+    } else {
+      final cp = analysis.scoreCp * (side == engine.Color.white ? 1 : -1);
+      final body = (cp.abs() / 100).toStringAsFixed(2);
+      evaluation = cp > 0 ? '+$body' : (cp < 0 ? '-$body' : '0.00');
+    }
+    final position = _game.copy();
+    final san = <String>[];
+    for (final uci in analysis.pvUci.take(6)) {
+      final move = position.moveFromUci(uci);
+      if (move == null) break;
+      san.add(position.sanFor(move));
+      position.makeMove(move);
+    }
+    return '$evaluation  ·  ${san.isEmpty ? "—" : san.join(" ")}';
+  }
+
+  Widget _engineLine(ColorScheme scheme, {bool panel = false}) {
+    final analysis = _analysis;
+    return Container(
+      width: double.infinity,
+      margin: panel
+          ? const EdgeInsets.fromLTRB(12, 8, 12, 0)
+          : const EdgeInsets.fromLTRB(12, 6, 12, 0),
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+      decoration: BoxDecoration(
+        color: panel ? scheme.surfaceContainerHigh : scheme.surfaceContainer,
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: Row(
+        children: [
+          Icon(Icons.memory_rounded, size: 20, color: scheme.primary),
+          const SizedBox(width: 8),
+          Expanded(
+            child: analysis == null
+                ? Text(
+                    t('openings.engineThinking'),
+                    style: TextStyle(
+                      fontSize: 13,
+                      color: scheme.onSurfaceVariant,
+                    ),
+                  )
+                : Text(
+                    _describeAnalysis(analysis),
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                    style: const TextStyle(fontSize: 14, height: 1.25),
+                  ),
+          ),
+        ],
+      ),
+    );
   }
 
   Future<void> _loadProgress() async {
@@ -137,6 +271,7 @@ class _OpeningStudyScreenState extends State<OpeningStudyScreen> {
         opponent: clamped.isOdd,
       );
     }
+    _afterPositionChanged();
   }
 
   /// Bekleyen otomatik hamleleri geçersiz kılan jeton.
@@ -309,6 +444,22 @@ class _OpeningStudyScreenState extends State<OpeningStudyScreen> {
     // yapıyordu. (Bulmacada durum farklı: orada "Çözüm" bulmacayı
     // bitirdiği için ipucu ayrı bir işe yarıyor.)
     final arrows = <BoardArrow>[];
+    final best = _analysis?.bestMoveUci;
+    if (_analysisOn &&
+        SettingsService.instance.showEngineArrows &&
+        best != null &&
+        best.length >= 4) {
+      final move = _game.moveFromUci(best);
+      if (move != null) {
+        arrows.add(BoardArrow(
+          move.from,
+          move.to,
+          Color(BoardAssets.markColor(SettingsService.instance.boardTheme))
+              .withValues(alpha: 0.7),
+          faint: true,
+        ));
+      }
+    }
 
     // Alıştırmada kullanıcı yalnızca sırası gelen tarafı oynar.
     final practiceSide = _flipped ? engine.Color.black : engine.Color.white;
@@ -329,6 +480,14 @@ class _OpeningStudyScreenState extends State<OpeningStudyScreen> {
               final value = await _service.toggleFavorite(opening.id);
               if (mounted) setState(() => _favorite = value);
             },
+          ),
+          IconButton(
+            tooltip: _analysisOn ? t('game.analysisOff') : t('game.analysisOn'),
+            icon: Icon(
+              Icons.insights_rounded,
+              color: _analysisOn ? scheme.primary : null,
+            ),
+            onPressed: _toggleAnalysis,
           ),
           IconButton(
             tooltip: t('common.flipBoard'),
@@ -388,6 +547,9 @@ class _OpeningStudyScreenState extends State<OpeningStudyScreen> {
                       builder: (_) => GameScreen(
                         startFen: _game.fen,
                         title: opening.variation,
+                        // Tahta çalışma ekranındaki yönde açılıyor: siyah
+                        // tarafından çalışılan başlıkta siyahın gözünden.
+                        startFlipped: _flipped,
                       ),
                     ),
                   );
@@ -456,6 +618,13 @@ class _OpeningStudyScreenState extends State<OpeningStudyScreen> {
                 constraints.maxHeight,
                 cap,
               );
+              // Yalnızca bir hamle ileri gidince canlandırılıyor. Eskiden
+              // geri almada da önceki hamle yeniden oynatılıyordu: taş
+              // geri gidiyor gibi değil, ileri gidiyor gibi uçuyordu.
+              // Başa dönüş ve uzağa atlama da canlanmıyor (oyun ekranıyla
+              // aynı kural).
+              final animate = _cursor == _drawnCursor + 1;
+              _drawnCursor = _cursor;
               return SizedBox(
                 width: side,
                 height: side,
@@ -467,6 +636,7 @@ class _OpeningStudyScreenState extends State<OpeningStudyScreen> {
                     interactive: _mode == StudyMode.practice,
                     movableSide: practiceSide,
                     lastMove: _currentMove,
+                    animateLastMove: animate,
                     onMove: _onUserMove,
                     arrows: arrows,
                   ),
@@ -490,6 +660,7 @@ class _OpeningStudyScreenState extends State<OpeningStudyScreen> {
       children: [
         _header(scheme),
         _boardArea(practiceSide, arrows, Layout.narrowBoardCap),
+        if (_analysisOn) _engineLine(scheme),
         if (opening.note != null && opening.note!.isNotEmpty)
           _noteCard(scheme, opening.note!),
         if (_message != null) _messageCard(scheme),
@@ -570,6 +741,7 @@ class _OpeningStudyScreenState extends State<OpeningStudyScreen> {
       clipBehavior: Clip.antiAlias,
       child: Column(
         children: [
+          if (_analysisOn) _engineLine(scheme, panel: true),
           if (opening.note != null && opening.note!.isNotEmpty)
             _noteCard(scheme, opening.note!),
           if (_message != null) _messageCard(scheme),

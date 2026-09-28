@@ -63,6 +63,11 @@ windows/stockfish/stockfish.exe
 windows/stockfish/*.zip
 windows/stockfish/_extract/
 
+# Stockfish Linux binary (GPL; see linux/stockfish/README.md)
+linux/stockfish/stockfish
+linux/stockfish/*.tar.gz
+linux/stockfish/_extract/
+
 # Stockfish Android binaries (GPL; see android/stockfish/README.md)
 android/stockfish/stockfish-*
 android/stockfish/*.tar.gz

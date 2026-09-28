@@ -4,10 +4,11 @@ project(runner LANGUAGES CXX)
 
 # The name of the executable created for the application. Change this to change
 # the on-disk name of your application.
-set(BINARY_NAME "chess_pgn_reader")
+set(BINARY_NAME "chess_library")
 # The unique GTK application identifier for this application. See:
 # https://wiki.gnome.org/HowDoI/ChooseApplicationID
-set(APPLICATION_ID "com.example.chess_pgn_reader")
+# Veri klasörü de buna göre: ~/.local/share/io.github.strangertheunknown.ChessLibrary
+set(APPLICATION_ID "io.github.strangertheunknown.ChessLibrary")
 
 # Explicitly opt in to modern CMake behaviors to avoid warnings with recent
 # versions of CMake.
@@ -120,6 +121,19 @@ install(CODE "
   " COMPONENT Runtime)
 install(DIRECTORY "${PROJECT_BUILD_DIR}/${FLUTTER_ASSET_DIR_NAME}"
   DESTINATION "${INSTALL_BUNDLE_DATA_DIR}" COMPONENT Runtime)
+
+# Stockfish (GPLv3) ayrı süreç olarak çalışıyor; ikili depoda değil
+# (bkz. linux/stockfish/README.md). Varsa yürütülebilir dosyanın yanına.
+set(STOCKFISH_BINARY "${CMAKE_CURRENT_SOURCE_DIR}/stockfish/stockfish")
+if(EXISTS "${STOCKFISH_BINARY}")
+  install(PROGRAMS "${STOCKFISH_BINARY}" DESTINATION "${CMAKE_INSTALL_PREFIX}"
+    COMPONENT Runtime)
+endif()
+
+# Pencere ve masaüstü simgesi.
+install(FILES "${CMAKE_CURRENT_SOURCE_DIR}/../assets/icon/icon.png"
+  DESTINATION "${INSTALL_BUNDLE_DATA_DIR}" RENAME "chess_library.png"
+  COMPONENT Runtime)
 
 # Install the AOT library on non-Debug builds only.
 if(NOT CMAKE_BUILD_TYPE MATCHES "Debug")

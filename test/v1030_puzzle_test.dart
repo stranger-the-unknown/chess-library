@@ -320,4 +320,25 @@ void main() {
           reason: 'yanlış hamle geri bildirimi');
     });
   });
+
+  group('Animasyon (10.5.0)', () {
+    testWidgets('hamle listesinde geriye dokununca hamle yeniden oynamıyor',
+        (tester) async {
+      await _open(tester, _scriptedPuzzle());
+      await _play(tester, 'a1a7');
+      await tester.pump();
+      expect(_board(tester).animateLastMove, isTrue,
+          reason: 'yeni hamle canlanıyor');
+      await _wait(tester);
+      expect(_moveCount(tester), 2);
+
+      // İlk hamleye bak: geri gidiş, canlanmamalı.
+      await tester.tap(find.descendant(
+        of: find.byType(MoveList),
+        matching: find.text('Ra7'),
+      ));
+      await tester.pump();
+      expect(_board(tester).animateLastMove, isFalse);
+    });
+  });
 }

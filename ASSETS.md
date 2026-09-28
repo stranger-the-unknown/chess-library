@@ -118,7 +118,10 @@ Uygulamayla aynı lisans (AGPL-3.0) altında dağıtılır.
 
 ## Sesler — `assets/sounds/` (10 dosya, ~74 KB)
 
-`tools/assets/make_sounds.py` ile sentezlenir; kayıt kullanılmaz.
+`tools/assets/make_sounds.py` ile sentezlenir; kayıt kullanılmaz. Aynı
+dalgalar `assets/sounds/wav/` altında 16 bit WAV olarak da yazılır
+(~372 KB): Linux'ta sesleri sistemin komutu (`paplay`, `pw-play`, `aplay`)
+çalıyor ve MP3 bu komutlarda her dağıtımda açılmıyor.
 
 Tahta bir taşın tahtaya vuruşu, inharmonik sönümlü modların üst üste
 binmesiyle modellenir; en tepede bant geçirgen süzülmüş kısa bir gürültü

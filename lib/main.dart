@@ -35,11 +35,13 @@ Future<void> main() async {
     await SettingsService.instance.load();
     PrefsRecovery.quarantined.value = moved;
   }
-  // Windows: oyun listeleri, bulmacalar ve açılışlar kendi dosyalarında,
-  // atomik yazılıyor (bkz. FileStore). İlk açılışta tercih dosyasından
-  // taşınıyor. Açılamazsa veri tercih dosyasında kalır ve oradan
-  // okunmaya devam eder: taşıma doğrulanmadan hiçbir şeyi silmiyor.
-  if (!kIsWeb && Platform.isWindows) {
+  // Windows ve Linux: oyun listeleri, bulmacalar ve açılışlar kendi
+  // dosyalarında, atomik yazılıyor (bkz. FileStore). İki masaüstünün
+  // tercih eklentisi de her değişiklikte tek bir büyük JSON dosyasını
+  // baştan yazıyor. İlk açılışta tercih dosyasından taşınıyor. Açılamazsa
+  // veri tercih dosyasında kalır ve oradan okunmaya devam eder: taşıma
+  // doğrulanmadan hiçbir şeyi silmiyor.
+  if (!kIsWeb && (Platform.isWindows || Platform.isLinux)) {
     try {
       AppStore.instance =
           await FileStore.open(await getApplicationSupportDirectory());
@@ -121,7 +123,8 @@ class _ChessAppState extends State<ChessApp> {
   /// Pencere kapatılırken onay penceresini gösterebilmek için.
   final GlobalKey<NavigatorState> _navigatorKey = GlobalKey<NavigatorState>();
 
-  /// Windows'ta pencere kapatma isteği (bkz. windows/runner/flutter_window.cpp).
+  /// Masaüstünde pencere kapatma isteği (bkz. windows/runner/flutter_window.cpp,
+  /// linux/runner/my_application.cc).
   ///
   /// Eskiden kaydedilmemiş bir oyun X'e basınca onay sorulmadan
   /// kayboluyordu (Android'de aynı şeyi geri tuşu soruyor). Flutter'ın

@@ -110,6 +110,10 @@ class _PuzzleSolveScreenState extends State<PuzzleSolveScreen> {
 
   final List<MoveEntry> _moves = [];
 
+  /// Tahtanın son çizildiği hamle sırası (geçmişe bakılıyorsa o hamle);
+  /// animasyon kararı için.
+  int _drawnIndex = -1;
+
   /// Motorla yargılanan bulmacada **başlangıç konumunun** analizi.
   ///
   /// "Baştan" tahtayı sıfırlarken ölçütü de buna döndürüyor. Eskiden
@@ -935,12 +939,20 @@ class _PuzzleSolveScreenState extends State<PuzzleSolveScreen> {
                 constraints.maxHeight,
                 cap,
               );
+              // Yalnızca bir hamle ileri gidince canlandırılıyor: hamle
+              // listesinde geriye dokununca önceki hamle yeniden
+              // oynatılıyordu. Yeni gelen hamleler (senin ya da rakibin)
+              // canlanmaya devam ediyor.
+              final shown = _viewIndex ?? _moves.length - 1;
+              final animate = shown == _drawnIndex + 1;
+              _drawnIndex = shown;
               return RepaintBoundary(
                 key: _boardKey,
                 child: SizedBox(
                   width: side,
                   height: side,
                   child: ChessBoardWidget(
+                    animateLastMove: animate,
                     game: _viewGame ?? _game,
                     flipped: _flipped,
                     // Geçmiş bir konuma bakılırken hamle yapılamaz.

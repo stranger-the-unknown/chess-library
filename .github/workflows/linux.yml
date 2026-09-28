@@ -1,0 +1,145 @@
+# Linux sürümü: testler, derleme, açılış denemesi ve paket.
+#
+# Elle başlatılır (Actions → Linux → Run workflow) ya da bir sürüm dalına
+# (release-*) gönderim yapılınca çalışır. Ortaya çıkan paket "artifact"
+# olarak iner; yayına kontrol edildikten sonra eklenir.
+#
+# Depoda olmayan iki ikili burada indirilip doğrulanıyor:
+# - Maia-3 ağırlıkları: HuggingFace'teki orijinal dosyadan
+#   tools/maia_export.py ile üretiliyor; sonuç Windows'ta üretilenle
+#   bit bit aynı olmalı (SHA-256).
+# - Stockfish 19: resmi sürümün Linux ikilisi (SHA-256 resmi sayfadan).
+name: Linux
+
+on:
+  workflow_dispatch:
+  push:
+    branches: ['release-*']
+
+permissions:
+  contents: read
+
+jobs:
+  linux:
+    runs-on: ubuntu-22.04
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Sistem paketleri
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y clang cmake ninja-build pkg-config \
+            libgtk-3-dev liblzma-dev xvfb openbox wmctrl imagemagick
+
+      - uses: subosito/flutter-action@v2
+        with:
+          flutter-version: 3.47.2
+          channel: stable
+          cache: true
+
+      # Ağırlıkları dönüştüren betik için; yerelde de aynı sürümler.
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.14'
+
+      - name: Maia ağırlıkları
+        run: |
+          python -m pip install --quiet numpy==2.5.3
+          python -m pip install --quiet torch==2.14.0 \
+            --index-url https://download.pytorch.org/whl/cpu
+          curl -sSL -o maia3-5m.pt \
+            https://huggingface.co/UofTCSSLab/Maia3-5M/resolve/main/maia3-5m.pt
+          echo "ba14208b2992d85502f5fb501934abf6aaaeb355e9f3fdf90e326911f562524f  maia3-5m.pt" | sha256sum -c
+          python tools/maia_export.py maia3-5m.pt assets/maia/maia3-5m.bin
+          echo "47aaea7f8fcd2101763afd5a7ffe50766ead70f52df60a8ec4a3178c45815d6a  assets/maia/maia3-5m.bin" | sha256sum -c
+          rm maia3-5m.pt
+
+      - name: Stockfish 19
+        working-directory: linux/stockfish
+        run: |
+          curl -sSL -o sf.tar.gz \
+            https://github.com/official-stockfish/Stockfish/releases/download/sf_19/stockfish-linux-x86-64-universal.tar.gz
+          echo "9defc0d4e55d49c65a6d042f3e571a39fcea499ade6dbe741b53b8c65e03611f  sf.tar.gz" | sha256sum -c
+          mkdir -p _extract
+          tar -xzf sf.tar.gz -C _extract
+          binary="$(find _extract -type f -name 'stockfish-linux-x86-64-universal*' | head -n 1)"
+          test -n "$binary"
+          cp "$binary" stockfish
+          chmod +x stockfish
+          ./stockfish quit < /dev/null | head -n 1
+
+      - run: flutter pub get
+      - run: flutter analyze
+
+      - name: Testler
+        timeout-minutes: 15
+        run: flutter test
+
+      - name: Testler (dosya deposu)
+        timeout-minutes: 10
+        run: |
+          flutter test --dart-define=CL_FILE_STORE=true test/backup_test.dart \
+            test/corrupt_data_test.dart test/opening_manage_test.dart \
+            test/opening_san_case_test.dart test/opening_test.dart \
+            test/puzzle_scale_test.dart test/storage_test.dart \
+            test/v1020_store_test.dart test/v1040_openings_test.dart \
+            test/v1040_fixes_test.dart test/v1050_openings_test.dart
+
+      - name: Derleme
+        run: flutter build linux --release
+
+      - name: Açılış denemesi
+        run: |
+          bundle=build/linux/x64/release/bundle
+          test -x "$bundle/chess_library"
+          test -x "$bundle/stockfish"
+          test -f "$bundle/data/chess_library.png"
+          test -f "$bundle/data/flutter_assets/assets/maia/maia3-5m.bin"
+          test -f "$bundle/data/flutter_assets/assets/sounds/wav/move-self.wav"
+          # Veri geçici bir ev klasörüne yazılsın.
+          export HOME="$(mktemp -d)"
+          set +e
+          timeout 25s xvfb-run -a "$bundle/chess_library" > run.log 2>&1
+          code=$?
+          set -e
+          cat run.log
+          # 124: zaman aşımı, yani uygulama 25 saniye açık kaldı (çökmedi).
+          test "$code" -eq 124
+          data="$HOME/.local/share/io.github.strangertheunknown.ChessLibrary"
+          ls -la "$data" "$data/veri" || true
+          test -d "$data/veri"
+
+      - name: Ekran görüntüsü ve pencereyi kapatma
+        run: |
+          export HOME="$(mktemp -d)"
+          chmod +x .github/scripts/linux-probe.sh
+          xvfb-run -a -s "-screen 0 1280x900x24" \
+            .github/scripts/linux-probe.sh \
+            build/linux/x64/release/bundle/chess_library "$PWD/linux-screen.png"
+
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: linux-screen
+          path: linux-screen.png
+          if-no-files-found: ignore
+
+      - name: Paket
+        run: |
+          version="$(grep '^version:' pubspec.yaml | sed 's/version: *//; s/+.*//')"
+          name="Chess Library $version"
+          mkdir -p "dist/$name"
+          cp -a build/linux/x64/release/bundle/. "dist/$name/"
+          cp LICENSE COPYRIGHT.md ASSETS.md README.md README.tr.md "dist/$name/"
+          cp linux/packaging/desktop-entry.sh "dist/$name/"
+          chmod +x "dist/$name/desktop-entry.sh"
+          tar -C dist -czf "dist/$name Linux.tar.gz" "$name"
+          sha256sum "dist/$name Linux.tar.gz"
+          echo "PACKAGE=$name Linux.tar.gz" >> "$GITHUB_ENV"
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: linux-package
+          path: dist/*.tar.gz
+          if-no-files-found: error
