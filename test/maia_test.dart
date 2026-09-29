@@ -186,11 +186,17 @@ void main() {
       expect(move, isNotNull);
     }, skip: available ? false : 'ağırlık dosyası yok');
 
-    test('tensörü eksik dosya kullanılmıyor, Stockfish oynuyor',
+    test('tensörü eksik dosya kullanılmıyor, Maia kullanılamaz sayılıyor',
         () async {
       // Başlığı ve manifesti doğru ama ağırlıkları eksik bir dosya.
       // Eskiden ağ kuruluyor, her hamlede hata verip "motor cevap
       // vermedi" diyecekti; artık kurulmuyor, Maia kullanılamaz sayılıyor.
+      //
+      // Testin eski adı "…, Stockfish oynuyor" idi: 24 Eylül 2026'dan
+      // (10.4.0) önceki davranış. O zamandan beri Maia açılamazsa
+      // Stockfish'e düşülmüyor, oyun "Maia açılamadı" ve sebebini yazıyor;
+      // bunu `v1040_maia_test.dart` ("ağırlık dosyası yoksa Stockfish
+      // gizlice oynamıyor") koruyor.
       MaiaPlayer.loadBytes = () async => _manifestOnly(heads: 8);
       expect(await MaiaPlayer.instance.move([start], 1500), isNull);
       expect(MaiaPlayer.instance.unavailable, isTrue);

@@ -1345,34 +1345,65 @@ class _GameScreenState extends State<GameScreen> {
             ),
           ),
           const SizedBox(width: 8),
-          Flexible(
-            child: Text(
-              name,
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-              style: TextStyle(
-                // İki ad da aynı: ne kalınlık ne renk değişiyor. Sırayı
-                // soldaki yuvarlağın halkası söylüyor.
-                fontWeight: FontWeight.w700,
-                color: scheme.onSurface,
-                // 13 punto telefona göre seçilmişti; masaüstünde 600+
-                // piksellik tahtanın yanında ufak kalıyordu.
-                fontSize: 15,
-                // Satır kutusu harflere otursun: yanındaki yuvarlak,
-                // inişli harflerin bıraktığı boşluk yüzünden yazıya göre
-                // aşağıda duruyor gibi görünüyordu.
-                height: 1.1,
-              ),
-            ),
-          ),
-          const SizedBox(width: 12),
+          // Önce ad yerleşiyor, alınan taşlar şeridi kalan yere sığıyor.
+          //
+          // Eskiden ad `Flexible`, şerit `Expanded` idi; ikisi de flex 1
+          // olduğu için ad satırın en fazla yarısını alabiliyordu. Listede
+          // tamamı görünen ad, 1536 piksellik pencerede bile oyun
+          // ekranına girince üç noktaya düşüyordu. Şerit yer yetmezse
+          // zaten kendini küçültüyor (bkz. [CapturedPieces]).
           Expanded(
-            child: CapturedPieces(side: side, game: _game, size: 16),
+            child: LayoutBuilder(
+              builder: (context, constraints) {
+                final base = DefaultTextStyle.of(context).style.merge(
+                      TextStyle(
+                        // İki ad da aynı: ne kalınlık ne renk değişiyor.
+                        // Sırayı soldaki yuvarlağın halkası söylüyor.
+                        fontWeight: FontWeight.w700,
+                        color: scheme.onSurface,
+                        // Satır kutusu harflere otursun: yanındaki
+                        // yuvarlak, inişli harflerin bıraktığı boşluk
+                        // yüzünden yazıya göre aşağıda duruyor gibi
+                        // görünüyordu.
+                        height: 1.1,
+                      ),
+                    );
+                final fit = Layout.fitPlayerName(
+                  name,
+                  base,
+                  constraints.maxWidth -
+                      _nameStripGap -
+                      Layout.minCapturedStripWidth,
+                  MediaQuery.textScalerOf(context),
+                );
+                return Row(
+                  children: [
+                    SizedBox(
+                      width: fit.width,
+                      child: Text(
+                        name,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: base.copyWith(fontSize: fit.fontSize),
+                      ),
+                    ),
+                    const SizedBox(width: _nameStripGap),
+                    Expanded(
+                      child:
+                          CapturedPieces(side: side, game: _game, size: 16),
+                    ),
+                  ],
+                );
+              },
+            ),
           ),
         ],
       ),
     );
   }
+
+  /// Oyuncu adıyla alınan taşlar şeridi arasındaki boşluk.
+  static const double _nameStripGap = 12;
 
   /// Tahta ve çevresindeki boşluk; kalan alana sığan en büyük kare.
   Widget _boardArea({

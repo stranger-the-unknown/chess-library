@@ -698,50 +698,79 @@ class HomeScreen extends StatelessWidget {
   }
 
   Future<void> _pastePgn(BuildContext context) async {
-    final controller = TextEditingController();
-    try {
-      final clipboard = await Clipboard.getData(Clipboard.kTextPlain);
-      if (clipboard?.text != null && clipboard!.text!.contains('.')) {
-        controller.text = clipboard.text!;
-      }
-      if (!context.mounted) return;
-
-      final pgn = await showDialog<String>(
-        context: context,
-        builder: (dialogContext) => AlertDialog(
-          title: Text(t('home.loadPgn')),
-          content: SizedBox(
-            width: 420,
-            child: TextField(
-              controller: controller,
-              maxLines: 10,
-              minLines: 6,
-              style: const TextStyle(fontSize: 12.5, fontFamily: 'monospace'),
-              decoration: InputDecoration(hintText: t('home.pgnHint')),
-            ),
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(dialogContext),
-              child: Text(t('common.cancel')),
-            ),
-            ElevatedButton(
-              onPressed: () =>
-                  Navigator.pop(dialogContext, controller.text.trim()),
-              child: Text(t('common.open')),
-            ),
-          ],
-        ),
-      );
-
-      if (pgn == null || !context.mounted) return;
-      if (pgn.isEmpty) {
-        AppDialogs.snack(context, t('home.pgnEmpty'));
-        return;
-      }
-      await _handlePgnText(context, pgn, 'PGN');
-    } finally {
-      controller.dispose();
+    String initial = '';
+    final clipboard = await Clipboard.getData(Clipboard.kTextPlain);
+    if (clipboard?.text != null && clipboard!.text!.contains('.')) {
+      initial = clipboard.text!;
     }
+    if (!context.mounted) return;
+
+    final pgn = await showDialog<String>(
+      context: context,
+      builder: (_) => _PgnPasteDialog(initialText: initial),
+    );
+
+    if (pgn == null || !context.mounted) return;
+    if (pgn.isEmpty) {
+      AppDialogs.snack(context, t('home.pgnEmpty'));
+      return;
+    }
+    await _handlePgnText(context, pgn, 'PGN');
+  }
+}
+
+/// PGN metni yapıştırma penceresi.
+///
+/// Metin kutusunun denetleyicisi pencerenin kendi State'inde. Eskiden
+/// `_pastePgn` içinde kurulup `finally`'de atılıyordu: `showDialog`
+/// pencere kapanmaya başlar başlamaz dönüyor, pencere ise kapanma
+/// animasyonu boyunca hâlâ çiziliyor ve atılmış denetleyiciye dokunuyordu
+/// (hata ayıklama derlemesinde "TextEditingController was used after
+/// being disposed"; masaüstünde, kutu odaktayken). 10.4.0'daki açılış
+/// formunun çözümü: State'in `dispose`'u pencere gerçekten gidince çalışır.
+class _PgnPasteDialog extends StatefulWidget {
+  final String initialText;
+
+  const _PgnPasteDialog({required this.initialText});
+
+  @override
+  State<_PgnPasteDialog> createState() => _PgnPasteDialogState();
+}
+
+class _PgnPasteDialogState extends State<_PgnPasteDialog> {
+  late final TextEditingController _controller =
+      TextEditingController(text: widget.initialText);
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AlertDialog(
+      title: Text(t('home.loadPgn')),
+      content: SizedBox(
+        width: 420,
+        child: TextField(
+          controller: _controller,
+          maxLines: 10,
+          minLines: 6,
+          style: const TextStyle(fontSize: 12.5, fontFamily: 'monospace'),
+          decoration: InputDecoration(hintText: t('home.pgnHint')),
+        ),
+      ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.pop(context),
+          child: Text(t('common.cancel')),
+        ),
+        ElevatedButton(
+          onPressed: () => Navigator.pop(context, _controller.text.trim()),
+          child: Text(t('common.open')),
+        ),
+      ],
+    );
   }
 }

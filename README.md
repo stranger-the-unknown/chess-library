@@ -351,6 +351,11 @@ delete them.
 
 - **Import a PGN file** adds many games to a list at once.
 - **Export as a PGN file** writes the whole list out.
+- **Read from Black’s side** (check mark, in the ⋮ menu of the list card
+  or in the menu inside the list): the games of that list open with the
+  board seen from Black — like "Study from Black’s side" for openings.
+  A marked list shows **Black** on its card. White’s side is the
+  default; the board can still be flipped on the game screen any time.
 - Games in a list are numbered; search works on the number (`#42`), the
   game name, the players, the result and your note.
 - **Read marks**: one at a time, all at once, or by giving a **range of
@@ -374,7 +379,10 @@ delete them.
 - The card shows the players’ full names, as written in the PGN. The
   font size follows the screen width: smaller on a small phone. On a
   phone in portrait the two buttons on the left are tighter, leaving
-  more room for the names. (Names on the game screen are unaffected.) White is on top, black
+  more room for the names. On the game screen the name is laid out
+  first and the captured pieces fit into what is left: a name that
+  does not fit gets a smaller font first, three dots only as a last
+  resort. White is on top, black
   underneath. It also shows the number of moves White
   played, and the date from the PGN if there is one (the year alone if
   the date is incomplete, nothing if there is no year).

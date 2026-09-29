@@ -88,10 +88,14 @@ class BackupService {
 
   /// Birleştirmede birleşimi alınan küme listeleri.
   ///
-  /// Siyah tarafından çalışılan başlıklar: yedekteki işaretler cihazdakilere
-  /// ekleniyor. (Gizli başlıklar bilerek dışarıda: birleştirmede cihazın
-  /// kendi görünümü kalıyor.)
-  static const List<String> _mergeableSets = ['openings_black_v1'];
+  /// Siyah tarafından çalışılan başlıklar ve siyah tarafından okunan
+  /// listeler: yedekteki işaretler cihazdakilere ekleniyor. (Gizli
+  /// başlıklar bilerek dışarıda: birleştirmede cihazın kendi görünümü
+  /// kalıyor.)
+  static const List<String> _mergeableSets = [
+    'openings_black_v1',
+    'playlists_black_v1',
+  ];
 
   /// Birleştirmede anahtar/değer olarak katılan haritalar.
   static const List<String> _mergeableMaps = [

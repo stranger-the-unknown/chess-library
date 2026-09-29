@@ -10,6 +10,7 @@ import 'opening_order_screen.dart';
 import 'opening_visibility_screen.dart';
 import '../../theme/app_theme.dart';
 import '../../widgets/app_dialogs.dart';
+import '../../widgets/black_side_badge.dart';
 import 'opening_study_screen.dart';
 import 'package:flutter/services.dart';
 import '../../services/file_pick.dart';
@@ -686,28 +687,7 @@ class _OpeningListScreenState extends State<OpeningListScreen> {
                   ),
                 ),
                 if (_black.contains(family))
-                  Tooltip(
-                    message: t('openings.blackSideShort'),
-                    child: Container(
-                      margin: const EdgeInsets.only(left: 6),
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 7,
-                        vertical: 2,
-                      ),
-                      decoration: BoxDecoration(
-                        color: scheme.inverseSurface,
-                        borderRadius: BorderRadius.circular(6),
-                      ),
-                      child: Text(
-                        t('common.black'),
-                        style: TextStyle(
-                          fontSize: 11,
-                          fontWeight: FontWeight.w700,
-                          color: scheme.onInverseSurface,
-                        ),
-                      ),
-                    ),
-                  ),
+                  BlackSideBadge(tooltip: t('openings.blackSideShort')),
                 // Menü dokunuşu kendine alıyor, başlık açılıp kapanmıyor.
                 PopupMenuButton<String>(
                   tooltip: t('openings.familyMenu'),

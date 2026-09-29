@@ -337,6 +337,11 @@ taşıma, silme.
 
 - **PGN dosyası içe aktar** ile bir listeye toplu oyun eklersin.
 - **Listeyi PGN dosyası olarak ver** ile listenin tamamını dışarı alırsın.
+- **Siyah tarafından oku** (liste kartının ⋮ menüsünde ya da listenin
+  içindeki menüde, işaret): o listenin oyunları tahta siyahın gözünden
+  açılır — açılışlardaki "Siyah tarafından çalış" gibi. İşaretli listenin
+  kartında **Siyah** yazar. Varsayılan beyaz tarafı; oyun ekranında tahta
+  yine istediğin zaman çevrilir.
 - Listedeki oyunlar numaralandırılır; arama numara (`#42`), oyun adı,
   oyuncu, sonuç ve not üzerinde çalışır.
 - **Okundu işareti**: tek tek, tümü birden ya da **numara aralığı vererek**
@@ -359,7 +364,8 @@ taşıma, silme.
 - Kartta oyuncuların adı tamamıyla, PGN'de yazdığı gibi görünür.
   Punto ekran genişliğine göre: küçük telefonda daha küçük. Dikey
   telefonda soldaki iki düğme sıkışık durur, adlara daha çok yer kalır.
-  (Oyun ekranındaki adlar bundan etkilenmez.) Beyaz üstte, siyah altta; beyazın kaç hamle yaptığı yazar;
+  Oyun ekranında da ad önce yerleşir, alınan taşlar kalan yere sığar:
+  ad sığmazsa önce punto küçülür, üç nokta yalnızca en son çare. Beyaz üstte, siyah altta; beyazın kaç hamle yaptığı yazar;
   PGN'de tarih varsa o da yazılır (tam tarih yoksa yalnızca yıl, yıl
   da yoksa hiçbir şey).
 - Satır menüsündeki **oyun bilgileri** PGN başlıklarını gösterir: turnuva,

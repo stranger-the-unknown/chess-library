@@ -41,6 +41,9 @@ class _PlaylistDetailScreenState extends State<PlaylistDetailScreen> {
   final TextEditingController _searchController = TextEditingController();
 
   Playlist? _playlist;
+
+  /// Liste siyah tarafından mı okunuyor ([StorageService.blackPlaylists]).
+  bool _black = false;
   bool _loading = true;
   String _query = '';
   _GameFilter _filter = _GameFilter.all;
@@ -82,6 +85,8 @@ class _PlaylistDetailScreenState extends State<PlaylistDetailScreen> {
     // playlistById analiz listelerini de buluyor; yalnızca
     // loadPlaylists()'e bakmak analiz listelerini boş gösteriyordu.
     final playlist = await _storage.playlistById(widget.playlistId);
+    final black =
+        (await _storage.blackPlaylists()).contains(widget.playlistId);
     if (!mounted) return;
 
     _numbers.clear();
@@ -93,8 +98,19 @@ class _PlaylistDetailScreenState extends State<PlaylistDetailScreen> {
 
     setState(() {
       _playlist = playlist;
+      _black = black;
       _loading = false;
     });
+  }
+
+  /// Bu listenin oyunları siyahın gözünden açılsın mı?
+  Future<void> _toggleBlack() async {
+    final black = !_black;
+    if (!await _guard(
+        () => _storage.setPlaylistBlack(widget.playlistId, black))) {
+      return;
+    }
+    await _load();
   }
 
   Future<void> _openGame(SavedGame game) async {
@@ -108,6 +124,9 @@ class _PlaylistDetailScreenState extends State<PlaylistDetailScreen> {
           initialResult: game.result,
           whiteName: game.white,
           blackName: game.black,
+          // Liste "Siyah tarafından oku" ile işaretliyse tahta siyahın
+          // gözünden açılıyor (açılışlardaki gibi).
+          startFlipped: _black,
         ),
       ),
     );
@@ -574,7 +593,7 @@ class _PlaylistDetailScreenState extends State<PlaylistDetailScreen> {
               if (value == 'range') _markRange();
               if (value == 'showRange') _pickRange();
               if (value == 'filter') _pickFilter();
-              
+              if (value == 'black') _toggleBlack();
             },
             itemBuilder: (context) => [
               ...[
@@ -598,6 +617,13 @@ class _PlaylistDetailScreenState extends State<PlaylistDetailScreen> {
               PopupMenuItem(
                 value: 'showRange',
                 child: Text(t('lists.showRange')),
+              ),
+              const PopupMenuDivider(),
+              // Listeler ekranındaki kart menüsüyle aynı işaret.
+              CheckedPopupMenuItem<String>(
+                value: 'black',
+                checked: _black,
+                child: Text(t('lists.blackSide')),
               ),
             ],
           ),

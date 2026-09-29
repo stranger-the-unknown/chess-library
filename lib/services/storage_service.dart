@@ -26,6 +26,10 @@ class StorageService extends ChangeNotifier {
 
   List<Playlist>? _cache;
 
+  /// Siyah tarafından okunan listelerin kimlikleri (bkz. [blackPlaylists]).
+  static const _blackKey = 'playlists_black_v1';
+  Set<String>? _black;
+
   /// 9.0.0'da kaldırılan analiz listelerinin anahtarı.
   ///
   /// Özellik gitti; telefonlarda kalan veri kimsenin göremediği bir yer
@@ -37,6 +41,7 @@ class StorageService extends ChangeNotifier {
   /// Yedek geri yüklendiğinde ve testlerde soğuk başlangıç için kullanılır.
   void resetCache() {
     _cache = null;
+    _black = null;
     notifyListeners();
   }
 
@@ -162,6 +167,40 @@ class StorageService extends ChangeNotifier {
     final playlists = await loadPlaylists();
     playlists.removeWhere((p) => p.id == id);
     await _save();
+    // Silinen listenin işareti kümede asılı kalmasın.
+    await setPlaylistBlack(id, false);
+  }
+
+  /// Siyah tarafından okunan listeler (kimlikleri).
+  ///
+  /// Varsayılan beyaz: listedeki oyunlar tahta beyazın gözünden açılıyor.
+  /// Listenin menüsündeki "Siyah tarafından oku" işaretliyse o listenin
+  /// oyunları siyahın gözünden açılıyor. Açılışlardaki siyah tarafının
+  /// (`openings_black_v1`) karşılığı; ama işaret listenin **kimliğine**
+  /// bağlı, adına değil: listelerin adı tekil değil ve yeniden
+  /// adlandırılabiliyor.
+  ///
+  /// Listelerin kendi kaydına (`playlists_v2`) alan olarak eklenmedi: eski
+  /// bir sürüm listeleri yeniden yazdığında tanımadığı alanı düşürürdü.
+  /// Ayrı küme olarak tam yedekte taşınıyor, birleştirmede birleşimi
+  /// alınıyor.
+  Future<Set<String>> blackPlaylists() async {
+    if (_black != null) return _black!;
+    _black = (await AppStore.instance.getStringList(_blackKey) ??
+            const <String>[])
+        .toSet();
+    return _black!;
+  }
+
+  Future<void> setPlaylistBlack(String id, bool black) async {
+    final current = Set<String>.from(await blackPlaylists());
+    final changed = black ? current.add(id) : current.remove(id);
+    if (!changed) return;
+    _black = current;
+    final ok =
+        await AppStore.instance.setStringList(_blackKey, current.toList()..sort());
+    if (!ok) throw StateError('liste işareti diske yazılamadı');
+    notifyListeners();
   }
 
   Future<void> addGame(String playlistId, SavedGame game) =>

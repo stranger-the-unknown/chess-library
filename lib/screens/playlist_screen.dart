@@ -9,6 +9,7 @@ import '../models/playlist.dart';
 import '../services/pgn_import_service.dart';
 import '../services/storage_service.dart';
 import '../widgets/app_dialogs.dart';
+import '../widgets/black_side_badge.dart';
 import 'playlist_detail_screen.dart';
 import '../widgets/cursors.dart';
 
@@ -23,6 +24,9 @@ class PlaylistScreen extends StatefulWidget {
 class _PlaylistScreenState extends State<PlaylistScreen> {
   final StorageService _storage = StorageService.instance;
   List<Playlist> _playlists = [];
+
+  /// Siyah tarafından okunan listelerin kimlikleri.
+  Set<String> _black = const {};
   bool _loading = true;
 
   @override
@@ -41,9 +45,11 @@ class _PlaylistScreenState extends State<PlaylistScreen> {
 
   Future<void> _load() async {
     final playlists = (await _storage.loadPlaylists()).toList();
+    final black = await _storage.blackPlaylists();
     if (!mounted) return;
     setState(() {
       _playlists = playlists;
+      _black = black;
       _loading = false;
     });
   }
@@ -83,6 +89,15 @@ class _PlaylistScreenState extends State<PlaylistScreen> {
     );
     if (name == null) return;
     if (!await _guard(() => _storage.renamePlaylist(playlist.id, name))) {
+      return;
+    }
+    await _load();
+  }
+
+  /// Listenin oyunları siyahın gözünden açılsın mı?
+  Future<void> _toggleBlack(Playlist playlist) async {
+    final black = !_black.contains(playlist.id);
+    if (!await _guard(() => _storage.setPlaylistBlack(playlist.id, black))) {
       return;
     }
     await _load();
@@ -209,12 +224,23 @@ class _PlaylistScreenState extends State<PlaylistScreen> {
                                     crossAxisAlignment:
                                         CrossAxisAlignment.start,
                                     children: [
-                                      Text(
-                                        playlist.name,
-                                        style: const TextStyle(
-                                          fontSize: 15.5,
-                                          fontWeight: FontWeight.w600,
-                                        ),
+                                      Row(
+                                        children: [
+                                          Flexible(
+                                            child: Text(
+                                              playlist.name,
+                                              style: const TextStyle(
+                                                fontSize: 15.5,
+                                                fontWeight: FontWeight.w600,
+                                              ),
+                                            ),
+                                          ),
+                                          if (_black.contains(playlist.id))
+                                            BlackSideBadge(
+                                              tooltip:
+                                                  t('lists.blackSideShort'),
+                                            ),
+                                        ],
                                       ),
                                       const SizedBox(height: 2),
                                       Text(
@@ -240,6 +266,7 @@ class _PlaylistScreenState extends State<PlaylistScreen> {
                                 PopupMenuButton<String>(
                                   onSelected: (value) {
                                     if (value == 'rename') _rename(playlist);
+                                    if (value == 'black') _toggleBlack(playlist);
                                     if (value == 'export') _exportPgn(playlist);
                                     if (value == 'delete') _delete(playlist);
                                   },
@@ -247,6 +274,13 @@ class _PlaylistScreenState extends State<PlaylistScreen> {
                                     PopupMenuItem(
                                       value: 'rename',
                                       child: Text(t('common.rename')),
+                                    ),
+                                    // İşaretliyse bu listenin oyunları
+                                    // siyahın gözünden açılıyor.
+                                    CheckedPopupMenuItem<String>(
+                                      value: 'black',
+                                      checked: _black.contains(playlist.id),
+                                      child: Text(t('lists.blackSide')),
                                     ),
                                     PopupMenuItem(
                                       value: 'export',

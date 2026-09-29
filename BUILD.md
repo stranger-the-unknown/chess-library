@@ -25,7 +25,7 @@ flutter test --dart-define=CL_FILE_STORE=true test/backup_test.dart \
   test/opening_san_case_test.dart test/opening_test.dart \
   test/puzzle_scale_test.dart test/storage_test.dart test/v1020_store_test.dart \
   test/v1040_openings_test.dart test/v1040_fixes_test.dart \
-  test/v1050_openings_test.dart
+  test/v1050_openings_test.dart test/v1060_lists_test.dart
 ```
 
 `flutter clean` sonrasında testlerin bir kısmı

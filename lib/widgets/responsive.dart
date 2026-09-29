@@ -106,6 +106,47 @@ class Layout {
     return 15;
   }
 
+  /// Oyun ekranında oyuncu adının denenen puntoları, büyükten küçüğe.
+  ///
+  /// Önce 15 (masaüstünde 600+ piksellik tahtanın yanında 13 ufak
+  /// kalıyordu); sığmazsa listedeki alt sınıra, 13'e kadar iniliyor.
+  static const List<double> playerNameSizes = [15, 14, 13];
+
+  /// Oyun ekranında alınan taşlar şeridine ayrılan en az genişlik.
+  ///
+  /// Dolu bir takım 16 puntoda ~190 piksel istiyor; şerit yer yetmezse
+  /// kendini küçültüyor, bu kadarında taşlar hâlâ seçilebiliyor.
+  static const double minCapturedStripWidth = 72;
+
+  /// Oyuncu adının oyun ekranındaki puntosu ve kutusunun genişliği.
+  ///
+  /// [maxWidth] ada ayrılabilecek en geniş yer. Ad bir puntoda sığıyorsa
+  /// o punto ve adın kendi genişliği dönüyor (şerit kalan yeri alıyor);
+  /// en küçük puntoda da sığmıyorsa o punto ve [maxWidth] — ad orada üç
+  /// noktayla kırpılıyor.
+  static ({double fontSize, double width}) fitPlayerName(
+    String name,
+    TextStyle style,
+    double maxWidth,
+    TextScaler textScaler,
+  ) {
+    final limit = math.max(0.0, maxWidth);
+    for (final size in playerNameSizes) {
+      final painter = TextPainter(
+        text: TextSpan(text: name, style: style.copyWith(fontSize: size)),
+        maxLines: 1,
+        textDirection: TextDirection.ltr,
+        textScaler: textScaler,
+      )..layout();
+      // Yuvarlama payı: ölçülen genişliğe tam eşit kutuda son harf
+      // kırpılabiliyor.
+      final width = painter.width.ceilToDouble() + 1;
+      painter.dispose();
+      if (width <= limit) return (fontSize: size, width: width);
+    }
+    return (fontSize: playerNameSizes.last, width: limit);
+  }
+
   /// Liste kartlarında sol düğmelerin sıkışık hâli (dikey telefon):
   /// adlara yer kalsın.
   static bool compactListCard(double width) => width < 600;
