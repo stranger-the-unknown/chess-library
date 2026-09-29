@@ -70,6 +70,24 @@ static gboolean delete_event_cb(GtkWidget* widget, GdkEvent* event,
   return TRUE;
 }
 
+// Sistemin yazı ölçeği (Cinnamon/GNOME "text-scaling-factor").
+//
+// GTK bunu Xft DPI olarak taşıyor: 96 × ölçek × 1024 (1,2 → 115 DPI).
+// Uygulama tarafında aynı ölçek Flutter'dan okunuyor (Layout.uiZoom) ve
+// aynı sınırlarla (1–2) kırpılıyor.
+static double ui_zoom() {
+  GtkSettings* settings = gtk_settings_get_default();
+  if (settings == nullptr) {
+    return 1.0;
+  }
+  gint xft_dpi = 0;
+  g_object_get(settings, "gtk-xft-dpi", &xft_dpi, nullptr);
+  if (xft_dpi <= 0) {
+    return 1.0;
+  }
+  return CLAMP(xft_dpi / 1024.0 / 96.0, 1.0, 2.0);
+}
+
 // Pencere simgesi: yürütülebilir dosyanın yanındaki data/ klasöründen.
 static void set_window_icon(GtkWindow* window) {
   g_autofree gchar* exe = g_file_read_link("/proc/self/exe", nullptr);
@@ -125,13 +143,34 @@ static void my_application_activate(GApplication* application) {
     gtk_window_set_title(window, "Chess Library");
   }
 
-  // Windows sürümüyle aynı açılış boyutu.
-  gtk_window_set_default_size(window, 1180, 820);
+  // Windows sürümüyle aynı açılış boyutu, arayüzle aynı oranda büyümüş.
+  //
+  // Uygulama Linux'ta bütün arayüzü sistemin ölçeği kadar büyütüyor
+  // (lib/widgets/responsive.dart, DesktopScale). Pencere 1180x820 piksel
+  // kalsaydı 1,2 ölçekte içeride 983 birim kalır, iki sütunlu yerleşim
+  // (1100) telefon düzenine düşerdi. Windows'ta aynı sayılar zaten
+  // mantıksal birim.
+  const double zoom = ui_zoom();
+  gtk_window_set_default_size(window, static_cast<int>(1180 * zoom),
+                              static_cast<int>(820 * zoom));
+  // Windows'taki gibi büyütülmüş açılıyor (win32_window.cpp,
+  // SW_SHOWMAXIMIZED): tahta ve yan panel birlikte rahat sığsın. Tam ekran
+  // değil; başlık çubuğu kalıyor, küçültülünce yukarıdaki boyuta dönüyor.
+  // 10.5.0'da Linux'a taşınırken unutulmuştu.
+  gtk_window_maximize(window);
   set_window_icon(window);
 
   g_autoptr(FlDartProject) project = fl_dart_project_new();
   fl_dart_project_set_dart_entrypoint_arguments(
       project, self->dart_entrypoint_arguments);
+  // Impeller kapalı, Skia çiziyor (Windows'taki gibi).
+  //
+  // Flutter 3.47'de Linux'ta varsayılan Impeller'ın OpenGL arka ucu
+  // ("OpenGLESSDF") şekilleri kenar yumuşatmasız çiziyordu: SVG taşların
+  // kenarları piksel piksel basamaklı, arada ara ton yok (yazılar
+  // düzgündü). Gerçek bir Linux Mint masaüstünde görüldü (10.6.0); CI'nin
+  // sanal ekranında tahta yoktu. Skia aynı kütüphanede geliyor.
+  fl_dart_project_set_enable_impeller(project, FALSE);
 
   FlView* view = fl_view_new(project);
   GdkRGBA background_color;

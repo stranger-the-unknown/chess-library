@@ -66,6 +66,35 @@ class Layout {
   /// taşırırdı.
   static const double desktopTextScale = 1.15;
 
+  /// Linux'ta mıyız? (Testlerde [debugLinuxOverride] ile zorlanır.)
+  static bool get isLinux =>
+      debugLinuxOverride ?? (!kIsWeb && Platform.isLinux);
+
+  @visibleForTesting
+  static bool? debugLinuxOverride;
+
+  /// Bütün arayüzün büyütülme oranı: Linux'ta sistemin ölçeği, başka
+  /// yerde 1.
+  ///
+  /// Windows 15,6 inçlik 1920×1080 ekranda %125 ölçekle çalışıyor ve
+  /// Flutter bunu piksel oranı olarak alıyor: her şey %25 büyük çiziliyor.
+  /// Linux Mint aynı ekranı %100'de bırakıp yalnızca yazıları büyütüyor
+  /// (`text-scaling-factor`, burada 1,2); GTK'nin piksel oranı tam sayı
+  /// olduğu için Flutter'a 1 geliyor. Uygulama Windows'takinin %80'i
+  /// boyunda kalıyordu: 760 birimlik içerik sütunu 1920 piksellik
+  /// pencerede dar bir şerit, yazılar küçük. Sistemin yazı ölçeği bütün
+  /// arayüze uygulanıyor; yazılar ayrıca [desktopTextScale] kadar büyüyor
+  /// (Windows'taki oran).
+  ///
+  /// [systemTextScale], platformun bildirdiği yazı ölçeği. 1'in altı 1
+  /// sayılıyor (uygulama Windows'un %100'ünden küçük çizilmesin), 2'nin
+  /// üstü 2.
+  static double uiZoom(double systemTextScale) {
+    if (!isDesktop || !isLinux) return 1;
+    if (!systemTextScale.isFinite) return 1;
+    return systemTextScale.clamp(1.0, 2.0);
+  }
+
   /// Yan yerleşimde grubun pencere kenarlarına bırakacağı pay
   /// (üstte ve altta ayrı ayrı).
   ///
@@ -323,6 +352,51 @@ class BoardArea extends StatelessWidget {
             return builder(context, side);
           },
         ),
+      ),
+    );
+  }
+}
+
+/// Masaüstünde uygulamanın bütününe ölçek uygular (`MaterialApp.builder`).
+///
+/// * Yazılar [Layout.desktopTextScale] kadar büyüyor (Windows ve Linux).
+/// * Linux'ta ayrıca **bütün arayüz** sistemin ölçeği kadar büyüyor
+///   ([Layout.uiZoom]): yerleşim pencere o oranda küçükmüş gibi yapılıyor,
+///   sonra çizim o oranda büyütülüyor. Tarayıcıdaki yakınlaştırma gibi;
+///   çizim vektörel olduğu için bulanıklık yok. Pencereler, menüler ve
+///   ipuçları da bunun içinde ([child] Navigator'ı kapsıyor); dokunma ve
+///   fare konumları dönüşümden geçtiği için yerini buluyor.
+///
+/// Telefonda ve tablette hiçbir şey değişmiyor.
+class DesktopScale extends StatelessWidget {
+  final Widget child;
+
+  const DesktopScale({super.key, required this.child});
+
+  @override
+  Widget build(BuildContext context) {
+    if (!Layout.isDesktop) return child;
+    final media = MediaQuery.of(context);
+    final text = media.copyWith(
+      textScaler: const TextScaler.linear(Layout.desktopTextScale),
+    );
+    final zoom = Layout.uiZoom(media.textScaler.scale(100) / 100);
+    if (zoom == 1) return MediaQuery(data: text, child: child);
+
+    final size = media.size / zoom;
+    return MediaQuery(
+      data: text.copyWith(
+        size: size,
+        devicePixelRatio: media.devicePixelRatio * zoom,
+        padding: media.padding / zoom,
+        viewPadding: media.viewPadding / zoom,
+        viewInsets: media.viewInsets / zoom,
+        systemGestureInsets: media.systemGestureInsets / zoom,
+      ),
+      child: FittedBox(
+        fit: BoxFit.fill,
+        alignment: Alignment.topLeft,
+        child: SizedBox(width: size.width, height: size.height, child: child),
       ),
     );
   }

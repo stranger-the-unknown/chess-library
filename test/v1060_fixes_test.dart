@@ -1,3 +1,5 @@
+import 'dart:io';
+
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -8,7 +10,7 @@ import 'package:chess_pgn_reader/l10n/app_strings.dart';
 import 'package:chess_pgn_reader/screens/home_screen.dart';
 import 'package:chess_pgn_reader/services/settings_service.dart';
 
-/// 10.6.0: bekleyen işlerden kapananlar.
+/// 10.6.0: bekleyen işlerden kapananlar ve Linux'ta taşların kenarları.
 ///
 /// PGN yapıştırma penceresi: metin kutusunun denetleyicisi `finally`
 /// içinde pencere döner dönmez atılıyordu. Pencere kapanma animasyonunda
@@ -118,5 +120,22 @@ void main() {
       await _playClose(tester);
       expect(tester.takeException(), isNull);
     });
+  });
+
+  test('Linux: Impeller kapalı (taşların kenarları yumuşak)', () {
+    // Flutter 3.47'nin Linux'taki Impeller/OpenGL arka ucu SVG taşları
+    // kenar yumuşatmasız çiziyordu. Başlatıcı Skia'yı seçiyor; biri bu
+    // satırı "temizlik" diye silerse taşlar yeniden tırtıklı çıkar.
+    final runner =
+        File('linux/runner/my_application.cc').readAsStringSync();
+    expect(
+      runner,
+      contains('fl_dart_project_set_enable_impeller(project, FALSE);'),
+    );
+    final create = runner.indexOf('fl_dart_project_new()');
+    final view = runner.indexOf('fl_view_new(project)');
+    final disable = runner.indexOf('fl_dart_project_set_enable_impeller');
+    expect(create < disable && disable < view, isTrue,
+        reason: 'ayar görünüm kurulmadan önce yapılmalı');
   });
 }

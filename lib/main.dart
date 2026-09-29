@@ -248,18 +248,10 @@ class _ChessAppState extends State<ChessApp> {
           darkTheme: AppTheme.dark,
           themeMode: mode,
           home: const HomeShell(),
-      // Masaüstünde bütün yazılar aynı oranda büyüyor; telefon ve
-      // tablet olduğu gibi kalıyor.
-      builder: (context, child) {
-        if (!Layout.isDesktop) return child!;
-        final media = MediaQuery.of(context);
-        return MediaQuery(
-          data: media.copyWith(
-            textScaler: TextScaler.linear(Layout.desktopTextScale),
-          ),
-          child: child!,
-        );
-      },
+      // Masaüstünde bütün yazılar aynı oranda büyüyor, Linux'ta ayrıca
+      // bütün arayüz sistemin ölçeği kadar; telefon ve tablet olduğu
+      // gibi kalıyor (bkz. DesktopScale).
+      builder: (context, child) => DesktopScale(child: child!),
         );
       },
     );

@@ -494,7 +494,15 @@ gerekmez. Uygulama menüsünde görünsün isterseniz aynı klasörde
   altında, Windows'taki düzenle (`veri` klasörü).
 
 Linux'ta da uygulama tek pencerede çalışır ve kaydedilmemiş hamleleri olan
-bir oyun açıkken pencereyi kapatmak onay sorar.
+bir oyun açıkken pencereyi kapatmak onay sorar. Pencere Windows'taki gibi
+büyütülmüş açılır.
+
+Arayüzün büyüklüğü sistemin yazı ölçeğini izler (Cinnamon / GNOME:
+"Yazı tipi ölçeği", örneğin 1,2): kartlar, simgeler, tahta ve yazılar
+birlikte o oranda büyür. Windows ekran ölçeğini (%125 gibi) kendisi
+uyguluyor; Linux çoğu dağıtımda ekranı %100'de bırakıp yalnızca yazıları
+büyüttüğü için uygulama bu ölçeği kendisi uygular. Oran 1 ile 2 arasında
+tutulur.
 
 ---
 

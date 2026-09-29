@@ -510,7 +510,15 @@ application menu, run `./desktop-entry.sh` in the same folder (remove with
   with the same layout as on Windows (the `veri` folder).
 
 On Linux too the app runs in a single window, and closing the window
-while a game with unsaved moves is open asks first.
+while a game with unsaved moves is open asks first. The window opens
+maximized, as on Windows.
+
+The size of the interface follows the system text scaling (Cinnamon /
+GNOME "Text scaling factor", e.g. 1.2): cards, icons, the board and the
+text all grow by that factor. Windows applies its display scale (such
+as 125%) itself; most Linux desktops leave the display at 100% and only
+enlarge text, so the app applies that factor itself. It is kept between
+1 and 2.
 
 ---
 
