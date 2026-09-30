@@ -115,15 +115,58 @@ class _OpeningListScreenState extends State<OpeningListScreen> {
   }
 
   Future<void> _open(Opening opening) async {
+    // Çalışma ekranındaki "önceki / sonraki varyant" listede görünen
+    // sırayı izliyor: gizli başlıklar yok, arama ya da "yalnızca
+    // favoriler" açıksa onun içinde. Sıra açıldığı andaki hâliyle sabit.
+    final sequence = [for (final list in _grouped.values) ...list];
     await Navigator.push(
       context,
       MaterialPageRoute(
         builder: (_) => OpeningStudyScreen(
           opening: opening,
           blackSide: _black.contains(opening.family),
+          sequence: sequence,
+          blackFamilies: Set<String>.from(_black),
         ),
       ),
     );
+    await _load();
+  }
+
+  /// Varyantı listeden, içine girmeden öğrenildi / öğrenilmedi yapar.
+  Future<void> _toggleLearned(Opening opening) async {
+    final learned = _progress[opening.id]?.learned != true;
+    await _service.markLearned(opening.id, learned: learned);
+    await _load();
+  }
+
+  /// Başlığın bütün varyantlarını öğrenildi ya da öğrenilmedi yapar.
+  ///
+  /// Silmedeki gibi **süzgeçsiz**: seçenek başlığın kendi menüsünde;
+  /// ekrandaki liste aramaya ya da favorilere göre daralmış olsa da
+  /// başlığın tamamı işaretleniyor ve onay bunun sayısını söylüyor.
+  /// Varyantların önceki hâli geri getirilemediği için onay, "onay
+  /// pencereleri" ayarından bağımsız soruluyor.
+  Future<void> _markFamily(String family, {required bool learned}) async {
+    final ids = [
+      for (final opening in _all)
+        if (opening.family == family) opening.id,
+    ];
+    final confirmed = await AppDialogs.confirm(
+      context,
+      title: t(learned
+          ? 'openings.markAllLearned'
+          : 'openings.markAllNotLearned'),
+      message: t(
+        learned
+            ? 'openings.markAllLearnedMessage'
+            : 'openings.markAllNotLearnedMessage',
+        {'family': family, 'count': ids.length},
+      ),
+      confirmLabel: t('openings.mark'),
+    );
+    if (!confirmed) return;
+    await _service.markManyLearned(ids, learned: learned);
     await _load();
   }
 
@@ -408,6 +451,7 @@ class _OpeningListScreenState extends State<OpeningListScreen> {
     final scheme = Theme.of(context).colorScheme;
     final grouped = _grouped;
     final families = grouped.keys.toList();
+    final counts = _familyCounts();
 
     final learned =
         _shown.where((o) => _progress[o.id]?.learned == true).length;
@@ -612,7 +656,7 @@ class _OpeningListScreenState extends State<OpeningListScreen> {
                       ),
                     ),
                   for (final family in families)
-                    _familyTile(family, grouped[family]!, scheme),
+                    _familyTile(family, grouped[family]!, scheme, counts),
                 ],
               ),
             ),
@@ -654,13 +698,32 @@ class _OpeningListScreenState extends State<OpeningListScreen> {
     );
   }
 
+  /// Başlık başına süzgeçsiz (toplam, öğrenilen) sayısı; tek geçişte.
+  ///
+  /// Başlık başına `_all` üzerinde ayrı ayrı saymak binlerce başlıkta
+  /// her tuş vuruşunda milyonlarca karşılaştırma demekti.
+  Map<String, (int, int)> _familyCounts() {
+    final counts = <String, (int, int)>{};
+    for (final opening in _all) {
+      final (total, learned) = counts[opening.family] ?? (0, 0);
+      counts[opening.family] = (
+        total + 1,
+        learned + (_progress[opening.id]?.learned == true ? 1 : 0),
+      );
+    }
+    return counts;
+  }
+
   Widget _familyTile(
     String family,
     List<Opening> openings,
     ColorScheme scheme,
+    Map<String, (int, int)> counts,
   ) {
     final learned =
         openings.where((o) => _progress[o.id]?.learned == true).length;
+    // Menüdeki "tümü" seçenekleri süzgeçsiz sayıya bakıyor.
+    final (familyTotal, familyLearned) = counts[family] ?? (0, 0);
 
     return Padding(
       padding: const EdgeInsets.only(bottom: 8),
@@ -702,6 +765,10 @@ class _OpeningListScreenState extends State<OpeningListScreen> {
                         _openEditor(family: family);
                       case 'black':
                         _toggleBlack(family);
+                      case 'learnedAll':
+                        _markFamily(family, learned: true);
+                      case 'notLearnedAll':
+                        _markFamily(family, learned: false);
                       case 'orderVariations':
                         _openOrder(family: family);
                       case 'toTop':
@@ -727,6 +794,25 @@ class _OpeningListScreenState extends State<OpeningListScreen> {
                       value: 'black',
                       checked: _black.contains(family),
                       child: Text(t('openings.blackSide')),
+                    ),
+                    // Süzgeçsiz: başlığın bütün varyantlarına bakıyor.
+                    PopupMenuItem<String>(
+                      value: 'learnedAll',
+                      enabled: familyLearned < familyTotal,
+                      child: ListTile(
+                        contentPadding: EdgeInsets.zero,
+                        leading: const Icon(Icons.check_circle_outline_rounded),
+                        title: Text(t('openings.markAllLearned')),
+                      ),
+                    ),
+                    PopupMenuItem<String>(
+                      value: 'notLearnedAll',
+                      enabled: familyLearned > 0,
+                      child: ListTile(
+                        contentPadding: EdgeInsets.zero,
+                        leading: const Icon(Icons.radio_button_unchecked_rounded),
+                        title: Text(t('openings.markAllNotLearned')),
+                      ),
                     ),
                     PopupMenuItem<String>(
                       value: 'orderVariations',
@@ -827,33 +913,58 @@ class _OpeningListScreenState extends State<OpeningListScreen> {
                           size: 16,
                           color: scheme.success,
                         ),
-                      if (opening.custom)
-                        PopupMenuButton<String>(
-                          padding: EdgeInsets.zero,
-                          icon: const Icon(Icons.more_vert_rounded, size: 18),
-                          onSelected: (value) {
-                            if (value == 'edit') {
-                              _openEditor(existing: opening);
-                            }
-                            if (value == 'delete') _deleteCustom(opening);
-                          },
-                          itemBuilder: (context) => [
+                      // Her varyantta: öğrenildi işareti içine girmeden
+                      // değişebilsin. Düzenleme ve silme yalnızca kendi
+                      // eklenen varyantlarda.
+                      PopupMenuButton<String>(
+                        padding: EdgeInsets.zero,
+                        tooltip: t('openings.variationMenu'),
+                        icon: const Icon(Icons.more_vert_rounded, size: 18),
+                        onSelected: (value) {
+                          if (value == 'learned') _toggleLearned(opening);
+                          if (value == 'edit') {
+                            _openEditor(existing: opening);
+                          }
+                          if (value == 'delete') _deleteCustom(opening);
+                        },
+                        itemBuilder: (context) {
+                          final learned =
+                              _progress[opening.id]?.learned == true;
+                          return [
                             PopupMenuItem(
-                              value: 'edit',
+                              value: 'learned',
                               child: ListTile(
-                                leading: const Icon(Icons.edit_outlined),
-                                title: Text(t('openings.editVariation')),
+                                leading: Icon(
+                                  learned
+                                      ? Icons.radio_button_unchecked_rounded
+                                      : Icons.check_circle_outline_rounded,
+                                ),
+                                title: Text(
+                                  learned
+                                      ? t('openings.markNotLearned')
+                                      : t('openings.markLearned'),
+                                ),
                               ),
                             ),
-                            PopupMenuItem(
-                              value: 'delete',
-                              child: ListTile(
-                                leading: const Icon(Icons.delete_outline),
-                                title: Text(t('openings.deleteVariation')),
+                            if (opening.custom) ...[
+                              PopupMenuItem(
+                                value: 'edit',
+                                child: ListTile(
+                                  leading: const Icon(Icons.edit_outlined),
+                                  title: Text(t('openings.editVariation')),
+                                ),
                               ),
-                            ),
-                          ],
-                        ),
+                              PopupMenuItem(
+                                value: 'delete',
+                                child: ListTile(
+                                  leading: const Icon(Icons.delete_outline),
+                                  title: Text(t('openings.deleteVariation')),
+                                ),
+                              ),
+                            ],
+                          ];
+                        },
+                      ),
                     ],
                   ),
                 ),

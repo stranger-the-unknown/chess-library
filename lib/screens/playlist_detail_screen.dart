@@ -20,7 +20,7 @@ import '../widgets/app_dialogs.dart';
 import 'pgn_import_screen.dart';
 import '../widgets/game_filter_dialog.dart';
 import '../widgets/range_dialog.dart';
-import 'game_screen.dart';
+import 'list_game_screen.dart';
 import '../widgets/cursors.dart';
 
 /// Liste içindeki oyun süzgeci.
@@ -114,19 +114,24 @@ class _PlaylistDetailScreenState extends State<PlaylistDetailScreen> {
   }
 
   Future<void> _openGame(SavedGame game) async {
+    // Oyun ekranındaki "önceki / sonraki oyun" listede görünen sırayı
+    // izliyor (arama, süzgeç, aralık, ters sıra) ve o sıra açıldığı
+    // andaki hâliyle sabit.
+    var games = _visible;
+    var index = games.indexWhere((g) => g.id == game.id);
+    if (index < 0) {
+      games = [game];
+      index = 0;
+    }
     await Navigator.push(
       context,
       MaterialPageRoute(
-        builder: (_) => GameScreen(
-          uciMoves: game.uciMoves,
-          startFen: game.startFen,
-          title: game.name,
-          initialResult: game.result,
-          whiteName: game.white,
-          blackName: game.black,
+        builder: (_) => ListGameScreen(
+          games: games,
+          initialIndex: index,
           // Liste "Siyah tarafından oku" ile işaretliyse tahta siyahın
           // gözünden açılıyor (açılışlardaki gibi).
-          startFlipped: _black,
+          blackSide: _black,
         ),
       ),
     );

@@ -11,7 +11,7 @@ geçilmez); Maia testleri atlanır.
 
 ```bash
 flutter pub get
-flutter test          # 524 test (3'ü yalnızca POSIX'te koşar)
+flutter test          # 586 test (3'ü yalnızca POSIX'te koşar)
 ```
 
 Windows ve Linux'ta oyun listeleri, bulmacalar ve açılışlar
@@ -25,7 +25,8 @@ flutter test --dart-define=CL_FILE_STORE=true test/backup_test.dart \
   test/opening_san_case_test.dart test/opening_test.dart \
   test/puzzle_scale_test.dart test/storage_test.dart test/v1020_store_test.dart \
   test/v1040_openings_test.dart test/v1040_fixes_test.dart \
-  test/v1050_openings_test.dart test/v1060_lists_test.dart
+  test/v1050_openings_test.dart test/v1060_lists_test.dart \
+  test/v1070_service_test.dart
 ```
 
 `flutter clean` sonrasında testlerin bir kısmı

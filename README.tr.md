@@ -261,6 +261,10 @@ formdaki adı sıra numarasıyla alır. Satırlara bölünmüş uzun bir PGN
   gözünden açılır; alıştırmada siyahı sen oynarsın ve "analiz tahtasında
   aç" da siyahın gözünden açar. İşaretli başlığın kartında **Siyah**
   yazar. Varsayılan beyaz tarafı.
+- **Tümü öğrenildi** / **Tümü öğrenilmedi**: başlığın bütün
+  varyantlarını tek seferde işaretler. Arama ya da "yalnızca favoriler"
+  açık olsa da başlığın tamamına uygulanır; kaç varyantın etkileneceği
+  sorulur.
 - **Varyantları sırala** ve **En üste taşı** (aşağıda, "Sıralama").
 - **Başlığı yeniden adlandır**: altındaki bütün varyantlar yeni ada
   taşınır; ilerleme ve notlar kalır. Yeni ad var olan bir başlıksa önce
@@ -274,6 +278,10 @@ soldaki tutamaçtan sürükle, sağdaki düğme en üste taşır. Binlerce
 başlıkta sürüklemek yerine başlığı aramayla bulup menüsünden **En üste
 taşı** da diyebilirsin. Her değişiklik hemen kaydedilir; sıra metin
 dosyasında ve yedekte de korunur.
+
+**Varyant menüsü** — Her varyant satırının sonundaki ⋮ menüsünde
+**Öğrendim işaretle** / **Öğrenilmedi işaretle** var: varyanta girmeden
+işaretlersin.
 
 **Düzenleme** — Eklediğin bir varyantın adını, ailesini ve hamlelerini
 satır menüsünden değiştirebilir, notunu silebilir ya da varyantı
@@ -318,10 +326,21 @@ Yani `ECO|aile|varyant|hamleler` ya da ECO'suz üç alan.
 
 **İzle** — Varyantı adım adım ya da otomatik oynatarak izlersin. Geri
 alırken hamle yeniden oynatılmaz; yalnızca bir hamle ileri gidince
-canlanır.
+canlanır. Otomatik oynatmanın hızı Ayarlar → **İzleme hızı**'ndan
+seçilir. Varyantın sonunda oynat tuşu **Baştan izle** olur. Elle ileri
+geri gitmek ya da bir hamleye dokunmak izlemeyi durdurur.
 
 **Alıştırma** — Hamleleri sen oynarsın, yanlışta uyarı alırsın. Hatasız iki
-tamamlamada varyant "öğrenildi" sayılır.
+tamamlamada varyant "öğrenildi" sayılır. **Baştan** varyantı yeniden
+kurar; siyahı çalışıyorsan beyazın ilk hamlesini tahta oynar.
+
+**Önceki / sonraki varyant** — Tahtanın üstündeki başlık satırının
+sağındaki ↑ ↓ oklar, listede bir üstteki ve bir alttaki varyanta
+geçirir. Kartın son varyantından sonra sıradaki kartın ilk varyantı
+gelir; listenin sonunda durur. Sıra listede gördüğün sıradır: gizli
+başlıklar yoktur, arama ya da "yalnızca favoriler" açıksa onun içinde
+gezilir. İzle ya da alıştırma kipi ve açık motor yeni varyanta taşınır;
+başlık siyah tarafından çalışılıyorsa tahta ona göre döner.
 
 Her varyantta not, favori, "bu konumdan motora karşı oyna" ve "analiz
 tahtasında aç" seçenekleri vardır. Üstteki grafik simgesi **motoru**
@@ -337,6 +356,10 @@ taşıma, silme.
 
 - **PGN dosyası içe aktar** ile bir listeye toplu oyun eklersin.
 - **Listeyi PGN dosyası olarak ver** ile listenin tamamını dışarı alırsın.
+- **Listeleri sırala** (üstteki ⇅ düğmesi): liste kartlarının sırası.
+  Satırı soldaki tutamaçtan sürükle, sağdaki düğme en üste taşır; kartın
+  ⋮ menüsünde de **En üste taşı** var. Listelerin içindeki oyunların
+  sırası (ve numaraları) değişmez.
 - **Siyah tarafından oku** (liste kartının ⋮ menüsünde ya da listenin
   içindeki menüde, işaret): o listenin oyunları tahta siyahın gözünden
   açılır — açılışlardaki "Siyah tarafından çalış" gibi. İşaretli listenin
@@ -361,6 +384,15 @@ taşıma, silme.
   varsayılana döner.
 - **Aralık göster**: listeyi belirli bir numara aralığına daraltır, üstteki
   şeritten kapatılır.
+- **Önceki / sonraki oyun**: listeden açılan oyunda tahtanın üstünde
+  (geniş pencerede sağ sütunun başında) "Oyun 3 / 12" ve ↑ ↓ oklar
+  durur. Sıra listede gördüğün sıradır: arama, süzgeç, aralık ve ters
+  sıralama geçerli; oyunu açtığın andaki hâliyle sabittir (okundu
+  işaretleyince kaymaz). Liste bitince durur, sonraki listeye geçmez.
+  Tahtanın yönü ve açık motor yeni oyuna taşınır.
+- **İzle**: oyun ekranındaki oynat tuşu hamleleri Ayarlar → **İzleme
+  hızı**'ndaki hızla oynatır; sonda **Baştan izle** olur. Elle gezinmek,
+  bir hamleye dokunmak ya da tahtada hamle denemek izlemeyi durdurur.
 - Kartta oyuncuların adı tamamıyla, PGN'de yazdığı gibi görünür.
   Punto ekran genişliğine göre: küçük telefonda daha küçük. Dikey
   telefonda soldaki iki düğme sıkışık durur, adlara daha çok yer kalır.
@@ -435,6 +467,9 @@ silmeden önce yedek al.
   motor okları.
 - **Bugün çözülen sayısı** — bulmaca listesi kartlarında günlük sayacı
   gösterir.
+- **İzleme hızı** — "İzle"nin hızı, açılışlar ve oyun listeleri için
+  ayrı ayrı: Yavaş (hamle başına 1,5 sn), Normal (0,9 sn, varsayılan),
+  Hızlı (0,5 sn).
 - **Onay pencereleri** — kapatılınca kaydedilmemiş hamlelerle oyundan
   çıkarken, pencereyi kapatırken, pes ederken ya da oyunu yeniden
   başlatırken sorulmaz. Kayıtlı veriyi silen işlemler (liste, bulmaca

@@ -212,6 +212,26 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 ),
               ]),
               const SizedBox(height: 16),
+              // "İzle"nin hızı; açılışlar ve oyun listeleri ayrı ayrı.
+              _section(t('settings.watchSection')),
+              _card([
+                _watchSpeedTile(
+                  key: const Key('watchSpeed-openings'),
+                  icon: Icons.menu_book_outlined,
+                  title: t('settings.watchOpenings'),
+                  value: _settings.openingWatchSpeed,
+                  onChanged: (value) => _settings.openingWatchSpeed = value,
+                ),
+                const Divider(indent: 56),
+                _watchSpeedTile(
+                  key: const Key('watchSpeed-games'),
+                  icon: Icons.library_books_outlined,
+                  title: t('settings.watchGames'),
+                  value: _settings.gameWatchSpeed,
+                  onChanged: (value) => _settings.gameWatchSpeed = value,
+                ),
+              ]),
+              const SizedBox(height: 16),
               _section(
                 t(
                   SettingsService.vibrationSupported
@@ -325,6 +345,51 @@ class _SettingsScreenState extends State<SettingsScreen> {
           fontWeight: FontWeight.w800,
           letterSpacing: 1.1,
           color: Theme.of(context).colorScheme.onSurfaceVariant,
+        ),
+      ),
+    );
+  }
+
+  /// İzleme hızı satırı: başlık, altında üç parçalı düğme.
+  ///
+  /// Düğme başlığın yanında değil altında: telefonda üç seçenek ve
+  /// başlık aynı satıra sığmıyor.
+  Widget _watchSpeedTile({
+    required Key key,
+    required IconData icon,
+    required String title,
+    required WatchSpeed value,
+    required ValueChanged<WatchSpeed> onChanged,
+  }) {
+    return ListTile(
+      key: key,
+      // Simge başlığın hizasında; düğmenin ortasına kaymasın.
+      titleAlignment: ListTileTitleAlignment.titleHeight,
+      leading: Icon(icon),
+      title: Text(title),
+      subtitle: Padding(
+        padding: const EdgeInsets.only(top: 8, bottom: 4),
+        child: SizedBox(
+          width: double.infinity,
+          child: SegmentedButton<WatchSpeed>(
+            showSelectedIcon: false,
+            segments: [
+              ButtonSegment(
+                value: WatchSpeed.slow,
+                label: Text(t('settings.watchSlow')),
+              ),
+              ButtonSegment(
+                value: WatchSpeed.normal,
+                label: Text(t('settings.watchNormal')),
+              ),
+              ButtonSegment(
+                value: WatchSpeed.fast,
+                label: Text(t('settings.watchFast')),
+              ),
+            ],
+            selected: {value},
+            onSelectionChanged: (selection) => onChanged(selection.first),
+          ),
         ),
       ),
     );

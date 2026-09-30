@@ -860,6 +860,24 @@ class OpeningService {
     await _saveProgress();
   }
 
+  /// Birden çok varyantı tek yazmayla işaretler (başlığın "Tümü
+  /// öğrenildi / öğrenilmedi" seçeneği). Değişen varyant sayısını döner.
+  Future<int> markManyLearned(
+    Iterable<String> ids, {
+    required bool learned,
+  }) async {
+    final progress = await progressMap();
+    var changed = 0;
+    for (final id in ids) {
+      // Kaydı olmayan varyant zaten "öğrenilmedi"; boş kayıt açılmıyor.
+      if ((progress[id]?.learned ?? false) == learned) continue;
+      progress.putIfAbsent(id, OpeningProgress.new).learned = learned;
+      changed++;
+    }
+    if (changed > 0) await _saveProgress();
+    return changed;
+  }
+
   Future<void> registerSuccess(String id) async {
     final progress = await progressMap();
     final entry = progress.putIfAbsent(id, OpeningProgress.new);

@@ -163,6 +163,33 @@ class StorageService extends ChangeNotifier {
     await _save();
   }
 
+  /// Listeleri [ids] sırasına dizer (listeler ekranındaki sıra).
+  ///
+  /// Sıra kaydın kendisi: liste dizisi yeni sırayla yazılıyor, ayrı bir
+  /// sıra anahtarı yok; yedekte de öyle taşınıyor. [ids] içinde olmayan
+  /// bir liste (ör. sıralama ekranı açıkken içe aktarılan) sonda, eski
+  /// sırasıyla kalıyor; bilinmeyen kimlikler yok sayılıyor.
+  Future<void> reorderPlaylists(List<String> ids) async {
+    final playlists = await loadPlaylists();
+    final rank = <String, int>{
+      for (var i = 0; i < ids.length; i++) ids[i]: i,
+    };
+    final ordered = [
+      for (final playlist in playlists)
+        if (rank.containsKey(playlist.id)) playlist,
+    ]..sort((a, b) => rank[a.id]!.compareTo(rank[b.id]!));
+    final next = [
+      ...ordered,
+      for (final playlist in playlists)
+        if (!rank.containsKey(playlist.id)) playlist,
+    ];
+    if (!next.indexed.any((e) => playlists[e.$1] != e.$2)) return;
+    playlists
+      ..clear()
+      ..addAll(next);
+    await _save();
+  }
+
   Future<void> deletePlaylist(String id) async {
     final playlists = await loadPlaylists();
     playlists.removeWhere((p) => p.id == id);

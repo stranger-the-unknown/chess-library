@@ -36,6 +36,27 @@ enum GameMode {
   versusEngine,
 }
 
+/// Önceki / sonraki oyuna geçerken yeni oyuna taşınanlar.
+typedef GameCarry = ({bool analysisOn, bool flipped});
+
+/// Oyun listesinden açılan oyunda listedeki sıra ve komşu oyunlara geçiş.
+class GameSequence {
+  const GameSequence({
+    required this.position,
+    required this.length,
+    this.onPrevious,
+    this.onNext,
+  });
+
+  /// 1'den başlayan sıra ve toplam: "Oyun 3 / 12".
+  final int position;
+  final int length;
+
+  /// Null ise o yönde oyun yok (listenin başı ya da sonu).
+  final void Function(GameCarry carry)? onPrevious;
+  final void Function(GameCarry carry)? onNext;
+}
+
 /// Tahta ekranı: PGN okuma, serbest oynama, analiz ve motora karşı oyun.
 class GameScreen extends StatefulWidget {
   final GameMode mode;
@@ -70,7 +91,15 @@ class GameScreen extends StatefulWidget {
     this.blackName,
     this.initialWarning,
     this.startFlipped = false,
+    this.startWithAnalysis = false,
+    this.sequence,
   });
+
+  /// Motor analizi açık başlasın (listede önceki oyundan taşınıyor).
+  final bool startWithAnalysis;
+
+  /// Listeden açılan oyunda önceki / sonraki oyun; yoksa null.
+  final GameSequence? sequence;
 
   /// Tahta siyahın gözünden açılsın (ör. siyah tarafından çalışılan bir
   /// açılıştan "Analiz tahtasında aç"). Motora karşı oyunda siyah
@@ -211,6 +240,11 @@ class _GameScreenState extends State<GameScreen> {
 
   late EngineLevel _level;
 
+  /// "İzle": hamleler ayardaki hızla kendiliğinden ilerliyor. Null ise
+  /// izleme kapalı.
+  Timer? _autoTimer;
+  bool get _autoPlaying => _autoTimer != null;
+
   /// Düşünürken ekran sönmesin; sayaç her hamlede sıfırlanıyor, oyun
   /// bitince bırakılıyor.
   final ScreenAwake _awake = ScreenAwake();
@@ -231,6 +265,14 @@ class _GameScreenState extends State<GameScreen> {
             widget.mode == GameMode.versusEngine);
     _resultText = widget.initialResult;
     _loadInitialPosition();
+    // Listede önceki oyundan geçildiyse analiz açık kalıyor. Motor hemen
+    // sorulmuyor: önceki oyunun ekranı kapanırken motordaki her işi
+    // iptal ediyor ve bu, aynı karede başlatılan isteği de düşürürdü.
+    if (widget.startWithAnalysis && widget.mode != GameMode.versusEngine) {
+      _analysisOn = true;
+      _analysisDebounce =
+          Timer(const Duration(milliseconds: 700), _runAnalysis);
+    }
     // Pencere kapatılırken (Windows) kaydedilmemiş hamle var mı diye
     // uygulama düzeyinde sorulabilsin.
     UnsavedWork.register(_hasUnsavedWork);
@@ -241,6 +283,7 @@ class _GameScreenState extends State<GameScreen> {
   @override
   void dispose() {
     UnsavedWork.unregister(_hasUnsavedWork);
+    _autoTimer?.cancel();
     _awake.release();
     _analysisDebounce?.cancel();
     _analysisToken++;
@@ -329,6 +372,7 @@ class _GameScreenState extends State<GameScreen> {
   // -------------------------------------------------------------------------
 
   void _onBoardMove(engine.ChessMove move) {
+    _stopAutoPlay();
     // Kayıtlı oyunda tahtaya oynamak oyunu değiştirmez, denemedir.
     if (_replayMode) {
       _exploreMove(move);
@@ -422,6 +466,62 @@ class _GameScreenState extends State<GameScreen> {
     if (widget.mode == GameMode.versusEngine && !_thinking) {
       _maybePlayEngineMove();
     }
+  }
+
+  // -------------------------------------------------------------------------
+  // İzleme
+  // -------------------------------------------------------------------------
+
+  /// İzlemeyi başlatır ya da durdurur. Oyunun sonundaysa başa dönüp
+  /// baştan izletir (tuş o zaman "Baştan izle").
+  void _toggleAutoPlay() {
+    if (_autoPlaying) {
+      _stopAutoPlay();
+      return;
+    }
+    if (_history.isEmpty) return;
+    if (_cursor >= _history.length - 1) _goTo(-1);
+    final pace = SettingsService.instance.gameWatchSpeed.pace;
+    setState(() => _autoTimer = Timer.periodic(pace, _autoStep));
+  }
+
+  void _autoStep(Timer timer) {
+    if (!mounted || _cursor >= _history.length - 1) {
+      _stopAutoPlay();
+      return;
+    }
+    // İzlerken ekrana dokunulmuyor; ekran açık kalma süresi her hamlede
+    // yenileniyor, uzun bir oyunun ortasında sönmesin.
+    _awake.keep();
+    _goTo(_cursor + 1);
+    // Son hamlede hemen duruyor: tuş bir tur beklemeden "Baştan izle"ye
+    // dönsün.
+    if (_cursor >= _history.length - 1) _stopAutoPlay();
+  }
+
+  void _stopAutoPlay() {
+    final timer = _autoTimer;
+    if (timer == null) return;
+    timer.cancel();
+    if (mounted) {
+      setState(() => _autoTimer = null);
+    } else {
+      _autoTimer = null;
+    }
+  }
+
+  /// Kullanıcının kendi gezinmesi (düğmeler, hamleye dokunma) izlemeyi
+  /// durduruyor: tahtayı o anda kendisi yönetmek istiyor.
+  void _userGoTo(int index) {
+    _stopAutoPlay();
+    _goTo(index);
+  }
+
+  /// Listede önceki / sonraki oyun: analiz ve tahtanın yönü taşınıyor.
+  void _stepGame(void Function(GameCarry carry)? step) {
+    if (step == null) return;
+    _stopAutoPlay();
+    step((analysisOn: _analysisOn, flipped: _flipped));
   }
 
   /// Hamlenin sesini çalar ve oyun bittiyse sonucu yazar.
@@ -677,6 +777,7 @@ class _GameScreenState extends State<GameScreen> {
 
   Future<void> _takeBack() async {
     if (_history.isEmpty) return;
+    _stopAutoPlay();
     // Motora karşı oyunda kendi hamlemize dönmek için iki hamle geri al.
     final steps = widget.mode == GameMode.versusEngine ? 2 : 1;
     final target = (_history.length - steps).clamp(0, _history.length);
@@ -734,6 +835,7 @@ class _GameScreenState extends State<GameScreen> {
     // Pano okuması ya da düzenleyici beklenirken ekrandan çıkılmış
     // olabilir; kapanmış ekrana yazmak hata veriyordu.
     if (!mounted) return;
+    _stopAutoPlay();
     setState(() {
       _startFen = fen;
       _history.clear();
@@ -834,6 +936,7 @@ class _GameScreenState extends State<GameScreen> {
       optional: true,
     );
     if (!confirmed || !mounted) return;
+    _stopAutoPlay();
 
     // Uçan analiz yeni konuma yazılmasın: jeton ilerletiliyor ve
     // bekleyen istek iptal ediliyor. Eskiden eski konumun oku/skoru
@@ -1460,6 +1563,7 @@ class _GameScreenState extends State<GameScreen> {
     return ContentWidth(
       child: Column(
         children: [
+          if (widget.sequence != null) _sequenceBar(scheme),
           if (_warning != null) _warningBanner(scheme),
           _playerRow(scheme, top: true),
           board,
@@ -1591,6 +1695,10 @@ class _GameScreenState extends State<GameScreen> {
       clipBehavior: Clip.antiAlias,
       child: Column(
         children: [
+          if (widget.sequence != null) ...[
+            _sequenceBar(scheme),
+            Divider(height: 1, color: scheme.outlineVariant),
+          ],
           if (_warning != null) _warningBanner(scheme),
           if (_explore.isNotEmpty) _exploreCard(scheme),
           if (_resultText != null && _explore.isEmpty) _resultBanner(scheme),
@@ -1609,10 +1717,69 @@ class _GameScreenState extends State<GameScreen> {
     );
   }
 
+  /// Listeden açılan oyunda: listedeki sıra, önceki ve sonraki oyun.
+  ///
+  /// Açılış çalışma ekranının başlık satırıyla aynı düzen: yazı solda,
+  /// yukarı / aşağı oklar sağda (listede bir üstteki ve bir alttaki oyun).
+  /// Sağa / sola oklar hamleler için kullanılıyor.
+  Widget _sequenceBar(ColorScheme scheme) {
+    final sequence = widget.sequence!;
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(14, 1, 6, 1),
+      child: Row(
+        children: [
+          Expanded(
+            child: Text(
+              t('lists.gamePosition', {
+                'n': sequence.position,
+                'total': sequence.length,
+              }),
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: TextStyle(
+                fontSize: 12.5,
+                fontWeight: FontWeight.w600,
+                color: scheme.onSurfaceVariant,
+              ),
+            ),
+          ),
+          _sequenceButton(
+            Icons.keyboard_arrow_up_rounded,
+            t('lists.previousGame'),
+            sequence.onPrevious,
+          ),
+          _sequenceButton(
+            Icons.keyboard_arrow_down_rounded,
+            t('lists.nextGame'),
+            sequence.onNext,
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _sequenceButton(
+    IconData icon,
+    String tooltip,
+    void Function(GameCarry carry)? step,
+  ) {
+    return IconButton(
+      tooltip: tooltip,
+      icon: Icon(icon),
+      iconSize: 24,
+      style: IconButton.styleFrom(
+        minimumSize: const Size(40, 34),
+        padding: EdgeInsets.zero,
+        tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+      ),
+      onPressed: step == null ? null : () => _stepGame(step),
+    );
+  }
+
   Widget _moveList({required bool vertical}) => MoveList(
         moves: _history,
         currentIndex: _cursor,
-        onMoveTap: _goTo,
+        onMoveTap: _userGoTo,
         blackFirst: _blackFirst,
         vertical: vertical,
       );
@@ -1842,6 +2009,7 @@ class _GameScreenState extends State<GameScreen> {
 
   /// Gezinme düğmeleri; iki yerleşim de aynı satırı kullanıyor.
   Widget _navRow(ColorScheme scheme) {
+    final atEnd = _cursor >= _history.length - 1;
     return Padding(
             padding: const EdgeInsets.symmetric(vertical: 4),
             child: Row(
@@ -1858,25 +2026,41 @@ class _GameScreenState extends State<GameScreen> {
                 else
                   _navButton(
                     Icons.first_page_rounded,
-                    _cursor >= 0 ? () => _goTo(-1) : null,
+                    _cursor >= 0 ? () => _userGoTo(-1) : null,
                     t('game.toStart'),
                   ),
                 _navButton(
                   Icons.chevron_left_rounded,
-                  _cursor >= 0 ? () => _goTo(_cursor - 1) : null,
+                  _cursor >= 0 ? () => _userGoTo(_cursor - 1) : null,
                   t('common.previous'),
                 ),
+                // İzle / duraklat; sonda "Baştan izle". Motora karşı
+                // oyunda yok: orada hamleleri oynayan sensin.
+                if (widget.mode != GameMode.versusEngine)
+                  _navButton(
+                    _autoPlaying
+                        ? Icons.pause_rounded
+                        : (atEnd
+                            ? Icons.replay_rounded
+                            : Icons.play_arrow_rounded),
+                    _history.isEmpty ? null : _toggleAutoPlay,
+                    _autoPlaying
+                        ? t('common.pause')
+                        : (atEnd
+                            ? t('common.watchAgain')
+                            : t('common.play')),
+                  ),
                 _navButton(
                   Icons.chevron_right_rounded,
                   _cursor < _history.length - 1
-                      ? () => _goTo(_cursor + 1)
+                      ? () => _userGoTo(_cursor + 1)
                       : null,
                   t('game.forward'),
                 ),
                 _navButton(
                   Icons.last_page_rounded,
                   _cursor < _history.length - 1
-                      ? () => _goTo(_history.length - 1)
+                      ? () => _userGoTo(_history.length - 1)
                       : null,
                   t('game.toEnd'),
                 ),

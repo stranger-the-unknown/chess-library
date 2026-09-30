@@ -85,7 +85,7 @@ jobs:
             test/puzzle_scale_test.dart test/storage_test.dart \
             test/v1020_store_test.dart test/v1040_openings_test.dart \
             test/v1040_fixes_test.dart test/v1050_openings_test.dart \
-            test/v1060_lists_test.dart
+            test/v1060_lists_test.dart test/v1070_service_test.dart
 
       - name: Derleme
         run: flutter build linux --release

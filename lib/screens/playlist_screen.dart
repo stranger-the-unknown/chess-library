@@ -11,6 +11,7 @@ import '../services/storage_service.dart';
 import '../widgets/app_dialogs.dart';
 import '../widgets/black_side_badge.dart';
 import 'playlist_detail_screen.dart';
+import 'playlist_order_screen.dart';
 import '../widgets/cursors.dart';
 
 /// Kayıtlı oyun listeleri.
@@ -119,6 +120,26 @@ class _PlaylistScreenState extends State<PlaylistScreen> {
     await _load();
   }
 
+  /// Sıralama ekranı: tutamaçla sürükle, düğmeyle en üste al.
+  Future<void> _openOrder() async {
+    await Navigator.push(
+      context,
+      MaterialPageRoute(builder: (_) => const PlaylistOrderScreen()),
+    );
+    await _load();
+  }
+
+  /// Listeyi en üste taşır; sıralama ekranına girmeden.
+  Future<void> _moveToTop(Playlist playlist) async {
+    final ids = [
+      playlist.id,
+      for (final p in _playlists)
+        if (p.id != playlist.id) p.id,
+    ];
+    if (!await _guard(() => _storage.reorderPlaylists(ids))) return;
+    await _load();
+  }
+
   /// Listeyi PGN dosyası olarak kaydeder; kaydedilemezse panoya kopyalar.
   Future<void> _exportPgn(Playlist playlist) async {
     if (playlist.games.isEmpty) {
@@ -161,6 +182,13 @@ class _PlaylistScreenState extends State<PlaylistScreen> {
       appBar: AppBar(
         title: Text(t('lists.title')),
         actions: [
+          // Açılış başlıklarındaki "Başlıkları sırala"nın karşılığı.
+          if (_playlists.length > 1)
+            IconButton(
+              tooltip: t('lists.order'),
+              icon: const Icon(Icons.swap_vert_rounded),
+              onPressed: _openOrder,
+            ),
           IconButton(
             tooltip: t('lists.newList'),
             icon: const Icon(Icons.create_new_folder_outlined),
@@ -266,6 +294,7 @@ class _PlaylistScreenState extends State<PlaylistScreen> {
                                 PopupMenuButton<String>(
                                   onSelected: (value) {
                                     if (value == 'rename') _rename(playlist);
+                                    if (value == 'toTop') _moveToTop(playlist);
                                     if (value == 'black') _toggleBlack(playlist);
                                     if (value == 'export') _exportPgn(playlist);
                                     if (value == 'delete') _delete(playlist);
@@ -274,6 +303,11 @@ class _PlaylistScreenState extends State<PlaylistScreen> {
                                     PopupMenuItem(
                                       value: 'rename',
                                       child: Text(t('common.rename')),
+                                    ),
+                                    PopupMenuItem(
+                                      value: 'toTop',
+                                      enabled: index > 0,
+                                      child: Text(t('openings.moveToTop')),
                                     ),
                                     // İşaretliyse bu listenin oyunları
                                     // siyahın gözünden açılıyor.

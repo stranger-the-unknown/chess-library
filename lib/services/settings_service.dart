@@ -11,6 +11,22 @@ import 'prefs_write.dart';
 
 import '../l10n/app_strings.dart';
 
+/// İzleme hızı: "İzle" ile oynatılırken hamleler arasındaki süre.
+///
+/// Sıra kalıcıdır: tercih sıra numarası olarak saklanıyor.
+enum WatchSpeed {
+  slow(Duration(milliseconds: 1500)),
+
+  /// 10.7.0'a kadar açılışlarda tek hız buydu; varsayılan o.
+  normal(Duration(milliseconds: 900)),
+  fast(Duration(milliseconds: 500));
+
+  const WatchSpeed(this.pace);
+
+  /// İki hamle arasındaki süre.
+  final Duration pace;
+}
+
 /// Uygulama tercihlerini tutar ve değiştiğinde dinleyicilere haber verir.
 ///
 /// `main.dart` içinde bir [AnimatedBuilder] ile dinlendiği için tema, tahta
@@ -63,6 +79,10 @@ class SettingsService extends ChangeNotifier {
   /// bağımsız, her zaman soruluyor.
   bool _askConfirmations = true;
 
+  /// Açılışlarda ve oyunlarda "İzle"nin hızı; ikisi ayrı ayar.
+  WatchSpeed _openingWatchSpeed = WatchSpeed.normal;
+  WatchSpeed _gameWatchSpeed = WatchSpeed.normal;
+
   /// Titreşim yalnızca telefonlarda var.
   ///
   /// Flutter'ın Windows gömülü katmanı dokunsal geri bildirimi
@@ -98,6 +118,8 @@ class SettingsService extends ChangeNotifier {
   int get engineLevel => _engineLevel;
   bool get showDailyCount => _showDailyCount;
   bool get askConfirmations => _askConfirmations;
+  WatchSpeed get openingWatchSpeed => _openingWatchSpeed;
+  WatchSpeed get gameWatchSpeed => _gameWatchSpeed;
 
   /// Ses ve titreşim varsayılanlarını bir kez geri getirir.
   ///
@@ -181,6 +203,8 @@ class SettingsService extends ChangeNotifier {
         .clamp(0, EngineLevel.all.length - 1);
     _showDailyCount = prefs.getBool('showDailyCount') ?? true;
     _askConfirmations = prefs.getBool('askConfirmations') ?? true;
+    _openingWatchSpeed = _watchSpeed(prefs.getInt('openingWatchSpeed'));
+    _gameWatchSpeed = _watchSpeed(prefs.getInt('gameWatchSpeed'));
     notifyListeners();
   }
 
@@ -344,6 +368,24 @@ class SettingsService extends ChangeNotifier {
     _set('askConfirmations', value);
     notifyListeners();
   }
+
+  set openingWatchSpeed(WatchSpeed value) {
+    _openingWatchSpeed = value;
+    _set('openingWatchSpeed', value.index);
+    notifyListeners();
+  }
+
+  set gameWatchSpeed(WatchSpeed value) {
+    _gameWatchSpeed = value;
+    _set('gameWatchSpeed', value.index);
+    notifyListeners();
+  }
+
+  /// Saklanan sıra numarası; yoksa ya da tanınmıyorsa Normal.
+  static WatchSpeed _watchSpeed(int? index) =>
+      index != null && index >= 0 && index < WatchSpeed.values.length
+          ? WatchSpeed.values[index]
+          : WatchSpeed.normal;
 }
 
 /// Uygulamayla birlikte gelen tahta ve taş takımları.

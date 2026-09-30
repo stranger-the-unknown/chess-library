@@ -272,6 +272,9 @@ starting `12. Re1 …`) stays one game.
   from Black’s point of view; in practice you play Black, and "open in the
   analysis board" opens from Black’s side too. A checked title shows
   **Black** on its card. The default is White’s side.
+- **Mark all as learned** / **Mark all as not learned**: marks every line
+  of the title at once. It applies to the whole title even while a search
+  or "favorites only" is on, and asks how many lines will change.
 - **Reorder lines** and **Move to top** (below, "Ordering").
 - **Rename title**: every line under it moves to the new name; progress
   and notes stay. If the new name is an existing title, you are asked
@@ -285,6 +288,9 @@ button on the right moves it to the top. With thousands of titles you can
 also find one with the search and choose **Move to top** from its menu.
 Every change is saved at once; the order is kept in the text file and in
 backups.
+
+**Line menu** — The ⋮ menu at the end of every line has **Mark as
+learned** / **Mark as not learned**: you mark a line without opening it.
 
 **Editing** — The name, family and moves of a line you added can be
 changed from the row menu, its note deleted, or the line removed.
@@ -333,9 +339,21 @@ the ECO code.
 
 **Watch** — Step through the line by hand or let it play itself. Going
 back does not replay the move; only a single step forward is animated.
+The speed of playback is set in Settings → **Playback speed**. At the end
+of the line the play button becomes **Watch from the start**. Stepping by
+hand or tapping a move stops playback.
 
 **Practice** — You play the moves and are warned when one is wrong. Two
-clean runs mark the line as learned.
+clean runs mark the line as learned. **Restart** sets the line up again;
+when you study Black, the board plays White’s first move.
+
+**Previous / next line** — The ↑ ↓ arrows on the right of the title row
+above the board go to the line above and below in the list. After the
+last line of a card comes the first line of the next card; at the end of
+the list they stop. The order is the one you see in the list: hidden
+titles are left out, and with a search or "favorites only" on you move
+within it. Watch or practice mode and a running engine carry over to the
+new line; if its title is studied from Black’s side, the board turns.
 
 Every line also offers a note, a favorite mark, "play the engine from
 here" and "open in the analysis board". The chart icon at the top turns
@@ -351,6 +369,10 @@ delete them.
 
 - **Import a PGN file** adds many games to a list at once.
 - **Export as a PGN file** writes the whole list out.
+- **Reorder lists** (the ⇅ button at the top): the order of the list
+  cards. Drag a row by the handle on the left; the button on the right
+  moves it to the top. The card’s ⋮ menu has **Move to top** as well. The
+  order of the games inside a list (and their numbers) does not change.
 - **Read from Black’s side** (check mark, in the ⋮ menu of the list card
   or in the menu inside the list): the games of that list open with the
   board seen from Black — like "Study from Black’s side" for openings.
@@ -376,6 +398,17 @@ delete them.
   to the default when the filter changes.
 - **Show a range** narrows the list to a stretch of numbers and is closed
   again from the banner at the top.
+- **Previous / next game**: a game opened from a list shows "Game 3 of
+  12" and ↑ ↓ arrows above the board (at the top of the right column in
+  a wide window). The order is the one you see in the list — search,
+  filter, range and reversed order apply — and it is fixed when you open
+  the game (marking a game read does not shift it). It stops at the end
+  of the list and does not move on to the next list. The board’s
+  orientation and a running engine carry over to the new game.
+- **Watch**: the play button on the game screen plays the moves at the
+  speed set in Settings → **Playback speed**; at the end it becomes
+  **Watch from the start**. Stepping by hand, tapping a move or trying a
+  move on the board stops playback.
 - The card shows the players’ full names, as written in the PGN. The
   font size follows the screen width: smaller on a small phone. On a
   phone in portrait the two buttons on the left are tighter, leaving
@@ -452,6 +485,9 @@ to keep them: take a backup before you uninstall.
   or white so it does not disappear.
 - Legal move hints, last move highlight, move animation, engine arrows.
 - **Daily solved count** — shows the daily counter on puzzle list cards.
+- **Playback speed** — how fast "Watch" plays, separately for openings
+  and for game lists: Slow (1.5 s a move), Normal (0.9 s, the default),
+  Fast (0.5 s).
 - **Confirmation prompts** — when turned off, the app no longer asks
   before leaving a game with unsaved moves, closing the window, resigning
   or restarting a game. Anything that deletes saved data (a list, a

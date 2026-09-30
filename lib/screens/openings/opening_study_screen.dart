@@ -28,6 +28,11 @@ enum StudyMode {
 }
 
 /// Tek bir açılış varyantını çalışma ekranı.
+///
+/// [sequence] verilirse başlık satırındaki oklar listedeki önceki ve
+/// sonraki varyanta geçiriyor. Geçiş aynı sayfada oluyor: varyantın
+/// ekranı sıfırdan kuruluyor ama kip (izle / alıştırma) ve motorun açık
+/// olup olmadığı yeni varyanta taşınıyor.
 class OpeningStudyScreen extends StatefulWidget {
   final Opening opening;
 
@@ -35,10 +40,20 @@ class OpeningStudyScreen extends StatefulWidget {
   /// gözünden açılıyor (alıştırmada siyahı sen oynuyorsun).
   final bool blackSide;
 
+  /// Listede görünen sıra; "önceki / sonraki varyant" bunun içinde
+  /// gezer ve sonda durur. Verilmezse oklar görünmez.
+  final List<Opening>? sequence;
+
+  /// Siyah tarafından çalışılan başlıklar: sıradaki varyant başka bir
+  /// başlıktaysa tahtanın yönü ona göre kuruluyor.
+  final Set<String> blackFamilies;
+
   const OpeningStudyScreen({
     super.key,
     required this.opening,
     this.blackSide = false,
+    this.sequence,
+    this.blackFamilies = const <String>{},
   });
 
   /// Testler için canlı analizin yerine geçer.
@@ -50,6 +65,82 @@ class OpeningStudyScreen extends StatefulWidget {
 }
 
 class _OpeningStudyScreenState extends State<OpeningStudyScreen> {
+  late Opening _opening = widget.opening;
+  late bool _blackSide = widget.blackSide;
+  late int _index =
+      widget.sequence?.indexWhere((o) => o.id == widget.opening.id) ?? -1;
+
+  /// Yeni varyanta taşınanlar.
+  StudyMode _mode = StudyMode.watch;
+  bool _analysisOn = false;
+
+  bool get _hasSequence =>
+      _index >= 0 && (widget.sequence?.length ?? 0) > 1;
+
+  void _step(int delta, StudyMode mode, bool analysisOn) {
+    final sequence = widget.sequence;
+    if (sequence == null || _index < 0) return;
+    final next = _index + delta;
+    if (next < 0 || next >= sequence.length) return;
+    setState(() {
+      _index = next;
+      _opening = sequence[next];
+      _blackSide = widget.blackFamilies.contains(_opening.family);
+      _mode = mode;
+      _analysisOn = analysisOn;
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final length = widget.sequence?.length ?? 0;
+    return _StudyView(
+      // Anahtar varyantın kimliği: geçişte eski varyantın zamanlayıcıları,
+      // motor isteği ve hamle konumu yeni varyanta sızmıyor.
+      key: ValueKey(_opening.id),
+      opening: _opening,
+      blackSide: _blackSide,
+      initialMode: _mode,
+      initialAnalysis: _analysisOn,
+      showSequence: _hasSequence,
+      onPrevious: _hasSequence && _index > 0
+          ? (mode, analysis) => _step(-1, mode, analysis)
+          : null,
+      onNext: _hasSequence && _index < length - 1
+          ? (mode, analysis) => _step(1, mode, analysis)
+          : null,
+    );
+  }
+}
+
+/// Önceki / sonraki varyanta geçiş; o anki kip ve motorun durumu taşınır.
+typedef _StepCallback = void Function(StudyMode mode, bool analysisOn);
+
+class _StudyView extends StatefulWidget {
+  final Opening opening;
+  final bool blackSide;
+  final StudyMode initialMode;
+  final bool initialAnalysis;
+  final bool showSequence;
+  final _StepCallback? onPrevious;
+  final _StepCallback? onNext;
+
+  const _StudyView({
+    super.key,
+    required this.opening,
+    required this.blackSide,
+    required this.initialMode,
+    required this.initialAnalysis,
+    required this.showSequence,
+    this.onPrevious,
+    this.onNext,
+  });
+
+  @override
+  State<_StudyView> createState() => _StudyViewState();
+}
+
+class _StudyViewState extends State<_StudyView> {
   final OpeningService _service = OpeningService.instance;
 
   /// Hamle şeridini seçili hamlede tutar; kural tahtanın altındaki
@@ -90,6 +181,16 @@ class _OpeningStudyScreenState extends State<OpeningStudyScreen> {
     // puntodaydı.
     _entries = MoveEntry.fromUciList(widget.opening.uciMoves);
     _loadProgress();
+    // Önceki varyanttan taşınanlar. Motor hemen sorulmuyor: önceki
+    // varyantın ekranı kapanırken analizi durduruyor ve bu, aynı karede
+    // başlatılan yeni isteği de düşürürdü.
+    _mode = widget.initialMode;
+    if (widget.initialAnalysis) {
+      _analysisOn = true;
+      _analysisDebounce =
+          Timer(const Duration(milliseconds: 400), _runAnalysis);
+    }
+    _scheduleOpeningMove();
   }
 
   Future<void> _saveBoardImage() async {
@@ -282,16 +383,13 @@ class _OpeningStudyScreenState extends State<OpeningStudyScreen> {
   /// ile kapatılmıştı, burası atlanmıştı.
   int _token = 0;
 
-  void _reset() {
-    _token++;
-    _autoTimer?.cancel();
-    setState(() {
-      _autoPlaying = false;
-      _mistakeMade = false;
-      _message = null;
-    });
-    _goTo(-1, silent: true);
-  }
+  /// Alıştırmada "Baştan".
+  ///
+  /// Alıştırmaya girerken yapılanların aynısı. Eskiden yalnızca başa
+  /// sarıyordu: siyahı çalışırken beyazın ilk hamlesi oynanmıyor, sıra
+  /// beyazda kalıyor ve tahta kilitleniyordu. ("Göster"e basınca da
+  /// beyazın hamlesiyle birlikte senin hamleni oynuyordu.)
+  void _reset() => _setMode(_mode);
 
   /// Rakip cevabının en erken görünme süresi (motora karşı oyunla aynı).
   static const Duration _replyPace = Duration(milliseconds: 700);
@@ -323,14 +421,19 @@ class _OpeningStudyScreenState extends State<OpeningStudyScreen> {
     _goTo(_cursor + 1);
   }
 
+  /// İzlemeyi başlatır ya da durdurur. Varyantın sonundaysa başa dönüp
+  /// baştan izletir (tuş o zaman "Baştan izle").
   void _toggleAutoPlay() {
     if (_autoPlaying) {
-      _autoTimer?.cancel();
-      setState(() => _autoPlaying = false);
+      _stopAutoPlay();
       return;
     }
+    if (_cursor >= widget.opening.uciMoves.length - 1) {
+      _goTo(-1, silent: true);
+    }
     setState(() => _autoPlaying = true);
-    _autoTimer = Timer.periodic(const Duration(milliseconds: 900), (timer) {
+    final pace = SettingsService.instance.openingWatchSpeed.pace;
+    _autoTimer = Timer.periodic(pace, (timer) {
       if (!mounted) {
         timer.cancel();
         return;
@@ -341,7 +444,29 @@ class _OpeningStudyScreenState extends State<OpeningStudyScreen> {
         return;
       }
       _goTo(_cursor + 1);
+      // Son hamlede hemen duruyor: tuş bir tur beklemeden "Baştan
+      // izle"ye dönsün.
+      if (_cursor >= widget.opening.uciMoves.length - 1) _stopAutoPlay();
     });
+  }
+
+  void _stopAutoPlay() {
+    _autoTimer?.cancel();
+    if (_autoPlaying) setState(() => _autoPlaying = false);
+  }
+
+  /// Kullanıcının kendi gezinmesi (düğmeler, hamleye dokunma) izlemeyi
+  /// durduruyor: tahtayı o anda kendisi yönetmek istiyor.
+  void _userGoTo(int index) {
+    _stopAutoPlay();
+    _goTo(index);
+  }
+
+  /// Önceki / sonraki varyant: kip ve motorun durumu yeni varyanta geçer.
+  void _stepVariation(_StepCallback? step) {
+    if (step == null) return;
+    _stopAutoPlay();
+    step(_mode, _analysisOn);
   }
 
   // -------------------------------------------------------------------------
@@ -410,14 +535,16 @@ class _OpeningStudyScreenState extends State<OpeningStudyScreen> {
       _mistakeMade = false;
     });
     _goTo(-1, silent: true);
+    _scheduleOpeningMove();
+  }
 
-    // Alıştırmada siyahı çalışıyorsan ilk hamleyi tahta oynasın.
-    if (mode == StudyMode.practice && _flipped) {
-      final token = _token;
-      Future<void>.delayed(_openingPace, () {
-        if (mounted && token == _token && _cursor == -1) _goTo(0);
-      });
-    }
+  /// Alıştırmada siyahı çalışıyorsan ilk hamleyi tahta oynasın.
+  void _scheduleOpeningMove() {
+    if (_mode != StudyMode.practice || !_flipped) return;
+    final token = _token;
+    Future<void>.delayed(_openingPace, () {
+      if (mounted && token == _token && _cursor == -1) _goTo(0);
+    });
   }
 
   // -------------------------------------------------------------------------
@@ -755,8 +882,13 @@ class _OpeningStudyScreenState extends State<OpeningStudyScreen> {
   }
 
   Widget _header(ColorScheme scheme) {
+    final sequence = widget.showSequence;
     return Padding(
-      padding: const EdgeInsets.fromLTRB(16, 4, 16, 6),
+      // Oklar varken satır onların boyunda; dikey pay daralıyor ki tahta
+      // küçülmesin.
+      padding: sequence
+          ? const EdgeInsets.fromLTRB(16, 1, 6, 1)
+          : const EdgeInsets.fromLTRB(16, 4, 16, 6),
       child: Row(
         children: [
           Container(
@@ -789,8 +921,41 @@ class _OpeningStudyScreenState extends State<OpeningStudyScreen> {
           ),
           if (_learned)
             Icon(Icons.check_circle_rounded, size: 16, color: scheme.success),
+          if (sequence) ...[
+            const SizedBox(width: 6),
+            // Yukarı / aşağı: listedeki bir üstteki ve bir alttaki
+            // varyant. Sağa / sola oklar hamleler için kullanılıyor.
+            _sequenceButton(
+              Icons.keyboard_arrow_up_rounded,
+              t('openings.previousVariation'),
+              widget.onPrevious,
+            ),
+            _sequenceButton(
+              Icons.keyboard_arrow_down_rounded,
+              t('openings.nextVariation'),
+              widget.onNext,
+            ),
+          ],
         ],
       ),
+    );
+  }
+
+  Widget _sequenceButton(
+    IconData icon,
+    String tooltip,
+    _StepCallback? step,
+  ) {
+    return IconButton(
+      tooltip: tooltip,
+      icon: Icon(icon),
+      iconSize: 24,
+      style: IconButton.styleFrom(
+        minimumSize: const Size(40, 34),
+        padding: EdgeInsets.zero,
+        tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+      ),
+      onPressed: step == null ? null : () => _stepVariation(step),
     );
   }
 
@@ -855,7 +1020,7 @@ class _OpeningStudyScreenState extends State<OpeningStudyScreen> {
       moves: _entries,
       currentIndex: _cursor,
       // Hamleye dokunup o konuma gitmek yalnızca izleme kipinde anlamlı.
-      onMoveTap: _mode == StudyMode.watch ? _goTo : (_) {},
+      onMoveTap: _mode == StudyMode.watch ? _userGoTo : (_) {},
       vertical: vertical,
       // Alıştırmada henüz gelmemiş hamleler gizleniyor.
       revealedCount:
@@ -910,32 +1075,41 @@ class _OpeningStudyScreenState extends State<OpeningStudyScreen> {
               children: [
                 IconButton(
                   icon: const Icon(Icons.first_page_rounded),
-                  onPressed: _cursor >= 0 ? () => _goTo(-1) : null,
+                  onPressed: _cursor >= 0 ? () => _userGoTo(-1) : null,
                 ),
                 IconButton(
                   icon: const Icon(Icons.chevron_left_rounded),
                   iconSize: 28,
-                  onPressed: _cursor >= 0 ? () => _goTo(_cursor - 1) : null,
+                  onPressed:
+                      _cursor >= 0 ? () => _userGoTo(_cursor - 1) : null,
                 ),
+                // Sonda "Baştan izle": eskiden burada sönük duruyordu.
                 IconButton(
+                  tooltip: _autoPlaying
+                      ? t('common.pause')
+                      : (atEnd ? t('common.watchAgain') : t('common.play')),
                   icon: Icon(
                     _autoPlaying
                         ? Icons.pause_rounded
-                        : Icons.play_arrow_rounded,
+                        : (atEnd
+                            ? Icons.replay_rounded
+                            : Icons.play_arrow_rounded),
                   ),
                   iconSize: 30,
-                  onPressed: atEnd ? null : _toggleAutoPlay,
+                  onPressed: widget.opening.uciMoves.isEmpty
+                      ? null
+                      : _toggleAutoPlay,
                 ),
                 IconButton(
                   icon: const Icon(Icons.chevron_right_rounded),
                   iconSize: 28,
-                  onPressed: atEnd ? null : () => _goTo(_cursor + 1),
+                  onPressed: atEnd ? null : () => _userGoTo(_cursor + 1),
                 ),
                 IconButton(
                   icon: const Icon(Icons.last_page_rounded),
                   onPressed: atEnd
                       ? null
-                      : () => _goTo(widget.opening.uciMoves.length - 1),
+                      : () => _userGoTo(widget.opening.uciMoves.length - 1),
                 ),
               ],
             )
