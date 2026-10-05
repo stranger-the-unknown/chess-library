@@ -438,7 +438,8 @@ void main() {
 
     testWidgets('açılış: ayardaki hızla ilerliyor, sonda "Baştan izle"',
         (tester) async {
-      _settings.openingWatchSpeed = WatchSpeed.fast;
+      // 0,5 sn: 10.7.0'ın "Hızlı"sı, 10.8.0'da "Çok hızlı".
+      _settings.openingWatchSpeed = WatchSpeed.veryFast;
       await _pump(tester, OpeningStudyScreen(opening: line()));
       await tester.tap(find.byTooltip(t('common.play')));
       await tester.pump(const Duration(milliseconds: 510));
@@ -488,7 +489,7 @@ void main() {
 
     testWidgets('oyun: sonda "Baştan izle"; hamleye dokunmak ve tahtada '
         'denemek izlemeyi durduruyor', (tester) async {
-      _settings.gameWatchSpeed = WatchSpeed.fast;
+      _settings.gameWatchSpeed = WatchSpeed.veryFast;
       await _pump(tester, const GameScreen(uciMoves: _italian, title: 'x'));
       await tester.tap(find.byTooltip(t('game.toEnd')));
       await tester.pumpAndSettle();
@@ -743,26 +744,31 @@ void main() {
   });
 
   group('Ayarlar', () {
-    testWidgets('izleme hızı: iki ayrı ayar', (tester) async {
-      await _pump(tester, const SettingsScreen(), size: const Size(420, 900));
-      final openings = find.byKey(const Key('watchSpeed-openings'));
-      await tester.scrollUntilVisible(openings, 200,
+    // 10.8.0: beş hız, açılır listede (üç parçalı düğme telefona
+    // sığmıyordu).
+    Future<void> choose(
+        WidgetTester tester, Finder tile, WatchSpeed speed) async {
+      await tester.scrollUntilVisible(tile, 200,
           scrollable: find.byType(Scrollable).first);
       await tester.pumpAndSettle();
       await tester.tap(find.descendant(
-          of: openings, matching: find.text(t('settings.watchFast'))));
+          of: tile, matching: find.byType(DropdownButton<WatchSpeed>)));
       await tester.pumpAndSettle();
+      await tester.tap(find.text(speed.label).last);
+      await tester.pumpAndSettle();
+    }
+
+    testWidgets('izleme hızı: iki ayrı ayar', (tester) async {
+      await _pump(tester, const SettingsScreen(), size: const Size(360, 800));
+      final openings = find.byKey(const Key('watchSpeed-openings'));
+      final games = find.byKey(const Key('watchSpeed-games'));
+
+      await choose(tester, openings, WatchSpeed.fast);
       expect(_settings.openingWatchSpeed, WatchSpeed.fast);
       expect(_settings.gameWatchSpeed, WatchSpeed.normal);
 
-      final games = find.byKey(const Key('watchSpeed-games'));
-      await tester.scrollUntilVisible(games, 200,
-          scrollable: find.byType(Scrollable).first);
-      await tester.pumpAndSettle();
-      await tester.tap(find.descendant(
-          of: games, matching: find.text(t('settings.watchSlow'))));
-      await tester.pumpAndSettle();
-      expect(_settings.gameWatchSpeed, WatchSpeed.slow);
+      await choose(tester, games, WatchSpeed.verySlow);
+      expect(_settings.gameWatchSpeed, WatchSpeed.verySlow);
       expect(_settings.openingWatchSpeed, WatchSpeed.fast);
       expect(tester.takeException(), isNull, reason: 'dar ekranda taşmıyor');
     });

@@ -13,18 +13,36 @@ import '../l10n/app_strings.dart';
 
 /// İzleme hızı: "İzle" ile oynatılırken hamleler arasındaki süre.
 ///
-/// Sıra kalıcıdır: tercih sıra numarası olarak saklanıyor.
+/// Sıra kalıcıdır: tercih sıra numarası olarak saklanıyor, yeni hızlar
+/// yalnızca sona eklenir ([AppLanguage] ile aynı kural). Ekrandaki sıra
+/// [ordered]. 10.7.0'da üç hız vardı (0 Yavaş, 1 Normal, 2 Hızlı); o
+/// sürümün "Hızlı"sı 10.8.0'da "Çok hızlı" oldu, numarası değişmedi.
 enum WatchSpeed {
-  slow(Duration(milliseconds: 1500)),
+  slow(Duration(milliseconds: 1500), 'settings.watchSlow'),
 
   /// 10.7.0'a kadar açılışlarda tek hız buydu; varsayılan o.
-  normal(Duration(milliseconds: 900)),
-  fast(Duration(milliseconds: 500));
+  normal(Duration(milliseconds: 900), 'settings.watchNormal'),
+  veryFast(Duration(milliseconds: 500), 'settings.watchVeryFast'),
+  verySlow(Duration(milliseconds: 2500), 'settings.watchVerySlow'),
+  fast(Duration(milliseconds: 700), 'settings.watchFast');
 
-  const WatchSpeed(this.pace);
+  const WatchSpeed(this.pace, this._labelKey);
 
   /// İki hamle arasındaki süre.
   final Duration pace;
+  final String _labelKey;
+
+  /// Ekranda gösterilen ad.
+  String get label => t(_labelKey);
+
+  /// Ekrandaki sıra: yavaştan hızlıya.
+  static const List<WatchSpeed> ordered = [
+    verySlow,
+    slow,
+    normal,
+    fast,
+    veryFast,
+  ];
 }
 
 /// Uygulama tercihlerini tutar ve değiştiğinde dinleyicilere haber verir.

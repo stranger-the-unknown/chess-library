@@ -634,6 +634,15 @@ class _PuzzleSolveScreenState extends State<PuzzleSolveScreen> {
       _viewIndex = null;
     });
 
+    // Baştan gösterimde önce bulmacanın başlangıç konumu bir adım boyunca
+    // görünüyor. Eskiden ilk hamle sıfırlamayla aynı karede oynanıyordu:
+    // bitmiş bulmacada "Çözüm"e basınca doğrudan 1. hamleden sonrası
+    // geliyor, başlangıç konumu hiç görünmüyordu.
+    if (fromStart) {
+      await Future<void>.delayed(_solutionPace);
+      if (!mounted || token != _loadToken) return;
+    }
+
     // Çözümü adım adım oyna.
     final played = <String>[];
     for (final uci in line) {

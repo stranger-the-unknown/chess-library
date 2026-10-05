@@ -28,6 +28,10 @@ class StorageService extends ChangeNotifier {
 
   /// Siyah tarafından okunan listelerin kimlikleri (bkz. [blackPlaylists]).
   static const _blackKey = 'playlists_black_v1';
+
+  /// "Oyuncunun gözünden oku" adları (bkz. [playlistPlayers]).
+  static const _playerKey = 'playlists_player_v1';
+  Map<String, String>? _players;
   Set<String>? _black;
 
   /// 9.0.0'da kaldırılan analiz listelerinin anahtarı.
@@ -42,6 +46,7 @@ class StorageService extends ChangeNotifier {
   void resetCache() {
     _cache = null;
     _black = null;
+    _players = null;
     notifyListeners();
   }
 
@@ -194,8 +199,9 @@ class StorageService extends ChangeNotifier {
     final playlists = await loadPlaylists();
     playlists.removeWhere((p) => p.id == id);
     await _save();
-    // Silinen listenin işareti kümede asılı kalmasın.
+    // Silinen listenin işaretleri asılı kalmasın.
     await setPlaylistBlack(id, false);
+    await setPlaylistPlayer(id, null);
   }
 
   /// Siyah tarafından okunan listeler (kimlikleri).
@@ -217,6 +223,40 @@ class StorageService extends ChangeNotifier {
             const <String>[])
         .toSet();
     return _black!;
+  }
+
+  /// Liste kimliği → "oyuncunun gözünden oku" için yazılan ad.
+  ///
+  /// Adı yazılan oyuncunun oynadığı oyunlarda tahta onun tarafından
+  /// açılıyor (kural `listGameFlipped`). Siyah işareti gibi listenin
+  /// kimliğine bağlı ve listelerin kaydının dışında, ayrı anahtarda; tam
+  /// yedekte taşınıyor, birleştirmede yedekteki ad geçerli.
+  Future<Map<String, String>> playlistPlayers() async {
+    if (_players != null) return _players!;
+    final raw = await AppStore.instance.getString(_playerKey);
+    return _players = raw == null
+        ? <String, String>{}
+        : await readOrQuarantine<Map<String, String>>(
+            _playerKey,
+            raw,
+            (decoded) => Map<String, String>.from(decoded as Map),
+            () => <String, String>{},
+          );
+  }
+
+  /// [name] boş ya da null ise listenin oyuncusu kaldırılır.
+  Future<void> setPlaylistPlayer(String id, String? name) async {
+    final current = Map<String, String>.from(await playlistPlayers());
+    final value = name?.trim() ?? '';
+    final changed = value.isEmpty
+        ? current.remove(id) != null
+        : current[id] != value;
+    if (!changed) return;
+    if (value.isNotEmpty) current[id] = value;
+    _players = current;
+    final ok = await AppStore.instance.setString(_playerKey, jsonEncode(current));
+    if (!ok) throw StateError('liste oyuncusu diske yazılamadı');
+    notifyListeners();
   }
 
   Future<void> setPlaylistBlack(String id, bool black) async {

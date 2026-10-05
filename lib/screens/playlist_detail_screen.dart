@@ -21,6 +21,7 @@ import 'pgn_import_screen.dart';
 import '../widgets/game_filter_dialog.dart';
 import '../widgets/range_dialog.dart';
 import 'list_game_screen.dart';
+import '../widgets/player_side.dart';
 import '../widgets/cursors.dart';
 
 /// Liste içindeki oyun süzgeci.
@@ -44,6 +45,9 @@ class _PlaylistDetailScreenState extends State<PlaylistDetailScreen> {
 
   /// Liste siyah tarafından mı okunuyor ([StorageService.blackPlaylists]).
   bool _black = false;
+
+  /// "Oyuncunun gözünden oku" adı ([StorageService.playlistPlayers]).
+  String? _player;
   bool _loading = true;
   String _query = '';
   _GameFilter _filter = _GameFilter.all;
@@ -87,6 +91,7 @@ class _PlaylistDetailScreenState extends State<PlaylistDetailScreen> {
     final playlist = await _storage.playlistById(widget.playlistId);
     final black =
         (await _storage.blackPlaylists()).contains(widget.playlistId);
+    final player = (await _storage.playlistPlayers())[widget.playlistId];
     if (!mounted) return;
 
     _numbers.clear();
@@ -99,6 +104,7 @@ class _PlaylistDetailScreenState extends State<PlaylistDetailScreen> {
     setState(() {
       _playlist = playlist;
       _black = black;
+      _player = player;
       _loading = false;
     });
   }
@@ -108,6 +114,17 @@ class _PlaylistDetailScreenState extends State<PlaylistDetailScreen> {
     final black = !_black;
     if (!await _guard(
         () => _storage.setPlaylistBlack(widget.playlistId, black))) {
+      return;
+    }
+    await _load();
+  }
+
+  /// Bu listenin oyunları adı yazılan oyuncunun gözünden açılsın.
+  Future<void> _pickPlayer() async {
+    final name = await askPlayerSide(context, current: _player);
+    if (name == null) return;
+    if (!await _guard(
+        () => _storage.setPlaylistPlayer(widget.playlistId, name))) {
       return;
     }
     await _load();
@@ -130,8 +147,10 @@ class _PlaylistDetailScreenState extends State<PlaylistDetailScreen> {
           games: games,
           initialIndex: index,
           // Liste "Siyah tarafından oku" ile işaretliyse tahta siyahın
-          // gözünden açılıyor (açılışlardaki gibi).
+          // gözünden açılıyor (açılışlardaki gibi); oyuncu adı yazılmışsa
+          // o oyuncunun olduğu oyunlarda onun gözünden.
           blackSide: _black,
+          player: _player,
         ),
       ),
     );
@@ -599,6 +618,7 @@ class _PlaylistDetailScreenState extends State<PlaylistDetailScreen> {
               if (value == 'showRange') _pickRange();
               if (value == 'filter') _pickFilter();
               if (value == 'black') _toggleBlack();
+              if (value == 'player') _pickPlayer();
             },
             itemBuilder: (context) => [
               ...[
@@ -629,6 +649,14 @@ class _PlaylistDetailScreenState extends State<PlaylistDetailScreen> {
                 value: 'black',
                 checked: _black,
                 child: Text(t('lists.blackSide')),
+              ),
+              PopupMenuItem(
+                value: 'player',
+                child: Text(
+                  _player == null
+                      ? t('lists.playerSide')
+                      : t('lists.playerSideNamed', {'name': _player}),
+                ),
               ),
             ],
           ),

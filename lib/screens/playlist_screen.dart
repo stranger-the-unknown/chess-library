@@ -10,6 +10,7 @@ import '../services/pgn_import_service.dart';
 import '../services/storage_service.dart';
 import '../widgets/app_dialogs.dart';
 import '../widgets/black_side_badge.dart';
+import '../widgets/player_side.dart';
 import 'playlist_detail_screen.dart';
 import 'playlist_order_screen.dart';
 import '../widgets/cursors.dart';
@@ -28,6 +29,9 @@ class _PlaylistScreenState extends State<PlaylistScreen> {
 
   /// Siyah tarafından okunan listelerin kimlikleri.
   Set<String> _black = const {};
+
+  /// Liste kimliği → "oyuncunun gözünden oku" adı.
+  Map<String, String> _players = const {};
   bool _loading = true;
 
   @override
@@ -47,10 +51,12 @@ class _PlaylistScreenState extends State<PlaylistScreen> {
   Future<void> _load() async {
     final playlists = (await _storage.loadPlaylists()).toList();
     final black = await _storage.blackPlaylists();
+    final players = await _storage.playlistPlayers();
     if (!mounted) return;
     setState(() {
       _playlists = playlists;
       _black = black;
+      _players = Map<String, String>.from(players);
       _loading = false;
     });
   }
@@ -99,6 +105,16 @@ class _PlaylistScreenState extends State<PlaylistScreen> {
   Future<void> _toggleBlack(Playlist playlist) async {
     final black = !_black.contains(playlist.id);
     if (!await _guard(() => _storage.setPlaylistBlack(playlist.id, black))) {
+      return;
+    }
+    await _load();
+  }
+
+  /// Listenin oyunları adı yazılan oyuncunun gözünden açılsın.
+  Future<void> _pickPlayer(Playlist playlist) async {
+    final name = await askPlayerSide(context, current: _players[playlist.id]);
+    if (name == null) return;
+    if (!await _guard(() => _storage.setPlaylistPlayer(playlist.id, name))) {
       return;
     }
     await _load();
@@ -252,41 +268,57 @@ class _PlaylistScreenState extends State<PlaylistScreen> {
                                     crossAxisAlignment:
                                         CrossAxisAlignment.start,
                                     children: [
-                                      Row(
+                                      // Ad satırı yalnızca adın: etiketler
+                                      // alttaki sayı satırında. Eskiden
+                                      // adın yanındaydılar ve dar telefonda
+                                      // ada yer bırakmıyorlardı ("Siyah" +
+                                      // uzun oyuncu adıyla ad harf harf
+                                      // alt alta diziliyordu).
+                                      Text(
+                                        playlist.name,
+                                        style: const TextStyle(
+                                          fontSize: 15.5,
+                                          fontWeight: FontWeight.w600,
+                                        ),
+                                      ),
+                                      const SizedBox(height: 2),
+                                      // Sığmayan etiket alt satıra iniyor.
+                                      Wrap(
+                                        spacing: 6,
+                                        runSpacing: 4,
+                                        crossAxisAlignment:
+                                            WrapCrossAlignment.center,
                                         children: [
-                                          Flexible(
-                                            child: Text(
-                                              playlist.name,
-                                              style: const TextStyle(
-                                                fontSize: 15.5,
-                                                fontWeight: FontWeight.w600,
-                                              ),
+                                          Text(
+                                            // Okunan sayısı listeye girmeden
+                                            // görünsün; eskiden listenin
+                                            // içindeki süzgeç şeridindeydi
+                                            // ve orada hem yer kaplıyordu
+                                            // hem de ancak girince
+                                            // görülüyordu.
+                                            t('lists.gameCountRead', {
+                                              'count': playlist.games.length,
+                                              'read': playlist.games
+                                                  .where((g) => g.read)
+                                                  .length,
+                                            }),
+                                            style: TextStyle(
+                                              fontSize: 12.5,
+                                              color: scheme.onSurfaceVariant,
                                             ),
                                           ),
                                           if (_black.contains(playlist.id))
                                             BlackSideBadge(
                                               tooltip:
                                                   t('lists.blackSideShort'),
+                                              margin: EdgeInsets.zero,
+                                            ),
+                                          if (_players[playlist.id] != null)
+                                            PlayerSideBadge(
+                                              name: _players[playlist.id]!,
+                                              margin: EdgeInsets.zero,
                                             ),
                                         ],
-                                      ),
-                                      const SizedBox(height: 2),
-                                      Text(
-                                        // Okunan sayısı listeye girmeden
-                                        // görünsün; eskiden listenin
-                                        // içindeki süzgeç şeridindeydi ve
-                                        // orada hem yer kaplıyordu hem de
-                                        // ancak girince görülüyordu.
-                                        t('lists.gameCountRead', {
-                                          'count': playlist.games.length,
-                                          'read': playlist.games
-                                              .where((g) => g.read)
-                                              .length,
-                                        }),
-                                        style: TextStyle(
-                                          fontSize: 12.5,
-                                          color: scheme.onSurfaceVariant,
-                                        ),
                                       ),
                                     ],
                                   ),
@@ -296,6 +328,7 @@ class _PlaylistScreenState extends State<PlaylistScreen> {
                                     if (value == 'rename') _rename(playlist);
                                     if (value == 'toTop') _moveToTop(playlist);
                                     if (value == 'black') _toggleBlack(playlist);
+                                    if (value == 'player') _pickPlayer(playlist);
                                     if (value == 'export') _exportPgn(playlist);
                                     if (value == 'delete') _delete(playlist);
                                   },
@@ -315,6 +348,16 @@ class _PlaylistScreenState extends State<PlaylistScreen> {
                                       value: 'black',
                                       checked: _black.contains(playlist.id),
                                       child: Text(t('lists.blackSide')),
+                                    ),
+                                    PopupMenuItem(
+                                      value: 'player',
+                                      child: Text(
+                                        _players[playlist.id] == null
+                                            ? t('lists.playerSide')
+                                            : t('lists.playerSideNamed', {
+                                                'name': _players[playlist.id],
+                                              }),
+                                      ),
                                     ),
                                     PopupMenuItem(
                                       value: 'export',

@@ -17,6 +17,7 @@ import '../../widgets/app_dialogs.dart';
 import '../../models/move_entry.dart';
 import '../../widgets/chess_board_widget.dart';
 import '../../widgets/move_list.dart';
+import '../../widgets/watch_speed_button.dart';
 import '../game_screen.dart';
 
 enum StudyMode {
@@ -216,12 +217,14 @@ class _StudyViewState extends State<_StudyView> {
 
   /// Motoru açar ya da kapatır. Oyun ekranındakiyle aynı analiz: skor,
   /// ana varyant ve (ayar açıksa) en iyi hamle oku.
-  void _toggleAnalysis() {
+  void _toggleAnalysis() => _setAnalysis(!_analysisOn);
+
+  void _setAnalysis(bool on) {
     setState(() {
-      _analysisOn = !_analysisOn;
+      _analysisOn = on;
       _analysis = null;
     });
-    if (_analysisOn) {
+    if (on) {
       _runAnalysis();
     } else {
       _analysisToken++;
@@ -431,7 +434,20 @@ class _StudyViewState extends State<_StudyView> {
     if (_cursor >= widget.opening.uciMoves.length - 1) {
       _goTo(-1, silent: true);
     }
+    // İzlerken motor duruyor, düğmesi kilitli: hamleler akarken her
+    // konumu motora sormanın anlamı yok. İzleme bitince ya da durunca
+    // önceden açıksa kendiliğinden geri açılıyor.
+    _engineWasOn = _analysisOn;
+    if (_analysisOn) _setAnalysis(false);
     setState(() => _autoPlaying = true);
+    _startAutoTimer();
+  }
+
+  /// İzleme açıkken motor açık mıydı ([_stopAutoPlay] geri açar).
+  bool _engineWasOn = false;
+
+  void _startAutoTimer() {
+    _autoTimer?.cancel();
     final pace = SettingsService.instance.openingWatchSpeed.pace;
     _autoTimer = Timer.periodic(pace, (timer) {
       if (!mounted) {
@@ -439,8 +455,7 @@ class _StudyViewState extends State<_StudyView> {
         return;
       }
       if (_cursor >= widget.opening.uciMoves.length - 1) {
-        timer.cancel();
-        setState(() => _autoPlaying = false);
+        _stopAutoPlay();
         return;
       }
       _goTo(_cursor + 1);
@@ -450,9 +465,21 @@ class _StudyViewState extends State<_StudyView> {
     });
   }
 
-  void _stopAutoPlay() {
+  /// İzlemeyi durdurur; [resumeEngine] ise izlemeden önce açık olan
+  /// motoru geri açar.
+  void _stopAutoPlay({bool resumeEngine = true}) {
     _autoTimer?.cancel();
-    if (_autoPlaying) setState(() => _autoPlaying = false);
+    if (!_autoPlaying) return;
+    setState(() => _autoPlaying = false);
+    if (resumeEngine && _engineWasOn) _setAnalysis(true);
+    _engineWasOn = false;
+  }
+
+  /// Ekrandaki hız düğmesi: ayara yazıyor, izleme sürüyorsa hemen geçerli.
+  void _setWatchSpeed(WatchSpeed speed) {
+    SettingsService.instance.openingWatchSpeed = speed;
+    setState(() {});
+    if (_autoPlaying) _startAutoTimer();
   }
 
   /// Kullanıcının kendi gezinmesi (düğmeler, hamleye dokunma) izlemeyi
@@ -465,8 +492,11 @@ class _StudyViewState extends State<_StudyView> {
   /// Önceki / sonraki varyant: kip ve motorun durumu yeni varyanta geçer.
   void _stepVariation(_StepCallback? step) {
     if (step == null) return;
-    _stopAutoPlay();
-    step(_mode, _analysisOn);
+    // İzlerken geçilirse motorun izlemeden önceki durumu taşınıyor; bu
+    // ekranda geri açmaya gerek yok, yeni varyant kendi açıyor.
+    final analysisOn = _autoPlaying ? _engineWasOn : _analysisOn;
+    _stopAutoPlay(resumeEngine: false);
+    step(_mode, analysisOn);
   }
 
   // -------------------------------------------------------------------------
@@ -527,10 +557,9 @@ class _StudyViewState extends State<_StudyView> {
 
   void _setMode(StudyMode mode) {
     _token++;
-    _autoTimer?.cancel();
+    _stopAutoPlay();
     setState(() {
       _mode = mode;
-      _autoPlaying = false;
       _message = null;
       _mistakeMade = false;
     });
@@ -612,9 +641,15 @@ class _StudyViewState extends State<_StudyView> {
             tooltip: _analysisOn ? t('game.analysisOff') : t('game.analysisOn'),
             icon: Icon(
               Icons.insights_rounded,
-              color: _analysisOn ? scheme.primary : null,
+              // Kilitliyken soluk, açıkça: uygulama çubuğu düğmelere kendi
+              // rengini veriyor ve kapalı düğme de o renkte, açık gibi
+              // görünüyordu.
+              color: _autoPlaying
+                  ? scheme.onSurface.withValues(alpha: 0.38)
+                  : (_analysisOn ? scheme.primary : null),
             ),
-            onPressed: _toggleAnalysis,
+            // İzlerken kilitli (bkz. [_toggleAutoPlay]).
+            onPressed: _autoPlaying ? null : _toggleAnalysis,
           ),
           IconButton(
             tooltip: t('common.flipBoard'),
@@ -787,15 +822,37 @@ class _StudyViewState extends State<_StudyView> {
       children: [
         _header(scheme),
         _boardArea(practiceSide, arrows, Layout.narrowBoardCap),
-        if (_analysisOn) _engineLine(scheme),
+        // Motor satırının yeri hep ayrılı: eskiden satır motor açılınca
+        // ekleniyordu, tahtanın alanı daralıyor ve tahta yukarı
+        // kayıyordu (oyun ekranında kapatılan sorunun aynısı).
+        SizedBox(
+          height: _engineSlotHeight(context),
+          child: _analysisOn ? _engineLine(scheme) : null,
+        ),
         if (opening.note != null && opening.note!.isNotEmpty)
           _noteCard(scheme, opening.note!),
-        if (_message != null) _messageCard(scheme),
+        // Alıştırmada uyarının yeri de ayrılı: ilk hamlede "Doğru" yazısı
+        // çıkınca tahta kaymasın. İzlemede uyarı hiç çıkmıyor.
+        if (_mode == StudyMode.practice)
+          SizedBox(
+            height: _messageSlotHeight(context),
+            child: _message != null ? _messageCard(scheme) : null,
+          ),
         _moveStrip(scheme, vertical: false),
         _controls(scheme),
       ],
     );
   }
+
+  /// Motor satırına ayrılan yükseklik: iki satır yazı, dolgu ve üst
+  /// boşluk. Yazı ölçeği (masaüstü ölçeği, kullanıcının büyütmesi) dahil.
+  double _engineSlotHeight(BuildContext context) =>
+      MediaQuery.textScalerOf(context).scale(14) * 1.25 * 2 + 16 + 6;
+
+  /// Alıştırma uyarısına ayrılan yükseklik: iki satır yazı, dolgu,
+  /// çerçeve ve üst boşluk.
+  double _messageSlotHeight(BuildContext context) =>
+      MediaQuery.textScalerOf(context).scale(12.5) * 1.25 * 2 + 18 + 2 + 8;
 
   /// Geniş pencere ve tablet: solda tahta, sağda hamleler ve düğmeler.
   ///
@@ -999,8 +1056,12 @@ class _StudyViewState extends State<_StudyView> {
           Expanded(
             child: Text(
               _message!,
+              // Yükseklik [_messageSlotHeight] ile ayrılı: en çok iki satır.
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis,
               style: TextStyle(
                 fontSize: 12.5,
+                height: 1.25,
                 fontWeight: FontWeight.w600,
                 color: color,
               ),
@@ -1110,6 +1171,10 @@ class _StudyViewState extends State<_StudyView> {
                   onPressed: atEnd
                       ? null
                       : () => _userGoTo(widget.opening.uciMoves.length - 1),
+                ),
+                WatchSpeedButton(
+                  value: SettingsService.instance.openingWatchSpeed,
+                  onSelected: _setWatchSpeed,
                 ),
               ],
             )

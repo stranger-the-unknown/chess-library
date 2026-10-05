@@ -350,10 +350,10 @@ class _SettingsScreenState extends State<SettingsScreen> {
     );
   }
 
-  /// İzleme hızı satırı: başlık, altında üç parçalı düğme.
+  /// İzleme hızı satırı: başlık ve açılır listede beş hız.
   ///
-  /// Düğme başlığın yanında değil altında: telefonda üç seçenek ve
-  /// başlık aynı satıra sığmıyor.
+  /// 10.7.0'da üç parçalı düğmeydi; beş seçenek telefonda yan yana
+  /// sığmıyor.
   Widget _watchSpeedTile({
     required Key key,
     required IconData icon,
@@ -363,33 +363,19 @@ class _SettingsScreenState extends State<SettingsScreen> {
   }) {
     return ListTile(
       key: key,
-      // Simge başlığın hizasında; düğmenin ortasına kaymasın.
-      titleAlignment: ListTileTitleAlignment.titleHeight,
       leading: Icon(icon),
       title: Text(title),
-      subtitle: Padding(
-        padding: const EdgeInsets.only(top: 8, bottom: 4),
-        child: SizedBox(
-          width: double.infinity,
-          child: SegmentedButton<WatchSpeed>(
-            showSelectedIcon: false,
-            segments: [
-              ButtonSegment(
-                value: WatchSpeed.slow,
-                label: Text(t('settings.watchSlow')),
-              ),
-              ButtonSegment(
-                value: WatchSpeed.normal,
-                label: Text(t('settings.watchNormal')),
-              ),
-              ButtonSegment(
-                value: WatchSpeed.fast,
-                label: Text(t('settings.watchFast')),
-              ),
-            ],
-            selected: {value},
-            onSelectionChanged: (selection) => onChanged(selection.first),
-          ),
+      trailing: DropdownButtonHideUnderline(
+        child: DropdownButton<WatchSpeed>(
+          value: value,
+          borderRadius: BorderRadius.circular(12),
+          items: [
+            for (final speed in WatchSpeed.ordered)
+              DropdownMenuItem(value: speed, child: Text(speed.label)),
+          ],
+          onChanged: (speed) {
+            if (speed != null) onChanged(speed);
+          },
         ),
       ),
     );

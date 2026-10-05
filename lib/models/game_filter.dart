@@ -155,7 +155,14 @@ String _outcome(String? raw) {
   return '';
 }
 
-bool _nameMatches(String? value, String query) {
+bool _nameMatches(String? value, String query) =>
+    playerNameMatches(value, query);
+
+/// Adın yazılan sorguya gevşek eşleşmesi: büyük-küçük harf, Türkçe
+/// harfler ve kelime sırası fark etmez, adın bir parçası yeter ("carl"
+/// ile "Magnus Carlsen" bulunur). Süzgeç ve "oyuncunun gözünden oku"
+/// aynı kuralı kullanıyor.
+bool playerNameMatches(String? value, String query) {
   final words = foldForSearch(query)
       .split(RegExp(r'[\s,.]+'))
       .where((word) => word.isNotEmpty)
@@ -163,4 +170,22 @@ bool _nameMatches(String? value, String query) {
   if (words.isEmpty) return true;
   final folded = foldForSearch(value ?? '');
   return words.every(folded.contains);
+}
+
+/// Listedeki oyunun tahtası siyahın gözünden mi açılsın?
+///
+/// [player] yazılmışsa ve oyunda yalnızca bir tarafta geçiyorsa o tarafın
+/// gözünden: "fischer" yazılan listede Fischer'in olduğu taraf aşağıda.
+/// Oyuncu o oyunda yoksa (ya da ad iki tarafa da uyuyorsa) listenin kendi
+/// yönü geçerli: [blackSide] ("Siyah tarafından oku").
+bool listGameFlipped(SavedGame game, {required bool blackSide, String? player}) {
+  final query = player?.trim() ?? '';
+  if (query.isNotEmpty) {
+    final white = game.resolvedWhite;
+    final black = game.resolvedBlack;
+    final asWhite = white != null && playerNameMatches(white, query);
+    final asBlack = black != null && playerNameMatches(black, query);
+    if (asWhite != asBlack) return asBlack;
+  }
+  return blackSide;
 }

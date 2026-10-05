@@ -190,7 +190,8 @@ ekleyebilir, çözüldü olarak işaretleyebilir ve not düşebilirsin.
 - **İpucu**, tahtadaki konumda oynanması gereken hamleyi okla gösterir;
   bulmacanın her hamlesinde ve ayarlardaki motor okları kapalı olsa da.
 - **Çözüm**, bulmaca sürüyorsa kaldığın yerden sonrasını oynar; bittiyse
-  (çözüldü ya da gösterildi) çözümün tamamını baştan oynar.
+  (çözüldü ya da gösterildi) çözümün tamamını baştan oynar: önce
+  bulmacanın başlangıç konumu bir adım boyunca görünür.
 - Hamle listesinde bir hamleye dokununca o konuma bakarsın; son hamleye
   dokununca kaldığın yere dönersin.
 - Motor bir hamleyi yargılayamazsa (cevap vermediyse) hamle oynanmaz ve
@@ -280,8 +281,8 @@ taşı** da diyebilirsin. Her değişiklik hemen kaydedilir; sıra metin
 dosyasında ve yedekte de korunur.
 
 **Varyant menüsü** — Her varyant satırının sonundaki ⋮ menüsünde
-**Öğrendim işaretle** / **Öğrenilmedi işaretle** var: varyanta girmeden
-işaretlersin.
+**Favorilere ekle** / **Favoriden çıkar** ve **Öğrendim işaretle** /
+**Öğrenilmedi işaretle** var: varyanta girmeden işaretlersin.
 
 **Düzenleme** — Eklediğin bir varyantın adını, ailesini ve hamlelerini
 satır menüsünden değiştirebilir, notunu silebilir ya da varyantı
@@ -326,9 +327,12 @@ Yani `ECO|aile|varyant|hamleler` ya da ECO'suz üç alan.
 
 **İzle** — Varyantı adım adım ya da otomatik oynatarak izlersin. Geri
 alırken hamle yeniden oynatılmaz; yalnızca bir hamle ileri gidince
-canlanır. Otomatik oynatmanın hızı Ayarlar → **İzleme hızı**'ndan
-seçilir. Varyantın sonunda oynat tuşu **Baştan izle** olur. Elle ileri
-geri gitmek ya da bir hamleye dokunmak izlemeyi durdurur.
+canlanır. Otomatik oynatmanın hızı gezinme satırının sağındaki hız
+düğmesinden (izlerken de hemen geçerli) ya da Ayarlar → **İzleme
+hızı**'ndan seçilir; ikisi aynı ayar. Varyantın sonunda oynat tuşu
+**Baştan izle** olur. Elle ileri geri gitmek ya da bir hamleye dokunmak
+izlemeyi durdurur. İzlerken motor durur ve düğmesi kilitlenir; izleme
+bitince ya da durunca, önceden açıksa kendiliğinden geri açılır.
 
 **Alıştırma** — Hamleleri sen oynarsın, yanlışta uyarı alırsın. Hatasız iki
 tamamlamada varyant "öğrenildi" sayılır. **Baştan** varyantı yeniden
@@ -360,6 +364,12 @@ taşıma, silme.
   Satırı soldaki tutamaçtan sürükle, sağdaki düğme en üste taşır; kartın
   ⋮ menüsünde de **En üste taşı** var. Listelerin içindeki oyunların
   sırası (ve numaraları) değişmez.
+- **Oyuncunun gözünden oku** (liste kartının ⋮ menüsünde ya da listenin
+  içindeki menüde): bir oyuncu adı yazarsın ("fischer"); listenin o
+  oyuncunun oynadığı bütün oyunlarında tahta onun tarafından açılır,
+  yani onun olduğu taraf aşağıdadır. Ad süzgeçteki gibi gevşek eşleşir.
+  Oyuncu bir oyunda yoksa (ya da ad iki tarafa da uyuyorsa) listenin
+  kendi yönü geçerlidir. Kartta adı yazar; aynı pencereden kaldırılır.
 - **Siyah tarafından oku** (liste kartının ⋮ menüsünde ya da listenin
   içindeki menüde, işaret): o listenin oyunları tahta siyahın gözünden
   açılır — açılışlardaki "Siyah tarafından çalış" gibi. İşaretli listenin
@@ -390,9 +400,11 @@ taşıma, silme.
   sıralama geçerli; oyunu açtığın andaki hâliyle sabittir (okundu
   işaretleyince kaymaz). Liste bitince durur, sonraki listeye geçmez.
   Tahtanın yönü ve açık motor yeni oyuna taşınır.
-- **İzle**: oyun ekranındaki oynat tuşu hamleleri Ayarlar → **İzleme
-  hızı**'ndaki hızla oynatır; sonda **Baştan izle** olur. Elle gezinmek,
-  bir hamleye dokunmak ya da tahtada hamle denemek izlemeyi durdurur.
+- **İzle**: oyun ekranındaki oynat tuşu hamleleri izleme hızıyla oynatır
+  (gezinme satırındaki hız düğmesi ya da Ayarlar → **İzleme hızı**);
+  sonda **Baştan izle** olur. Elle gezinmek, bir hamleye dokunmak ya da
+  tahtada hamle denemek izlemeyi durdurur. İzlerken motor durur, izleme
+  bitince önceden açıksa geri açılır.
 - Kartta oyuncuların adı tamamıyla, PGN'de yazdığı gibi görünür.
   Punto ekran genişliğine göre: küçük telefonda daha küçük. Dikey
   telefonda soldaki iki düğme sıkışık durur, adlara daha çok yer kalır.
@@ -468,8 +480,9 @@ silmeden önce yedek al.
 - **Bugün çözülen sayısı** — bulmaca listesi kartlarında günlük sayacı
   gösterir.
 - **İzleme hızı** — "İzle"nin hızı, açılışlar ve oyun listeleri için
-  ayrı ayrı: Yavaş (hamle başına 1,5 sn), Normal (0,9 sn, varsayılan),
-  Hızlı (0,5 sn).
+  ayrı ayrı: Çok yavaş (hamle başına 2,5 sn), Yavaş (1,5 sn), Normal
+  (0,9 sn, varsayılan), Hızlı (0,7 sn), Çok hızlı (0,5 sn). Ekranların
+  içindeki hız düğmesi de aynı ayarı değiştirir.
 - **Onay pencereleri** — kapatılınca kaydedilmemiş hamlelerle oyundan
   çıkarken, pencereyi kapatırken, pes ederken ya da oyunu yeniden
   başlatırken sorulmaz. Kayıtlı veriyi silen işlemler (liste, bulmaca

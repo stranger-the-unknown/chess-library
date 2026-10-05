@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../models/game_filter.dart';
 import '../models/playlist.dart';
 import 'game_screen.dart';
 
@@ -16,6 +17,7 @@ class ListGameScreen extends StatefulWidget {
     required this.games,
     required this.initialIndex,
     this.blackSide = false,
+    this.player,
   });
 
   final List<SavedGame> games;
@@ -24,6 +26,10 @@ class ListGameScreen extends StatefulWidget {
   /// Liste "Siyah tarafından oku" ile işaretli.
   final bool blackSide;
 
+  /// "Oyuncunun gözünden oku" adı: o oyuncunun olduğu oyunlarda tahta onun
+  /// tarafından (kural [listGameFlipped]).
+  final String? player;
+
   @override
   State<ListGameScreen> createState() => _ListGameScreenState();
 }
@@ -31,16 +37,26 @@ class ListGameScreen extends StatefulWidget {
 class _ListGameScreenState extends State<ListGameScreen> {
   late int _index = widget.initialIndex.clamp(0, widget.games.length - 1);
 
-  /// Yeni oyuna taşınanlar: tahtanın yönü (elle çevrildiyse o) ve analiz.
-  late bool _flipped = widget.blackSide;
+  /// Yeni oyuna taşınanlar: elle çevirme ve analiz.
+  ///
+  /// Yön oyundan oyuna değişebiliyor (oyuncu bir oyunda beyaz, ötekinde
+  /// siyah); taşınan şey yönün kendisi değil, kullanıcının oyunun kendi
+  /// yönüne göre tahtayı çevirip çevirmediği.
+  bool _userFlip = false;
   bool _analysisOn = false;
+
+  bool _baseFlipped(SavedGame game) => listGameFlipped(
+        game,
+        blackSide: widget.blackSide,
+        player: widget.player,
+      );
 
   void _step(int delta, GameCarry carry) {
     final next = _index + delta;
     if (next < 0 || next >= widget.games.length) return;
     setState(() {
+      _userFlip = carry.flipped != _baseFlipped(widget.games[_index]);
       _index = next;
-      _flipped = carry.flipped;
       _analysisOn = carry.analysisOn;
     });
   }
@@ -59,7 +75,7 @@ class _ListGameScreenState extends State<ListGameScreen> {
       initialResult: game.result,
       whiteName: game.white,
       blackName: game.black,
-      startFlipped: _flipped,
+      startFlipped: _baseFlipped(game) != _userFlip,
       startWithAnalysis: _analysisOn,
       sequence: length < 2
           ? null

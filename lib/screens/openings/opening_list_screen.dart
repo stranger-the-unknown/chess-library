@@ -140,6 +140,12 @@ class _OpeningListScreenState extends State<OpeningListScreen> {
     await _load();
   }
 
+  /// Varyantı listeden, içine girmeden favorilere ekler ya da çıkarır.
+  Future<void> _toggleFavorite(Opening opening) async {
+    await _service.toggleFavorite(opening.id);
+    await _load();
+  }
+
   /// Başlığın bütün varyantlarını öğrenildi ya da öğrenilmedi yapar.
   ///
   /// Silmedeki gibi **süzgeçsiz**: seçenek başlığın kendi menüsünde;
@@ -913,8 +919,8 @@ class _OpeningListScreenState extends State<OpeningListScreen> {
                           size: 16,
                           color: scheme.success,
                         ),
-                      // Her varyantta: öğrenildi işareti içine girmeden
-                      // değişebilsin. Düzenleme ve silme yalnızca kendi
+                      // Her varyantta: favori ve öğrenildi işareti içine
+                      // girmeden değişebilsin. Düzenleme ve silme yalnızca kendi
                       // eklenen varyantlarda.
                       PopupMenuButton<String>(
                         padding: EdgeInsets.zero,
@@ -922,6 +928,7 @@ class _OpeningListScreenState extends State<OpeningListScreen> {
                         icon: const Icon(Icons.more_vert_rounded, size: 18),
                         onSelected: (value) {
                           if (value == 'learned') _toggleLearned(opening);
+                          if (value == 'favorite') _toggleFavorite(opening);
                           if (value == 'edit') {
                             _openEditor(existing: opening);
                           }
@@ -930,7 +937,24 @@ class _OpeningListScreenState extends State<OpeningListScreen> {
                         itemBuilder: (context) {
                           final learned =
                               _progress[opening.id]?.learned == true;
+                          final favorite =
+                              _progress[opening.id]?.favorite == true;
                           return [
+                            PopupMenuItem(
+                              value: 'favorite',
+                              child: ListTile(
+                                leading: Icon(
+                                  favorite
+                                      ? Icons.star_border_rounded
+                                      : Icons.star_rounded,
+                                ),
+                                title: Text(
+                                  favorite
+                                      ? t('common.favoriteRemove')
+                                      : t('common.favoriteAdd'),
+                                ),
+                              ),
+                            ),
                             PopupMenuItem(
                               value: 'learned',
                               child: ListTile(

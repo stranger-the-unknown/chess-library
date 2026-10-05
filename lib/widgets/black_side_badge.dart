@@ -9,7 +9,14 @@ import '../l10n/app_strings.dart';
 class BlackSideBadge extends StatelessWidget {
   final String tooltip;
 
-  const BlackSideBadge({super.key, required this.tooltip});
+  /// Dış boşluk; varsayılanı başlığın yanında duruşu için.
+  final EdgeInsetsGeometry margin;
+
+  const BlackSideBadge({
+    super.key,
+    required this.tooltip,
+    this.margin = const EdgeInsets.only(left: 6),
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -17,7 +24,7 @@ class BlackSideBadge extends StatelessWidget {
     return Tooltip(
       message: tooltip,
       child: Container(
-        margin: const EdgeInsets.only(left: 6),
+        margin: margin,
         padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
         decoration: BoxDecoration(
           color: scheme.inverseSurface,

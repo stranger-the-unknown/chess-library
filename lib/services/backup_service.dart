@@ -103,6 +103,8 @@ class BackupService {
     'puzzle_progress_v1',
     'openings_progress_v1',
     'openings_notes_v1',
+    // Liste kimliği → "oyuncunun gözünden oku" adı; yedekteki ad geçerli.
+    'playlists_player_v1',
   ];
 
   // -------------------------------------------------------------------

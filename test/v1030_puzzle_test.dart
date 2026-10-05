@@ -196,8 +196,16 @@ void main() {
           reason: 'çözüm düğmesi yeniden basılabilmeli');
       await tester.tap(find.text(t('puzzles.solution')));
       await tester.pump();
-      expect(_moveCount(tester), 1,
-          reason: 'baştan gösterim: ilk hamle hemen oynanır');
+      // 10.8.0: baştan gösterim önce başlangıç konumunu gösteriyor. Eskiden
+      // ilk hamle sıfırlamayla aynı karede oynanıyordu ve başlangıç konumu
+      // hiç görünmüyordu.
+      expect(_moveCount(tester), 0,
+          reason: 'önce bulmacanın başlangıç konumu');
+      expect(_board(tester).game.fen, _start);
+      await tester.pump(const Duration(milliseconds: 500));
+      expect(_moveCount(tester), 0, reason: 'bir adım boyunca kalıyor');
+      await tester.pump(const Duration(milliseconds: 450));
+      expect(_moveCount(tester), 1);
       await _wait(tester, 4000);
       expect(_moveCount(tester), 4);
       expect(_board(tester).game.fen,

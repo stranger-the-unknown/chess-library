@@ -25,6 +25,7 @@ import '../widgets/app_dialogs.dart';
 import '../widgets/captured_pieces.dart';
 import '../widgets/chess_board_widget.dart';
 import '../widgets/move_list.dart';
+import '../widgets/watch_speed_button.dart';
 import 'board_editor_screen.dart';
 import '../widgets/cursors.dart';
 
@@ -481,8 +482,54 @@ class _GameScreenState extends State<GameScreen> {
     }
     if (_history.isEmpty) return;
     if (_cursor >= _history.length - 1) _goTo(-1);
+    // İzlerken motor duruyor, düğmesi kilitli: hamleler akarken her
+    // konumu motora sormanın anlamı yok. İzleme bitince ya da durunca
+    // önceden açıksa kendiliğinden geri açılıyor.
+    _engineWasOn = _analysisOn;
+    if (_analysisOn) _setAnalysis(false);
+    _startAutoTimer();
+  }
+
+  /// İzleme başlarken motor açık mıydı ([_stopAutoPlay] geri açar).
+  bool _engineWasOn = false;
+
+  void _startAutoTimer() {
+    _autoTimer?.cancel();
     final pace = SettingsService.instance.gameWatchSpeed.pace;
     setState(() => _autoTimer = Timer.periodic(pace, _autoStep));
+  }
+
+  /// Ekrandaki hız düğmesi: ayara yazıyor, izleme sürüyorsa hemen geçerli.
+  void _setWatchSpeed(WatchSpeed speed) {
+    SettingsService.instance.gameWatchSpeed = speed;
+    if (_autoPlaying) {
+      _startAutoTimer();
+    } else {
+      setState(() {});
+    }
+  }
+
+  /// Motor analizini açar ya da kapatır (uygulama çubuğundaki düğme ve
+  /// izlemenin durdurup geri açması).
+  void _setAnalysis(bool on) {
+    setState(() => _analysisOn = on);
+    if (on) {
+      // Sıra motordayken analiz başlatmak motorun aramasını keser ve
+      // motor daha zayıf bir hamle oynar. Motor oynayınca analiz
+      // kendiliğinden başlıyor.
+      if (!_engineAboutToMove) _runAnalysis();
+    } else {
+      _analysisToken++;
+      _analysisDebounce?.cancel();
+      // `stopAnalysis` yalnızca analiz/ipucu isteklerini iptal ediyor;
+      // motorun hamlesine dokunamıyor (bkz. EngineCoordinator).
+      EngineService.instance.stopAnalysis();
+      setState(() {
+        _analysis = null;
+        _evalScoreCp = null;
+        _thinking = false;
+      });
+    }
   }
 
   void _autoStep(Timer timer) {
@@ -499,15 +546,19 @@ class _GameScreenState extends State<GameScreen> {
     if (_cursor >= _history.length - 1) _stopAutoPlay();
   }
 
-  void _stopAutoPlay() {
+  /// İzlemeyi durdurur; [resumeEngine] ise izleme başlarken açık olan
+  /// motoru geri açar.
+  void _stopAutoPlay({bool resumeEngine = true}) {
     final timer = _autoTimer;
     if (timer == null) return;
     timer.cancel();
-    if (mounted) {
-      setState(() => _autoTimer = null);
-    } else {
+    if (!mounted) {
       _autoTimer = null;
+      return;
     }
+    setState(() => _autoTimer = null);
+    if (resumeEngine && _engineWasOn) _setAnalysis(true);
+    _engineWasOn = false;
   }
 
   /// Kullanıcının kendi gezinmesi (düğmeler, hamleye dokunma) izlemeyi
@@ -520,8 +571,11 @@ class _GameScreenState extends State<GameScreen> {
   /// Listede önceki / sonraki oyun: analiz ve tahtanın yönü taşınıyor.
   void _stepGame(void Function(GameCarry carry)? step) {
     if (step == null) return;
-    _stopAutoPlay();
-    step((analysisOn: _analysisOn, flipped: _flipped));
+    // İzlerken geçilirse motorun izlemeden önceki durumu taşınıyor; bu
+    // ekranda geri açmaya gerek yok, yeni oyun kendi açıyor.
+    final analysisOn = _autoPlaying ? _engineWasOn : _analysisOn;
+    _stopAutoPlay(resumeEngine: false);
+    step((analysisOn: analysisOn, flipped: _flipped));
   }
 
   /// Hamlenin sesini çalar ve oyun bittiyse sonucu yazar.
@@ -1211,29 +1265,16 @@ class _GameScreenState extends State<GameScreen> {
             tooltip: _analysisOn ? t('game.analysisOff') : t('game.analysisOn'),
             icon: Icon(
               Icons.insights_rounded,
-              color: _analysisOn ? scheme.primary : null,
+              // Kilitliyken soluk, açıkça: uygulama çubuğu düğmelere kendi
+              // rengini veriyor ve kapalı düğme de o renkte, açık gibi
+              // görünüyordu.
+              color: _autoPlaying
+                  ? scheme.onSurface.withValues(alpha: 0.38)
+                  : (_analysisOn ? scheme.primary : null),
             ),
-            onPressed: () {
-              setState(() => _analysisOn = !_analysisOn);
-              if (_analysisOn) {
-                // Sıra motordayken analiz başlatmak motorun aramasını
-                // keser ve motor daha zayıf bir hamle oynar. Motor
-                // oynayınca analiz kendiliğinden başlıyor.
-                if (!_engineAboutToMove) _runAnalysis();
-              } else {
-                _analysisToken++;
-                // `stopAnalysis` artık yalnızca analiz/ipucu isteklerini
-                // iptal ediyor; motorun hamlesine dokunamıyor (bkz.
-                // EngineCoordinator). Eskiden burada "sıra motordaysa
-                // çağırma" denetimi gerekiyordu.
-                EngineService.instance.stopAnalysis();
-                setState(() {
-                  _analysis = null;
-                  _evalScoreCp = null;
-                  _thinking = false;
-                });
-              }
-            },
+            // İzlerken kilitli (bkz. [_toggleAutoPlay]).
+            onPressed:
+                _autoPlaying ? null : () => _setAnalysis(!_analysisOn),
           ),
           PopupMenuButton<String>(
             onSelected: (value) {
@@ -2064,6 +2105,13 @@ class _GameScreenState extends State<GameScreen> {
                       : null,
                   t('game.toEnd'),
                 ),
+                // İzleme hızı; yalnızca izlenebilen oyunda.
+                if (widget.mode != GameMode.versusEngine)
+                  WatchSpeedButton(
+                    value: SettingsService.instance.gameWatchSpeed,
+                    onSelected: _setWatchSpeed,
+                    iconSize: 26,
+                  ),
               ],
             ),
     );

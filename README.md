@@ -204,7 +204,8 @@ favorites, mark it solved and write a note.
   turned on in the settings.
 - **Solution** continues from where you are while the puzzle is still
   going; once it is over (solved or shown) it plays the whole solution
-  from the start.
+  from the start, showing the puzzle's starting position for one step
+  first.
 - Tap a move in the move list to look at that position; tap the last move
   to come back.
 - If the engine cannot judge a move (it gave no answer), the move is not
@@ -289,8 +290,9 @@ also find one with the search and choose **Move to top** from its menu.
 Every change is saved at once; the order is kept in the text file and in
 backups.
 
-**Line menu** — The ⋮ menu at the end of every line has **Mark as
-learned** / **Mark as not learned**: you mark a line without opening it.
+**Line menu** — The ⋮ menu at the end of every line has **Add to
+favorites** / **Remove from favorites** and **Mark as learned** / **Mark
+as not learned**: you mark a line without opening it.
 
 **Editing** — The name, family and moves of a line you added can be
 changed from the row menu, its note deleted, or the line removed.
@@ -339,9 +341,13 @@ the ECO code.
 
 **Watch** — Step through the line by hand or let it play itself. Going
 back does not replay the move; only a single step forward is animated.
-The speed of playback is set in Settings → **Playback speed**. At the end
-of the line the play button becomes **Watch from the start**. Stepping by
-hand or tapping a move stops playback.
+The speed of playback is set with the speed button at the right of the
+navigation row (it applies at once, even while playing) or in Settings →
+**Playback speed**; both are the same setting. At the end of the line the
+play button becomes **Watch from the start**. Stepping by hand or tapping
+a move stops playback. While it plays the engine pauses and its button is
+locked; when playback ends or stops, the engine comes back on if it was
+on before.
 
 **Practice** — You play the moves and are warned when one is wrong. Two
 clean runs mark the line as learned. **Restart** sets the line up again;
@@ -373,6 +379,13 @@ delete them.
   cards. Drag a row by the handle on the left; the button on the right
   moves it to the top. The card’s ⋮ menu has **Move to top** as well. The
   order of the games inside a list (and their numbers) does not change.
+- **Read from a player’s side** (in the ⋮ menu of the list card or in the
+  menu inside the list): you type a player’s name ("fischer"); in every
+  game of the list that player played, the board opens from their side,
+  with their pieces at the bottom. The name is matched loosely, as in the
+  filter. In a game without that player (or where the name fits both
+  sides) the list’s own orientation applies. The card shows the name; the
+  same dialog removes it.
 - **Read from Black’s side** (check mark, in the ⋮ menu of the list card
   or in the menu inside the list): the games of that list open with the
   board seen from Black — like "Study from Black’s side" for openings.
@@ -406,9 +419,11 @@ delete them.
   of the list and does not move on to the next list. The board’s
   orientation and a running engine carry over to the new game.
 - **Watch**: the play button on the game screen plays the moves at the
-  speed set in Settings → **Playback speed**; at the end it becomes
-  **Watch from the start**. Stepping by hand, tapping a move or trying a
-  move on the board stops playback.
+  playback speed (the speed button in the navigation row, or Settings →
+  **Playback speed**); at the end it becomes **Watch from the start**.
+  Stepping by hand, tapping a move or trying a move on the board stops
+  playback. The engine pauses while it plays and comes back on afterwards
+  if it was on.
 - The card shows the players’ full names, as written in the PGN. The
   font size follows the screen width: smaller on a small phone. On a
   phone in portrait the two buttons on the left are tighter, leaving
@@ -486,8 +501,9 @@ to keep them: take a backup before you uninstall.
 - Legal move hints, last move highlight, move animation, engine arrows.
 - **Daily solved count** — shows the daily counter on puzzle list cards.
 - **Playback speed** — how fast "Watch" plays, separately for openings
-  and for game lists: Slow (1.5 s a move), Normal (0.9 s, the default),
-  Fast (0.5 s).
+  and for game lists: Very slow (2.5 s a move), Slow (1.5 s), Normal
+  (0.9 s, the default), Fast (0.7 s), Very fast (0.5 s). The speed button
+  inside the screens changes the same setting.
 - **Confirmation prompts** — when turned off, the app no longer asks
   before leaving a game with unsaved moves, closing the window, resigning
   or restarting a game. Anything that deletes saved data (a list, a
