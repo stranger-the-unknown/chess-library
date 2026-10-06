@@ -446,6 +446,11 @@ class _StudyViewState extends State<_StudyView> {
   /// İzleme açıkken motor açık mıydı ([_stopAutoPlay] geri açar).
   bool _engineWasOn = false;
 
+  /// İzleme bitince motor geri açılacak mı: önceden açıktı ve ayar
+  /// ("İzleme bitince motoru geri aç") açık.
+  bool get _resumesEngine =>
+      _engineWasOn && SettingsService.instance.resumeEngineAfterWatch;
+
   void _startAutoTimer() {
     _autoTimer?.cancel();
     final pace = SettingsService.instance.openingWatchSpeed.pace;
@@ -471,7 +476,7 @@ class _StudyViewState extends State<_StudyView> {
     _autoTimer?.cancel();
     if (!_autoPlaying) return;
     setState(() => _autoPlaying = false);
-    if (resumeEngine && _engineWasOn) _setAnalysis(true);
+    if (resumeEngine && _resumesEngine) _setAnalysis(true);
     _engineWasOn = false;
   }
 
@@ -494,7 +499,7 @@ class _StudyViewState extends State<_StudyView> {
     if (step == null) return;
     // İzlerken geçilirse motorun izlemeden önceki durumu taşınıyor; bu
     // ekranda geri açmaya gerek yok, yeni varyant kendi açıyor.
-    final analysisOn = _autoPlaying ? _engineWasOn : _analysisOn;
+    final analysisOn = _autoPlaying ? _resumesEngine : _analysisOn;
     _stopAutoPlay(resumeEngine: false);
     step(_mode, analysisOn);
   }

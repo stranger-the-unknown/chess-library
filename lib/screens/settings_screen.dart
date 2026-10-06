@@ -8,6 +8,7 @@ import '../widgets/responsive.dart';
 import '../l10n/app_strings.dart';
 import '../models/chess_engine.dart' as engine;
 import '../services/backup_service.dart';
+import '../services/android_sound.dart';
 import '../services/linux_sound.dart';
 import '../services/sound_service.dart';
 import '../services/settings_service.dart';
@@ -232,6 +233,30 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 ),
               ]),
               const SizedBox(height: 16),
+              // Motorun kendiliğinden açıldığı iki yer; ikisi de
+              // varsayılan açık (10.8.0'daki davranış).
+              _section(t('settings.engineSection')),
+              _card([
+                SwitchListTile(
+                  key: const Key('resumeEngineAfterWatch'),
+                  secondary: const Icon(Icons.replay_rounded),
+                  title: Text(t('settings.resumeEngineAfterWatch')),
+                  subtitle: Text(t('settings.resumeEngineAfterWatchSub')),
+                  value: _settings.resumeEngineAfterWatch,
+                  onChanged: (value) =>
+                      _settings.resumeEngineAfterWatch = value,
+                ),
+                const Divider(indent: 56),
+                SwitchListTile(
+                  key: const Key('exploreStartsEngine'),
+                  secondary: const Icon(Icons.alt_route_rounded),
+                  title: Text(t('settings.exploreStartsEngine')),
+                  subtitle: Text(t('settings.exploreStartsEngineSub')),
+                  value: _settings.exploreStartsEngine,
+                  onChanged: (value) => _settings.exploreStartsEngine = value,
+                ),
+              ]),
+              const SizedBox(height: 16),
               _section(
                 t(
                   SettingsService.vibrationSupported
@@ -254,6 +279,15 @@ class _SettingsScreenState extends State<SettingsScreen> {
                           }),
                           style: TextStyle(color: scheme.error),
                         )
+                      // Android'de yüklenemeyen ses sessizce geçmesin.
+                      : SoundService.useSoundPool &&
+                              AndroidSound.instance.unavailable
+                          ? Text(
+                              t('settings.soundLoadFailed', {
+                                'error': AndroidSound.instance.failure,
+                              }),
+                              style: TextStyle(color: scheme.error),
+                            )
                       : SettingsService.vibrationSupported
                           ? Text(t('settings.soundSub'))
                           : null,

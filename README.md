@@ -85,7 +85,7 @@ lower-rated player this stood out at once.
 one of nine ratings from 800 to 2400, or **Stockfish** (Expert, Master).
 Each level says briefly how it plays. The level you had chosen in an
 earlier version moves to the closest new one. Your colour can be white,
-black or **random**. You can also start from a **position you set up
+black or **random**; your choice is remembered, like the level. You can also start from a **position you set up
 yourself** instead of the standard arrangement.
 
 **Load PGN** — From a file, or by pasting from the clipboard. A file may
@@ -135,7 +135,10 @@ the board to see how the engine's evaluation changes. These moves are not
 written into the game: they do not appear in the move list, they are not
 exported to PGN, they are not saved, and they disappear when you leave
 the screen. The buttons on the strip undo the last trial move or take you
-back to the game.
+back to the game. A trial move turns the engine on by itself; if you do
+not want that, switch off Settings → Engine → **Turn the engine on for
+trial moves**. If you pause playback, try moves and then press play again,
+the game's own position comes back first and the next move follows.
 
 **Engine arrows** — While analysis is on, the engine's suggestion is
 drawn as an arrow. It uses the board's own highlight colour but is
@@ -347,7 +350,8 @@ navigation row (it applies at once, even while playing) or in Settings →
 play button becomes **Watch from the start**. Stepping by hand or tapping
 a move stops playback. While it plays the engine pauses and its button is
 locked; when playback ends or stops, the engine comes back on if it was
-on before.
+on before (switch this off in Settings → Engine → **Turn the engine back
+on after watching**).
 
 **Practice** — You play the moves and are warned when one is wrong. Two
 clean runs mark the line as learned. **Restart** sets the line up again;
@@ -500,6 +504,10 @@ to keep them: take a backup before you uninstall.
   or white so it does not disappear.
 - Legal move hints, last move highlight, move animation, engine arrows.
 - **Daily solved count** — shows the daily counter on puzzle list cards.
+- **Engine** — **Turn the engine back on after watching**: an engine that
+  was on before watching comes back on when playback stops or ends.
+  **Turn the engine on for trial moves**: trying a move on the board in a
+  saved game turns the engine on by itself. Both are on by default.
 - **Playback speed** — how fast "Watch" plays, separately for openings
   and for game lists: Very slow (2.5 s a move), Slow (1.5 s), Normal
   (0.9 s, the default), Fast (0.7 s), Very fast (0.5 s). The speed button

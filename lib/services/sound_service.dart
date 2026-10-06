@@ -4,6 +4,7 @@ import 'package:flutter/foundation.dart' show kIsWeb, visibleForTesting;
 import 'package:flutter/services.dart';
 import 'package:just_audio/just_audio.dart';
 
+import 'android_sound.dart';
 import 'linux_sound.dart';
 import 'settings_service.dart';
 
@@ -16,7 +17,9 @@ import 'settings_service.dart';
 /// "illegal" sesi yalnızca **şah altındayken** kural dışı bir hamle
 /// denendiğinde çalar; bkz. [playIllegalMove].
 ///
-/// Her ses için ayrı bir oynatıcı önceden hazırlanır; çalmak yalnızca başa
+/// Android'de sesleri SoundPool çalıyor ([AndroidSound]), Linux'ta
+/// sistemin komutu ([LinuxSound]). Öteki yerlerde (Windows) her ses için
+/// ayrı bir just_audio oynatıcısı önceden hazırlanır; çalmak yalnızca başa
 /// sarıp `play()` demektir. (Tek oynatıcıya her seferinde `setAsset`
 /// çağırmak ilk hamlede belirgin gecikmeye yol açıyordu.)
 class SoundService {
@@ -81,13 +84,19 @@ class SoundService {
   /// okuyor; testler değiştirebilir.
   static bool useSystemPlayer = !kIsWeb && Platform.isLinux;
 
+  /// Android'de sesleri SoundPool çalıyor (bkz. [AndroidSound]). Ayarlar
+  /// ekranı da okuyor; testler değiştirebilir.
+  static bool useSoundPool = !kIsWeb && Platform.isAndroid;
+
   /// Bütün sesleri önceden hazırlar (uygulama açılışında çağrılır).
   ///
   /// Paralel yüklenir: sırayla yüklemek ilk hamleye kadar geçen süreyi
   /// gereksiz yere uzatıyordu.
   Future<void> init() => useSystemPlayer
       ? LinuxSound.instance.init(_names)
-      : Future.wait(_names.map(_playerFor));
+      : useSoundPool
+          ? AndroidSound.instance.init(_names)
+          : Future.wait(_names.map(_playerFor));
 
   /// Testler için: çalınan her sesin adını bildirir.
   ///
@@ -101,6 +110,10 @@ class SoundService {
     debugOnPlay?.call(name);
     if (useSystemPlayer) {
       await LinuxSound.instance.play(name, _names);
+      return;
+    }
+    if (useSoundPool) {
+      await AndroidSound.instance.play(name, _names);
       return;
     }
 

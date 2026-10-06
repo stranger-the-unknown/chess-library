@@ -11,7 +11,7 @@ geçilmez); Maia testleri atlanır.
 
 ```bash
 flutter pub get
-flutter test          # 612 test (3'ü yalnızca POSIX'te koşar)
+flutter test          # 627 test (3'ü yalnızca POSIX'te koşar)
 ```
 
 Windows ve Linux'ta oyun listeleri, bulmacalar ve açılışlar
@@ -169,6 +169,13 @@ ilgili paket güncellenirse kaldırılabilirler.
 
 ## Kod düzeni üzerine notlar
 
+- **Sesler platforma göre üç yoldan çalıyor** (`lib/services/sound_service.dart`):
+  Android'de Android'in SoundPool'u (`GameSounds.kt`, `chess_library/sound`
+  kanalı; WAV kopyaları, ses türü `USAGE_GAME` — ekran kaydı yalnızca
+  medya/oyun/bilinmeyen türleri yakalar), Linux'ta sistemin komutu
+  (`LinuxSound`), öteki yerlerde `just_audio`. Android'de 10.9.0'a kadar
+  `just_audio` vardı; ekran kaydı alınırken bazı hamlelerde kayıtta
+  cızırtı oluyordu.
 - Motor `lib/services/engine/` altındadır. Stockfish **ayrı bir işletim
   sistemi süreci** olarak çalışır (Isolate değil); `engine_coordinator.dart`
   o tek sürecin sahibidir ve analiz / ipucu / oyun hamlesi isteklerini tek

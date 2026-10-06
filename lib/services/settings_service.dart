@@ -97,6 +97,19 @@ class SettingsService extends ChangeNotifier {
   /// bağımsız, her zaman soruluyor.
   bool _askConfirmations = true;
 
+  /// İzleme bitince ya da durunca, izlemeden önce açık olan motor geri
+  /// açılsın mı? (10.8.0'da hep açılıyordu; 10.9.0'da ayar.)
+  bool _resumeEngineAfterWatch = true;
+
+  /// Kayıtlı oyunda tahtaya deneme hamlesi oynanınca motor kendiliğinden
+  /// açılsın mı?
+  bool _exploreStartsEngine = true;
+
+  /// Motora karşı oyunda son seçilen renk: 0 beyaz, 1 siyah, 2 rastgele.
+  /// Zorluk gibi hatırlanıyor; eskiden pencere her açılışta "Beyaz"la
+  /// geliyordu.
+  int _engineColor = 0;
+
   /// Açılışlarda ve oyunlarda "İzle"nin hızı; ikisi ayrı ayar.
   WatchSpeed _openingWatchSpeed = WatchSpeed.normal;
   WatchSpeed _gameWatchSpeed = WatchSpeed.normal;
@@ -136,6 +149,9 @@ class SettingsService extends ChangeNotifier {
   int get engineLevel => _engineLevel;
   bool get showDailyCount => _showDailyCount;
   bool get askConfirmations => _askConfirmations;
+  bool get resumeEngineAfterWatch => _resumeEngineAfterWatch;
+  bool get exploreStartsEngine => _exploreStartsEngine;
+  int get engineColor => _engineColor;
   WatchSpeed get openingWatchSpeed => _openingWatchSpeed;
   WatchSpeed get gameWatchSpeed => _gameWatchSpeed;
 
@@ -221,6 +237,9 @@ class SettingsService extends ChangeNotifier {
         .clamp(0, EngineLevel.all.length - 1);
     _showDailyCount = prefs.getBool('showDailyCount') ?? true;
     _askConfirmations = prefs.getBool('askConfirmations') ?? true;
+    _resumeEngineAfterWatch = prefs.getBool('resumeEngineAfterWatch') ?? true;
+    _exploreStartsEngine = prefs.getBool('exploreStartsEngine') ?? true;
+    _engineColor = (prefs.getInt('engineColor') ?? 0).clamp(0, 2);
     _openingWatchSpeed = _watchSpeed(prefs.getInt('openingWatchSpeed'));
     _gameWatchSpeed = _watchSpeed(prefs.getInt('gameWatchSpeed'));
     notifyListeners();
@@ -384,6 +403,24 @@ class SettingsService extends ChangeNotifier {
   set askConfirmations(bool value) {
     _askConfirmations = value;
     _set('askConfirmations', value);
+    notifyListeners();
+  }
+
+  set resumeEngineAfterWatch(bool value) {
+    _resumeEngineAfterWatch = value;
+    _set('resumeEngineAfterWatch', value);
+    notifyListeners();
+  }
+
+  set exploreStartsEngine(bool value) {
+    _exploreStartsEngine = value;
+    _set('exploreStartsEngine', value);
+    notifyListeners();
+  }
+
+  set engineColor(int value) {
+    _engineColor = value.clamp(0, 2);
+    _set('engineColor', _engineColor);
     notifyListeners();
   }
 

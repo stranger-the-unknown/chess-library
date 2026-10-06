@@ -660,6 +660,15 @@ class Strings {
     'settings.lastMove': 'Son hamleyi vurgula',
     'settings.animations': 'Hamle animasyonu',
     'settings.watchSection': 'İzleme hızı',
+    'settings.engineSection': 'Motor',
+    'settings.resumeEngineAfterWatch': 'İzleme bitince motoru geri aç',
+    'settings.resumeEngineAfterWatchSub':
+        'İzlemeden önce motor açıksa, izleme durunca ya da bitince yeniden '
+            'açılır.',
+    'settings.exploreStartsEngine': 'Deneme hamlesinde motoru aç',
+    'settings.exploreStartsEngineSub':
+        'Kayıtlı bir oyunda tahtada hamle denenince motor kendiliğinden '
+            'açılır.',
     'settings.watchOpenings': 'Açılışlar',
     'settings.watchGames': 'Oyun listeleri',
     'settings.watchSlow': 'Yavaş',
@@ -675,6 +684,7 @@ class Strings {
     'settings.soundSub': 'Kapalıyken titreşim de verilmez.',
     'settings.soundPlayerMissing':
         'Ses çalınamıyor: bu sistemde {players} komutlarından hiçbiri yok.',
+    'settings.soundLoadFailed': 'Bazı sesler yüklenemedi: {error}',
     'settings.about': 'Hakkında',
     'settings.aboutText':
         'Sürüm {version} · Motor tamamen cihazda çalışır, internet '
@@ -1265,6 +1275,15 @@ class Strings {
     'settings.lastMove': 'Highlight last move',
     'settings.animations': 'Move animation',
     'settings.watchSection': 'Playback speed',
+    'settings.engineSection': 'Engine',
+    'settings.resumeEngineAfterWatch': 'Turn the engine back on after watching',
+    'settings.resumeEngineAfterWatchSub':
+        'If the engine was on before watching, it comes back on when '
+            'playback stops or ends.',
+    'settings.exploreStartsEngine': 'Turn the engine on for trial moves',
+    'settings.exploreStartsEngineSub':
+        'When you try a move on the board in a saved game, the engine '
+            'turns on by itself.',
     'settings.watchOpenings': 'Openings',
     'settings.watchGames': 'Game lists',
     'settings.watchSlow': 'Slow',
@@ -1280,6 +1299,7 @@ class Strings {
     'settings.soundSub': 'Vibration is off as well when this is off.',
     'settings.soundPlayerMissing':
         'Sounds cannot play: none of {players} is installed on this system.',
+    'settings.soundLoadFailed': 'Some sounds could not be loaded: {error}',
     'settings.about': 'About',
     'settings.aboutText':
         'Version {version} · The engine runs entirely on your device, no '

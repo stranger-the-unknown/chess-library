@@ -23,6 +23,15 @@ import '../widgets/cursors.dart';
 class HomeScreen extends StatelessWidget {
   const HomeScreen({super.key});
 
+  /// Motora karşı oyunda "Rastgele" rengin kaynağı.
+  ///
+  /// İşletim sisteminin rastgele kaynağı: her oyunda yeni bir `Random()`
+  /// kurulmasının sorun çıkardığı ölçülmedi (40 oyunda iki renk de
+  /// geldi), ama telefonda "hep beyaz" görüldü; tohumlamaya bağlı bir
+  /// şüphe kalmasın. Testler sırayı bilinen bir kaynakla değiştiriyor.
+  @visibleForTesting
+  static math.Random random = math.Random.secure();
+
   @override
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
@@ -331,8 +340,13 @@ class HomeScreen extends StatelessWidget {
   Future<void> _startEngineGame(BuildContext context, {String? fen}) async {
     final settings = SettingsService.instance;
     int levelIndex = settings.engineLevel;
-    // null = rastgele renk
-    engine.Color? color = engine.Color.white;
+    // null = rastgele renk. Son seçim zorluk gibi hatırlanıyor; eskiden
+    // pencere her açılışta "Beyaz"la geliyordu.
+    engine.Color? color = switch (settings.engineColor) {
+      1 => engine.Color.black,
+      2 => null,
+      _ => engine.Color.white,
+    };
     String? startFen = fen;
 
     final start = await showModalBottomSheet<bool>(
@@ -495,6 +509,8 @@ class HomeScreen extends StatelessWidget {
                       color == null ? 2 : (color == engine.Color.white ? 0 : 1),
                     },
                     onSelectionChanged: (selection) => setLocalState(() {
+                      // Zorluk gibi seçilir seçilmez kaydediliyor.
+                      settings.engineColor = selection.first;
                       switch (selection.first) {
                         case 0:
                           color = engine.Color.white;
@@ -575,7 +591,7 @@ class HomeScreen extends StatelessWidget {
     settings.engineLevel = levelIndex;
 
     final resolvedColor = color ??
-        (math.Random().nextBool() ? engine.Color.white : engine.Color.black);
+        (random.nextBool() ? engine.Color.white : engine.Color.black);
 
     Navigator.push(
       context,

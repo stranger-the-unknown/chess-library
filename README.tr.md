@@ -81,7 +81,8 @@ oyuncu için bu hemen sırıtıyordu.
 **Motora karşı oyna** — Rakibini seçersin: 800'den 2400'e dokuz puan
 seviyesinde **insan gibi oynayan Maia** ya da **Stockfish** (Uzman, Usta).
 Seçtiğin seviyenin nasıl oynadığı kısaca yazıyor. Eski sürümdeki
-seçimin en yakın yeni seviyeye taşınır. Rengini beyaz, siyah ya da **rastgele** belirleyebilirsin. İstersen
+seçimin en yakın yeni seviyeye taşınır. Rengini beyaz, siyah ya da **rastgele** belirleyebilirsin; seçimin zorluk
+gibi hatırlanır. İstersen
 normal diziliş yerine **kendi kurduğun pozisyondan** başlarsın.
 
 **PGN yükle** — Bir dosyadan ya da panodan yapıştırarak. Bir dosyada
@@ -126,7 +127,10 @@ seçili tahtadan türetilir, bu yüzden her tahtada seçilir.
 oynayıp motorun değerlendirmesinin nasıl değiştiğini görebilirsin. Bu
 hamleler oyunun kendisine yazılmaz: hamle listesinde görünmez, PGN'e girmez,
 kaydedilmez ve ekrandan çıkınca kaybolur. Şeritteki düğmelerle son denemeyi
-geri alır ya da oyuna dönersin.
+geri alır ya da oyuna dönersin. Deneme hamlesi motoru kendiliğinden açar;
+istemezsen Ayarlar → Motor → **Deneme hamlesinde motoru aç**'ı kapat.
+İzlemeyi durdurup hamle denedikten sonra devam edersen önce oyunun kendi
+konumuna dönülür, sıradaki hamle ondan sonra gelir.
 
 **Motor okları** — Analiz açıkken motorun önerisi ok olarak çizilir.
 Tahtanın kendi vurgu rengini kullanır ama senin çizdiğin oktan daha ince
@@ -332,7 +336,8 @@ düğmesinden (izlerken de hemen geçerli) ya da Ayarlar → **İzleme
 hızı**'ndan seçilir; ikisi aynı ayar. Varyantın sonunda oynat tuşu
 **Baştan izle** olur. Elle ileri geri gitmek ya da bir hamleye dokunmak
 izlemeyi durdurur. İzlerken motor durur ve düğmesi kilitlenir; izleme
-bitince ya da durunca, önceden açıksa kendiliğinden geri açılır.
+bitince ya da durunca, önceden açıksa kendiliğinden geri açılır (Ayarlar →
+Motor → **İzleme bitince motoru geri aç** ile kapatılabilir).
 
 **Alıştırma** — Hamleleri sen oynarsın, yanlışta uyarı alırsın. Hatasız iki
 tamamlamada varyant "öğrenildi" sayılır. **Baştan** varyantı yeniden
@@ -479,6 +484,10 @@ silmeden önce yedek al.
   motor okları.
 - **Bugün çözülen sayısı** — bulmaca listesi kartlarında günlük sayacı
   gösterir.
+- **Motor** — **İzleme bitince motoru geri aç**: izlemeden önce açık olan
+  motor izleme durunca ya da bitince yeniden açılır. **Deneme hamlesinde
+  motoru aç**: kayıtlı bir oyunda tahtada hamle denenince motor
+  kendiliğinden açılır. İkisi de varsayılan açık.
 - **İzleme hızı** — "İzle"nin hızı, açılışlar ve oyun listeleri için
   ayrı ayrı: Çok yavaş (hamle başına 2,5 sn), Yavaş (1,5 sn), Normal
   (0,9 sn, varsayılan), Hızlı (0,7 sn), Çok hızlı (0,5 sn). Ekranların
