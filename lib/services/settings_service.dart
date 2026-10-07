@@ -105,6 +105,10 @@ class SettingsService extends ChangeNotifier {
   /// açılsın mı?
   bool _exploreStartsEngine = true;
 
+  /// Kayıtlı oyunda sonuç kartı yalnızca son hamlede görünsün mü?
+  /// Ekran kaydıyla paylaşılan oyunda sonuç baştan belli olmasın diye.
+  bool _resultAtEnd = false;
+
   /// Motora karşı oyunda son seçilen renk: 0 beyaz, 1 siyah, 2 rastgele.
   /// Zorluk gibi hatırlanıyor; eskiden pencere her açılışta "Beyaz"la
   /// geliyordu.
@@ -152,6 +156,7 @@ class SettingsService extends ChangeNotifier {
   bool get resumeEngineAfterWatch => _resumeEngineAfterWatch;
   bool get exploreStartsEngine => _exploreStartsEngine;
   int get engineColor => _engineColor;
+  bool get resultAtEnd => _resultAtEnd;
   WatchSpeed get openingWatchSpeed => _openingWatchSpeed;
   WatchSpeed get gameWatchSpeed => _gameWatchSpeed;
 
@@ -240,6 +245,7 @@ class SettingsService extends ChangeNotifier {
     _resumeEngineAfterWatch = prefs.getBool('resumeEngineAfterWatch') ?? true;
     _exploreStartsEngine = prefs.getBool('exploreStartsEngine') ?? true;
     _engineColor = (prefs.getInt('engineColor') ?? 0).clamp(0, 2);
+    _resultAtEnd = prefs.getBool('resultAtEnd') ?? false;
     _openingWatchSpeed = _watchSpeed(prefs.getInt('openingWatchSpeed'));
     _gameWatchSpeed = _watchSpeed(prefs.getInt('gameWatchSpeed'));
     notifyListeners();
@@ -415,6 +421,12 @@ class SettingsService extends ChangeNotifier {
   set exploreStartsEngine(bool value) {
     _exploreStartsEngine = value;
     _set('exploreStartsEngine', value);
+    notifyListeners();
+  }
+
+  set resultAtEnd(bool value) {
+    _resultAtEnd = value;
+    _set('resultAtEnd', value);
     notifyListeners();
   }
 

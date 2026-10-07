@@ -18,6 +18,8 @@ import '../../models/move_entry.dart';
 import '../../widgets/chess_board_widget.dart';
 import '../../widgets/move_list.dart';
 import '../../widgets/watch_speed_button.dart';
+import '../../services/recording_session.dart';
+import '../../services/screen_recording.dart';
 import '../game_screen.dart';
 
 enum StudyMode {
@@ -474,11 +476,53 @@ class _StudyViewState extends State<_StudyView> {
   /// motoru geri açar.
   void _stopAutoPlay({bool resumeEngine = true}) {
     _autoTimer?.cancel();
+    final done = _watchDone;
+    _watchDone = null;
+    if (done != null && !done.isCompleted) done.complete();
     if (!_autoPlaying) return;
     setState(() => _autoPlaying = false);
     if (resumeEngine && _resumesEngine) _setAnalysis(true);
     _engineWasOn = false;
   }
+
+  // -------------------------------------------------------------------------
+  // Ekran kaydı
+  // -------------------------------------------------------------------------
+
+  /// Kayıt sürüyor: ekran dokunuşlara ve geri tuşuna kapalı.
+  bool _recordingLocked = false;
+
+  /// İzleme bitince (ya da durunca) tamamlanır; kayıt bunu bekliyor.
+  Completer<void>? _watchDone;
+
+  /// İzlemeyi baştan başlatır; bitince tamamlanır.
+  Future<void> _watchToEnd() {
+    final done = Completer<void>();
+    _watchDone = done;
+    _toggleAutoPlay();
+    if (!_autoPlaying && !done.isCompleted) done.complete();
+    return done.future;
+  }
+
+  /// "Ekran kaydı al": varyantı izle kipinde baştan sona oynatıp kaydı
+  /// uygulama başlatıyor ve bitiriyor ([RecordingSession]).
+  Future<void> _recordScreen() => RecordingSession.run(
+        context: context,
+        title: '${widget.opening.family} - ${widget.opening.variation}',
+        rewind: () {
+          if (_mode != StudyMode.watch) {
+            _setMode(StudyMode.watch);
+          } else {
+            _stopAutoPlay();
+            _goTo(-1, silent: true);
+          }
+        },
+        watch: _watchToEnd,
+        stopWatch: _stopAutoPlay,
+        setLocked: (locked) {
+          if (mounted) setState(() => _recordingLocked = locked);
+        },
+      );
 
   /// Ekrandaki hız düğmesi: ayara yazıyor, izleme sürüyorsa hemen geçerli.
   void _setWatchSpeed(WatchSpeed speed) {
@@ -625,7 +669,7 @@ class _StudyViewState extends State<_StudyView> {
     // Alıştırmada kullanıcı yalnızca sırası gelen tarafı oynar.
     final practiceSide = _flipped ? engine.Color.black : engine.Color.white;
 
-    return Scaffold(
+    final screen = Scaffold(
       appBar: AppBar(
         title: Text(opening.variation),
         actions: [
@@ -707,6 +751,9 @@ class _StudyViewState extends State<_StudyView> {
                     ),
                   );
                   break;
+                case 'record':
+                  _recordScreen();
+                  break;
                 case 'analyze':
                   Navigator.push(
                     context,
@@ -747,6 +794,13 @@ class _StudyViewState extends State<_StudyView> {
                 value: 'analyze',
                 child: Text(t('common.openInAnalysis')),
               ),
+              // Varyantı baştan sona izletip kaydı kendisi alıyor.
+              if (ScreenRecording.platformSupported &&
+                  widget.opening.uciMoves.isNotEmpty)
+                PopupMenuItem(
+                  value: 'record',
+                  child: Text(t('record.menu')),
+                ),
             ],
           ),
         ],
@@ -759,6 +813,12 @@ class _StudyViewState extends State<_StudyView> {
                 child: _narrowBody(scheme, opening, practiceSide, arrows),
               ),
       ),
+    );
+    // Kayıt sürerken ekran dokunuşlara ve geri tuşuna kapalı: yanlışlıkla
+    // bir dokunuş izlemeyi ve kaydı bozmasın (kullanıcının isteği).
+    return PopScope(
+      canPop: !_recordingLocked,
+      child: AbsorbPointer(absorbing: _recordingLocked, child: screen),
     );
   }
 

@@ -17,7 +17,9 @@ import '../services/engine/engine_service.dart';
 import '../services/engine/maia/maia_player.dart';
 import '../services/unsaved_work.dart';
 import '../services/settings_service.dart';
+import '../services/recording_session.dart';
 import '../services/screen_awake.dart';
+import '../services/screen_recording.dart';
 import '../services/sound_service.dart';
 import '../services/storage_service.dart';
 import '../theme/app_theme.dart';
@@ -202,7 +204,8 @@ class _GameScreenState extends State<GameScreen> {
       !_replayMode && _history.isNotEmpty && !_savedToList;
 
   Future<void> _onPopInvoked(bool didPop, Object? result) async {
-    if (didPop || !mounted) return;
+    // Kayıt sürerken geri tuşu bir şey yapmıyor (bkz. [_recordScreen]).
+    if (didPop || !mounted || _recordingLocked) return;
     final leave = await AppDialogs.confirm(
       context,
       title: t('game.exitTitle'),
@@ -564,6 +567,9 @@ class _GameScreenState extends State<GameScreen> {
   /// motoru geri açar.
   void _stopAutoPlay({bool resumeEngine = true}) {
     final timer = _autoTimer;
+    final done = _watchDone;
+    _watchDone = null;
+    if (done != null && !done.isCompleted) done.complete();
     if (timer == null) return;
     timer.cancel();
     if (!mounted) {
@@ -574,6 +580,46 @@ class _GameScreenState extends State<GameScreen> {
     if (resumeEngine && _resumesEngine) _setAnalysis(true);
     _engineWasOn = false;
   }
+
+  // -------------------------------------------------------------------------
+  // Ekran kaydı
+  // -------------------------------------------------------------------------
+
+  /// Kayıt sürüyor: ekran dokunuşlara ve geri tuşuna kapalı.
+  bool _recordingLocked = false;
+
+  /// İzleme bitince (ya da durunca) tamamlanır; kayıt bunu bekliyor.
+  Completer<void>? _watchDone;
+
+  bool get _canRecord =>
+      ScreenRecording.platformSupported &&
+      widget.mode != GameMode.versusEngine &&
+      _history.isNotEmpty;
+
+  /// İzlemeyi baştan başlatır; bitince tamamlanır.
+  Future<void> _watchToEnd() {
+    final done = Completer<void>();
+    _watchDone = done;
+    _toggleAutoPlay();
+    if (!_autoPlaying && !done.isCompleted) done.complete();
+    return done.future;
+  }
+
+  /// "Ekran kaydı al": kaydı uygulama başlatıp bitiriyor
+  /// ([RecordingSession]).
+  Future<void> _recordScreen() => RecordingSession.run(
+        context: context,
+        title: widget.title ?? t('game.board'),
+        rewind: () {
+          _stopAutoPlay();
+          _goTo(-1);
+        },
+        watch: _watchToEnd,
+        stopWatch: _stopAutoPlay,
+        setLocked: (locked) {
+          if (mounted) setState(() => _recordingLocked = locked);
+        },
+      );
 
   /// Kullanıcının kendi gezinmesi (düğmeler, hamleye dokunma) izlemeyi
   /// durduruyor: tahtayı o anda kendisi yönetmek istiyor.
@@ -1317,6 +1363,9 @@ class _GameScreenState extends State<GameScreen> {
                 case 'restart':
                   _restart();
                   break;
+                case 'record':
+                  _recordScreen();
+                  break;
               }
             },
             itemBuilder: (context) => [
@@ -1377,6 +1426,15 @@ class _GameScreenState extends State<GameScreen> {
                   title: Text(t('game.restart')),
                 ),
               ),
+              // Oyunu baştan sona izletip kaydı kendisi alıyor.
+              if (_canRecord)
+                PopupMenuItem(
+                  value: 'record',
+                  child: ListTile(
+                    leading: const Icon(Icons.videocam_outlined),
+                    title: Text(t('record.menu')),
+                  ),
+                ),
             ],
           ),
         ],
@@ -1413,9 +1471,12 @@ class _GameScreenState extends State<GameScreen> {
     // yirmi hamlelik bir oyun sistem geri jestiyle yok oluyordu.
     // "Onay pencereleri" ayarı kapalıysa sorulmadan çıkılıyor.
     return PopScope(
-      canPop: !_unsaved || !SettingsService.instance.askConfirmations,
+      canPop: !_recordingLocked &&
+          (!_unsaved || !SettingsService.instance.askConfirmations),
       onPopInvokedWithResult: _onPopInvoked,
-      child: screen,
+      // Kayıt sürerken ekran dokunuşlara kapalı: yanlışlıkla bir dokunuş
+      // izlemeyi ve kaydı bozmasın (kullanıcının isteği).
+      child: AbsorbPointer(absorbing: _recordingLocked, child: screen),
     );
   }
 
@@ -1630,7 +1691,7 @@ class _GameScreenState extends State<GameScreen> {
             child: _analysisOn ? _engineLine(scheme) : null,
           ),
           // Deneme sırasında tahtadaki konum oyunun sonucunu yansıtmaz.
-          if (_resultText != null && _explore.isEmpty) _resultBanner(scheme),
+          if (_resultText != null && _explore.isEmpty) _resultSlot(scheme),
           _controls(scheme),
         ],
       ),
@@ -1756,7 +1817,7 @@ class _GameScreenState extends State<GameScreen> {
           ],
           if (_warning != null) _warningBanner(scheme),
           if (_explore.isNotEmpty) _exploreCard(scheme),
-          if (_resultText != null && _explore.isEmpty) _resultBanner(scheme),
+          if (_resultText != null && _explore.isEmpty) _resultSlot(scheme),
           Expanded(child: _moveList(vertical: true)),
           Divider(height: 1, color: scheme.outlineVariant),
           SizedBox(
@@ -2007,6 +2068,24 @@ class _GameScreenState extends State<GameScreen> {
 
     return '$evaluation  ·  ${sanMoves.isEmpty ? "—" : sanMoves.join(" ")}';
   }
+
+  /// "Sonucu oyunun sonunda göster" açıkken kayıtlı oyunda sonuç kartı
+  /// son hamleye kadar gizli: ekran kaydıyla paylaşılan oyunda sonuç
+  /// baştan belli olmasın.
+  bool get _resultHidden =>
+      SettingsService.instance.resultAtEnd &&
+      _replayMode &&
+      _cursor < _history.length - 1;
+
+  /// Sonuç kartı; gizliyken de yeri ayrılı, son hamlede kart çıkınca tahta
+  /// kaymasın (videoda tam sonuç anında sıçrardı).
+  Widget _resultSlot(ColorScheme scheme) => Visibility(
+        visible: !_resultHidden,
+        maintainSize: true,
+        maintainAnimation: true,
+        maintainState: true,
+        child: _resultBanner(scheme),
+      );
 
   Widget _resultBanner(ColorScheme scheme) {
     final result = _resultText!;

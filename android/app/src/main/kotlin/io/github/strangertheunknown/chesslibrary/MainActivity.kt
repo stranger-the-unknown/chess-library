@@ -1,5 +1,11 @@
 package io.github.strangertheunknown.chesslibrary
 
+import android.Manifest
+import android.content.Intent
+import android.content.pm.PackageManager
+import android.media.projection.MediaProjectionConfig
+import android.media.projection.MediaProjectionManager
+import android.os.Build
 import io.flutter.embedding.android.FlutterActivity
 import io.flutter.embedding.engine.FlutterEngine
 import io.flutter.plugin.common.MethodChannel
@@ -11,6 +17,13 @@ class MainActivity : FlutterActivity() {
     /** Hamle sesleri (bkz. [GameSounds]); Dart'taki `AndroidSound`. */
     private val soundChannelName = "chess_library/sound"
     private var sounds: GameSounds? = null
+
+    /** Ekran kaydı (bkz. [RecordService], [Capture]); Dart'ta `ScreenRecording`. */
+    private val recordChannelName = "chess_library/record"
+    private var recordChannel: MethodChannel? = null
+
+    /** "prepare" isteğinin bekleyen cevabı (izin ve onay pencereleri). */
+    private var pendingPrepare: MethodChannel.Result? = null
 
     override fun configureFlutterEngine(flutterEngine: FlutterEngine) {
         super.configureFlutterEngine(flutterEngine)
@@ -46,11 +59,111 @@ class MainActivity : FlutterActivity() {
                     else -> result.notImplemented()
                 }
             }
+
+        Capture.appContext = applicationContext
+        val record = MethodChannel(flutterEngine.dartExecutor.binaryMessenger, recordChannelName)
+        recordChannel = record
+        Capture.onStoppedOutside = { saved -> record.invokeMethod("stopped", saved) }
+        record.setMethodCallHandler { call, result ->
+            when (call.method) {
+                // Uygulamanın kendi sesini yakalamak Android 10 ister.
+                "supported" -> result.success(Build.VERSION.SDK_INT >= 29)
+                "prepare" -> prepare(result)
+                "begin" -> {
+                    val name = call.argument<String>("name") ?: "Chess Library"
+                    result.success(Capture.begin(this, name))
+                }
+                "stop" -> Capture.finish { saved -> result.success(saved) }
+                else -> result.notImplemented()
+            }
+        }
+    }
+
+    /**
+     * İzin ve onay: önce ses kaydı izni (uygulamanın kendi seslerini
+     * yakalamak için), sonra Android'in "ekranı kaydetsin mi?" penceresi.
+     * Cevap: "ok", "cancelled", "noAudioPermission" ya da hata metni.
+     */
+    private fun prepare(result: MethodChannel.Result) {
+        if (Build.VERSION.SDK_INT < 29) {
+            result.success("unsupported")
+            return
+        }
+        pendingPrepare?.success("cancelled")
+        pendingPrepare = result
+        if (checkSelfPermission(Manifest.permission.RECORD_AUDIO) != PackageManager.PERMISSION_GRANTED) {
+            requestPermissions(arrayOf(Manifest.permission.RECORD_AUDIO), REQUEST_AUDIO)
+        } else {
+            askToCapture()
+        }
+    }
+
+    /**
+     * Android'in "ekranı kaydetsin mi?" penceresi.
+     *
+     * Android 14+ pencerede "tek bir uygulama" da sunuyor; uygulama kendi
+     * kendini seçince kayıt hemen kesiliyordu ("failing to set
+     * ContentRecordingSession": uygulama zaten açık olduğu için seçimin
+     * bağlandığı görev bulunamıyor; öykünücüde Android 15'te görüldü).
+     * Bu yüzden pencere doğrudan tüm ekran kaydıyla açılıyor — telefonun
+     * kendi kaydedicisindeki gibi.
+     */
+    private fun askToCapture() {
+        val manager = getSystemService(MediaProjectionManager::class.java)
+        val intent = if (Build.VERSION.SDK_INT >= 34) {
+            manager.createScreenCaptureIntent(MediaProjectionConfig.createConfigForDefaultDisplay())
+        } else {
+            manager.createScreenCaptureIntent()
+        }
+        @Suppress("DEPRECATION")
+        startActivityForResult(intent, REQUEST_CAPTURE)
+    }
+
+    @Deprecated("FlutterActivity bir ComponentActivity değil")
+    override fun onRequestPermissionsResult(
+        requestCode: Int,
+        permissions: Array<out String>,
+        grantResults: IntArray,
+    ) {
+        super.onRequestPermissionsResult(requestCode, permissions, grantResults)
+        if (requestCode != REQUEST_AUDIO) return
+        if (grantResults.firstOrNull() == PackageManager.PERMISSION_GRANTED) {
+            askToCapture()
+        } else {
+            pendingPrepare?.success("noAudioPermission")
+            pendingPrepare = null
+        }
+    }
+
+    @Deprecated("FlutterActivity bir ComponentActivity değil")
+    override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
+        @Suppress("DEPRECATION")
+        super.onActivityResult(requestCode, resultCode, data)
+        if (requestCode != REQUEST_CAPTURE) return
+        val result = pendingPrepare ?: return
+        pendingPrepare = null
+        if (resultCode != RESULT_OK || data == null) {
+            result.success("cancelled")
+            return
+        }
+        Capture.onPrepared = { error -> result.success(error ?: "ok") }
+        val service = Intent(this, RecordService::class.java)
+            .putExtra(RecordService.EXTRA_CODE, resultCode)
+            .putExtra(RecordService.EXTRA_DATA, data)
+        startForegroundService(service)
+    }
+
+    companion object {
+        private const val REQUEST_AUDIO = 4101
+        private const val REQUEST_CAPTURE = 4102
     }
 
     override fun cleanUpFlutterEngine(flutterEngine: FlutterEngine) {
         sounds?.release()
         sounds = null
+        Capture.onStoppedOutside = null
+        Capture.finish()
+        recordChannel = null
         super.cleanUpFlutterEngine(flutterEngine)
     }
 }

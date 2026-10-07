@@ -21,6 +21,39 @@ struct _MyApplication {
 
 G_DEFINE_TYPE(MyApplication, my_application, GTK_TYPE_APPLICATION)
 
+// Ekran kaydı (10.10.0): Dart kaydedilecek pencerenin X11 kimliğini ve
+// piksel boyutunu soruyor (bkz. lib/services/screen_recording.dart).
+// X11 dışında (Wayland) boş dönüyor; Dart bunu söylüyor.
+static void window_method_cb(FlMethodChannel* channel,
+                             FlMethodCall* method_call, gpointer user_data) {
+  MyApplication* self = MY_APPLICATION(user_data);
+  g_autoptr(FlMethodResponse) response = nullptr;
+  if (g_strcmp0(fl_method_call_get_name(method_call), "captureTarget") == 0) {
+    GdkWindow* gdk_window =
+        self->window == nullptr ? nullptr
+                                : gtk_widget_get_window(GTK_WIDGET(self->window));
+    if (gdk_window != nullptr && GDK_IS_X11_WINDOW(gdk_window)) {
+      const gint scale = gdk_window_get_scale_factor(gdk_window);
+      g_autoptr(FlValue) result = fl_value_new_map();
+      fl_value_set_string_take(
+          result, "xid",
+          fl_value_new_int(static_cast<int64_t>(gdk_x11_window_get_xid(gdk_window))));
+      fl_value_set_string_take(
+          result, "width",
+          fl_value_new_int(gdk_window_get_width(gdk_window) * scale));
+      fl_value_set_string_take(
+          result, "height",
+          fl_value_new_int(gdk_window_get_height(gdk_window) * scale));
+      response = FL_METHOD_RESPONSE(fl_method_success_response_new(result));
+    } else {
+      response = FL_METHOD_RESPONSE(fl_method_success_response_new(nullptr));
+    }
+  } else {
+    response = FL_METHOD_RESPONSE(fl_method_not_implemented_response_new());
+  }
+  fl_method_call_respond(method_call, response, nullptr);
+}
+
 // Called when first Flutter frame received.
 static void first_frame_cb(MyApplication* self, FlView* view) {
   gtk_widget_show(gtk_widget_get_toplevel(GTK_WIDGET(view)));
@@ -195,6 +228,8 @@ static void my_application_activate(GApplication* application) {
   self->window_channel = fl_method_channel_new(
       fl_engine_get_binary_messenger(engine), "chess_library/window",
       FL_METHOD_CODEC(codec));
+  fl_method_channel_set_method_call_handler(self->window_channel,
+                                            window_method_cb, self, nullptr);
   g_signal_connect(window, "delete-event", G_CALLBACK(delete_event_cb), self);
 
   gtk_widget_grab_focus(GTK_WIDGET(view));

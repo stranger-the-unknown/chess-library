@@ -132,6 +132,30 @@ istemezsen Ayarlar → Motor → **Deneme hamlesinde motoru aç**'ı kapat.
 İzlemeyi durdurup hamle denedikten sonra devam edersen önce oyunun kendi
 konumuna dönülür, sıradaki hamle ondan sonra gelir.
 
+**Ekran kaydı** — Oyun ekranının ve açılış çalışma ekranının ⋮
+menüsündeki **Ekran kaydı al**, oyunu ya da varyantı baştan sona izletip
+kaydı kendisi alır: başta kaydı başlatıp oynatmaya basmak, sonda
+zamanında durdurmak ve fazlasını kırpmak gerekmez.
+
+1. Tahta başa sarılır. Android her seferinde "ekranı kaydetsin mi?" diye
+   sorar (ilk seferde bir de ses kaydı izni: uygulamanın kendi seslerini
+   yakalamak için; mikrofon kullanılmaz).
+2. Kayıt, pencereler tamamen kapandıktan sonra başlar: 1 saniye başlangıç
+   konumu, sonra izleme hızıyla oynatma, sonda 2 saniye son konum.
+3. Video kendiliğinden durur ve kaydedilir: Android'de **Filmler/Chess
+   Library** (galeride görünür), Linux'ta **Videolar/Chess Library**.
+
+Kayıt sürerken ekran dokunuşlara kapalıdır; yanlışlıkla bir dokunuş
+izlemeyi bozmaz. Erken bitirmek için Android'de kayıt bildirimindeki
+**Durdur**'a bas ya da uygulamadan çık; o ana kadarki kısım kaydedilir.
+Android'de tüm ekran kaydedilir (telefonun kendi kaydedicisindeki gibi);
+bildirimler görünmesin istersen kayıttan önce Rahatsız Etmeyin'i aç.
+Linux'ta yalnızca uygulamanın penceresi kaydedilir, ses bilgisayarın genel
+çıkışından alınır (kayıt sırasında başka yerde çalan ses de girer); X11
+oturumu ve GStreamer gerekir, eksikse ne gerektiği söylenir. Paylaşımda
+sonuç baştan belli olmasın diye Ayarlar → **Sonucu oyunun sonunda
+göster**.
+
 **Motor okları** — Analiz açıkken motorun önerisi ok olarak çizilir.
 Tahtanın kendi vurgu rengini kullanır ama senin çizdiğin oktan daha ince
 ve daha sönüktür: seninki kasıtlı bir not, motorunki her hamlede değişen
@@ -484,6 +508,10 @@ silmeden önce yedek al.
   motor okları.
 - **Bugün çözülen sayısı** — bulmaca listesi kartlarında günlük sayacı
   gösterir.
+- **Sonucu oyunun sonunda göster** — kayıtlı oyunlarda sonuç kartı son
+  hamleye gelince görünür; ekran kaydıyla paylaşılan oyunda sonuç baştan
+  belli olmaz. Kartın yeri hep ayrılı, çıkınca tahta kaymaz. Varsayılan
+  kapalı.
 - **Motor** — **İzleme bitince motoru geri aç**: izlemeden önce açık olan
   motor izleme durunca ya da bitince yeniden açılır. **Deneme hamlesinde
   motoru aç**: kayıtlı bir oyunda tahtada hamle denenince motor

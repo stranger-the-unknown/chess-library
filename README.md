@@ -140,6 +140,33 @@ not want that, switch off Settings → Engine → **Turn the engine on for
 trial moves**. If you pause playback, try moves and then press play again,
 the game's own position comes back first and the next move follows.
 
+**Screen recording** — **Record the screen** in the ⋮ menu of the game
+screen and of the opening study screen plays the game or line from start
+to finish and takes the recording itself: no starting the recorder and
+pressing play at the start, no stopping it in time and trimming at the end.
+
+1. The board goes back to the start. Android asks every time whether the
+   screen may be recorded (the first time also for the audio recording
+   permission, to capture the app's own sounds; the microphone is not
+   used).
+2. Recording starts once the dialogs have fully closed: 1 second of the
+   starting position, then playback at the playback speed, then 2 seconds
+   on the final position.
+3. The video stops and is saved by itself: on Android in **Movies/Chess
+   Library** (it shows up in the gallery), on Linux in **Videos/Chess
+   Library**.
+
+While recording, the screen ignores touches, so an accidental tap does not
+disturb playback. To finish early on Android, press **Stop** in the
+recording notification or leave the app; what was recorded so far is
+saved. On Android the whole screen is recorded (as with the phone's own
+recorder); turn on Do Not Disturb first if notifications should not show.
+On Linux only the app's window is recorded and the sound comes from the
+computer's main output (other sound playing meanwhile is recorded too); it
+needs an X11 session and GStreamer, and says what is missing. So that a
+shared game does not give the result away, see Settings → **Show the
+result at the end**.
+
 **Engine arrows** — While analysis is on, the engine's suggestion is
 drawn as an arrow. It uses the board's own highlight colour but is
 thinner and fainter than an arrow you draw yourself: yours is a
@@ -504,6 +531,10 @@ to keep them: take a backup before you uninstall.
   or white so it does not disappear.
 - Legal move hints, last move highlight, move animation, engine arrows.
 - **Daily solved count** — shows the daily counter on puzzle list cards.
+- **Show the result at the end** — in saved games the result card appears
+  at the last move, so a screen recording does not give the result away.
+  Its space is always reserved, so the board does not move when it
+  appears. Off by default.
 - **Engine** — **Turn the engine back on after watching**: an engine that
   was on before watching comes back on when playback stops or ends.
   **Turn the engine on for trial moves**: trying a move on the board in a

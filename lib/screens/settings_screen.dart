@@ -205,6 +205,14 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   onChanged: (value) => _settings.showDailyCount = value,
                 ),
                 SwitchListTile(
+                  key: const Key('resultAtEnd'),
+                  secondary: const Icon(Icons.emoji_events_outlined),
+                  title: Text(t('settings.resultAtEnd')),
+                  subtitle: Text(t('settings.resultAtEndSub')),
+                  value: _settings.resultAtEnd,
+                  onChanged: (value) => _settings.resultAtEnd = value,
+                ),
+                SwitchListTile(
                   secondary: const Icon(Icons.help_outline_rounded),
                   title: Text(t('settings.confirmations')),
                   subtitle: Text(t('settings.confirmationsSub')),

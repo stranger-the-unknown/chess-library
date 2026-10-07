@@ -11,7 +11,7 @@ geçilmez); Maia testleri atlanır.
 
 ```bash
 flutter pub get
-flutter test          # 627 test (3'ü yalnızca POSIX'te koşar)
+flutter test          # 640 test (3'ü yalnızca POSIX'te koşar)
 ```
 
 Windows ve Linux'ta oyun listeleri, bulmacalar ve açılışlar
@@ -127,6 +127,13 @@ klasörün tamamı gider; `linux/packaging/desktop-entry.sh` uygulama
 menüsüne girdi ekliyor.
 
 Linux'a özgü noktalar:
+- Ekran kaydı (10.10.0, `lib/services/screen_recording.dart`) çalışma
+  anında `gst-launch-1.0` ve şu GStreamer parçalarını arıyor: `ximagesrc`,
+  `pulsesrc`, `videoconvert`, `videoscale` (plugins-base/good), `x264enc`
+  (plugins-ugly), `h264parse` (plugins-bad), `aacparse`, `mp4mux` ve
+  `avenc_aac` (libav) ya da `voaacenc`; ayrıca `pactl`. Eksikse menü
+  seçeneği neyin eksik olduğunu söylüyor. Yalnızca X11 (pencere kimliği
+  `chess_library/window` kanalındaki `captureTarget`).
 - Sesler: `just_audio`'nun Linux gerçekleştirmesi yok. `LinuxSound`
   sesleri `paplay` / `pw-play` / `aplay` ile çalıyor; MP3'ler bu
   komutlarda her dağıtımda açılmadığı için aynı sesler
@@ -169,6 +176,12 @@ ilgili paket güncellenirse kaldırılabilirler.
 
 ## Kod düzeni üzerine notlar
 
+- **Ekran kaydı (Android)**: `RecordService.kt` (ekran yansıtma türünde
+  ön plan hizmeti), `Mp4Writer.kt` (H.264 + uygulamanın kendi sesi AAC,
+  MediaStore Movies/Chess Library), `MainActivity` (`chess_library/record`;
+  ses kaydı izni ve onay penceresi). Android 14+ pencere tüm ekranla
+  açılıyor: "tek uygulama" seçilince uygulama kendini seçtiğinde kayıt
+  hemen kesiliyordu. Akış ve süreler `lib/services/recording_session.dart`.
 - **Sesler platforma göre üç yoldan çalıyor** (`lib/services/sound_service.dart`):
   Android'de Android'in SoundPool'u (`GameSounds.kt`, `chess_library/sound`
   kanalı; WAV kopyaları, ses türü `USAGE_GAME` — ekran kaydı yalnızca

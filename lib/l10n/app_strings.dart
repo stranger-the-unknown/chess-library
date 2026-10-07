@@ -661,6 +661,20 @@ class Strings {
     'settings.animations': 'Hamle animasyonu',
     'settings.watchSection': 'İzleme hızı',
     'settings.engineSection': 'Motor',
+    'record.menu': 'Ekran kaydı al',
+    'record.saved': 'Video kaydedildi: {path}',
+    'record.notSaved': 'Kayıt kaydedilemedi.',
+    'record.noAudioPermission':
+        'Kayda uygulamanın seslerini katmak için ses kaydı izni gerekiyor '
+            '(mikrofon kullanılmıyor). İzin verilmediği için kayıt başlamadı.',
+    'record.unsupported': 'Ekran kaydı Android 10 ve sonrasında yapılabiliyor.',
+    'record.linuxX11': 'Ekran kaydı şimdilik yalnızca X11 oturumunda yapılabiliyor.',
+    'record.linuxMissing': 'Ekran kaydı için şunlar gerekiyor: {missing}',
+    'record.failed': 'Ekran kaydı yapılamadı: {error}',
+    'settings.resultAtEnd': 'Sonucu oyunun sonunda göster',
+    'settings.resultAtEndSub':
+        'Kayıtlı oyunlarda sonuç kartı son hamleye gelince görünür; ekran '
+            'kaydında sonuç baştan belli olmaz.',
     'settings.resumeEngineAfterWatch': 'İzleme bitince motoru geri aç',
     'settings.resumeEngineAfterWatchSub':
         'İzlemeden önce motor açıksa, izleme durunca ya da bitince yeniden '
@@ -1276,6 +1290,21 @@ class Strings {
     'settings.animations': 'Move animation',
     'settings.watchSection': 'Playback speed',
     'settings.engineSection': 'Engine',
+    'record.menu': 'Record the screen',
+    'record.saved': 'Video saved: {path}',
+    'record.notSaved': 'The recording could not be saved.',
+    'record.noAudioPermission':
+        'Recording the app\'s own sounds needs the audio recording permission '
+            '(the microphone is not used). It was not granted, so recording '
+            'did not start.',
+    'record.unsupported': 'Screen recording needs Android 10 or later.',
+    'record.linuxX11': 'Screen recording works only in an X11 session for now.',
+    'record.linuxMissing': 'Screen recording needs: {missing}',
+    'record.failed': 'The screen could not be recorded: {error}',
+    'settings.resultAtEnd': 'Show the result at the end',
+    'settings.resultAtEndSub':
+        'In saved games the result card appears at the last move, so a '
+            'screen recording does not give the result away.',
     'settings.resumeEngineAfterWatch': 'Turn the engine back on after watching',
     'settings.resumeEngineAfterWatchSub':
         'If the engine was on before watching, it comes back on when '
