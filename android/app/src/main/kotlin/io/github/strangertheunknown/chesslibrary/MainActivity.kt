@@ -1,8 +1,6 @@
 package io.github.strangertheunknown.chesslibrary
 
-import android.Manifest
 import android.content.Intent
-import android.content.pm.PackageManager
 import android.media.projection.MediaProjectionConfig
 import android.media.projection.MediaProjectionManager
 import android.os.Build
@@ -71,7 +69,7 @@ class MainActivity : FlutterActivity() {
                 "prepare" -> prepare(result)
                 "begin" -> {
                     val name = call.argument<String>("name") ?: "Chess Library"
-                    result.success(Capture.begin(this, name))
+                    result.success(Capture.begin(this, name, gameSounds))
                 }
                 "stop" -> Capture.finish { saved -> result.success(saved) }
                 else -> result.notImplemented()
@@ -80,9 +78,9 @@ class MainActivity : FlutterActivity() {
     }
 
     /**
-     * İzin ve onay: önce ses kaydı izni (uygulamanın kendi seslerini
-     * yakalamak için), sonra Android'in "ekranı kaydetsin mi?" penceresi.
-     * Cevap: "ok", "cancelled", "noAudioPermission" ya da hata metni.
+     * Android'in "ekranı kaydetsin mi?" penceresi. Cevap: "ok",
+     * "cancelled" ya da hata metni. (Ses kaydı izni 10.10.1'den beri
+     * gerekmiyor: videonun sesi uygulamanın kendi seslerinden üretiliyor.)
      */
     private fun prepare(result: MethodChannel.Result) {
         if (Build.VERSION.SDK_INT < 29) {
@@ -91,11 +89,7 @@ class MainActivity : FlutterActivity() {
         }
         pendingPrepare?.success("cancelled")
         pendingPrepare = result
-        if (checkSelfPermission(Manifest.permission.RECORD_AUDIO) != PackageManager.PERMISSION_GRANTED) {
-            requestPermissions(arrayOf(Manifest.permission.RECORD_AUDIO), REQUEST_AUDIO)
-        } else {
-            askToCapture()
-        }
+        askToCapture()
     }
 
     /**
@@ -120,22 +114,6 @@ class MainActivity : FlutterActivity() {
     }
 
     @Deprecated("FlutterActivity bir ComponentActivity değil")
-    override fun onRequestPermissionsResult(
-        requestCode: Int,
-        permissions: Array<out String>,
-        grantResults: IntArray,
-    ) {
-        super.onRequestPermissionsResult(requestCode, permissions, grantResults)
-        if (requestCode != REQUEST_AUDIO) return
-        if (grantResults.firstOrNull() == PackageManager.PERMISSION_GRANTED) {
-            askToCapture()
-        } else {
-            pendingPrepare?.success("noAudioPermission")
-            pendingPrepare = null
-        }
-    }
-
-    @Deprecated("FlutterActivity bir ComponentActivity değil")
     override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
         @Suppress("DEPRECATION")
         super.onActivityResult(requestCode, resultCode, data)
@@ -154,7 +132,6 @@ class MainActivity : FlutterActivity() {
     }
 
     companion object {
-        private const val REQUEST_AUDIO = 4101
         private const val REQUEST_CAPTURE = 4102
     }
 

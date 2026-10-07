@@ -1,13 +1,9 @@
 package io.github.strangertheunknown.chesslibrary
 
-import android.annotation.SuppressLint
 import android.content.ContentValues
 import android.content.Context
 import android.hardware.display.DisplayManager
 import android.hardware.display.VirtualDisplay
-import android.media.AudioFormat
-import android.media.AudioPlaybackCaptureConfiguration
-import android.media.AudioRecord
 import android.media.MediaCodec
 import android.media.MediaCodecInfo
 import android.media.MediaFormat
@@ -15,9 +11,10 @@ import android.media.MediaMuxer
 import android.media.projection.MediaProjection
 import android.net.Uri
 import android.os.ParcelFileDescriptor
-import android.os.Process
 import android.provider.MediaStore
 import android.util.Log
+import java.nio.ByteOrder
+import java.util.concurrent.ConcurrentLinkedQueue
 
 /**
  * Ekranı ve uygulamanın kendi seslerini MP4'e yazar (Android 10+).
@@ -26,9 +23,12 @@ import android.util.Log
  * değişmediğinde de kare üretiliyor ([MediaFormat.KEY_REPEAT_PREVIOUS_FRAME_AFTER]):
  * yoksa başta ve sonda bekletilen durgun tahta videoya hiç girmezdi.
  *
- * Ses: yalnızca bu uygulamanın çaldığı sesler (AudioPlaybackCapture,
- * kendi kullanıcı kimliğiyle sınırlı) → AAC. Müzik ya da bildirim sesi
- * girmiyor.
+ * Ses: kayıt sürerken çalınan hamle sesleri, aynı WAV'lardan, çalındıkları
+ * anda ses izine karıştırılıyor → AAC ([pumpAudio]). 10.10.0'da ses
+ * Android'in yakalamasıyla (AudioPlaybackCapture) alınıyordu: her yeni ses
+ * çalmaya başlarken yakalama kanalı yeniden kuruluyor ve o anki ses
+ * düşüyordu — telefonda 94 hamlenin yalnızca 32'sinin sesi kayda girdi,
+ * bir kısmı da kırpıktı. Artık ses kaydı izni de gerekmiyor.
  *
  * Dosya: Filmler/Chess Library (MediaStore); yazılırken "beklemede",
  * bitince galeride görünüyor.
@@ -40,13 +40,16 @@ class Mp4Writer(
     displayHeight: Int,
     private val dpi: Int,
     private val name: String,
+    private val sounds: GameSounds,
 ) {
     private val width: Int
     private val height: Int
     private val video = MediaCodec.createEncoderByType(VIDEO_MIME)
     private val audio = MediaCodec.createEncoderByType(AUDIO_MIME)
-    private var record: AudioRecord? = null
     private var display: VirtualDisplay? = null
+
+    /** Kayıt sürerken çalınan sesler: ad ve an (System.nanoTime). */
+    private val played = ConcurrentLinkedQueue<Pair<String, Long>>()
 
     private var uri: Uri? = null
     private var file: ParcelFileDescriptor? = null
@@ -58,6 +61,9 @@ class Mp4Writer(
     private var wroteVideo = false
 
     @Volatile private var capturing = false
+
+    /** Kaydın durduğu an: ses izi buraya kadar tamamlanıyor. */
+    @Volatile private var stopAtNs = Long.MAX_VALUE
     private var videoThread: Thread? = null
     private var audioThread: Thread? = null
 
@@ -79,7 +85,6 @@ class Mp4Writer(
     }
 
     /** Kaydı başlatır; olmazsa hatayı fırlatır. */
-    @SuppressLint("MissingPermission") // İzin MainActivity'de alınıyor.
     fun start() {
         val values = ContentValues().apply {
             put(MediaStore.Video.Media.DISPLAY_NAME, "$name.mp4")
@@ -121,29 +126,10 @@ class Mp4Writer(
         }
         audio.configure(audioFormat, null, null, MediaCodec.CONFIGURE_FLAG_ENCODE)
 
-        val capture = AudioPlaybackCaptureConfiguration.Builder(projection)
-            .addMatchingUid(Process.myUid())
-            .build()
-        val pcm = AudioFormat.Builder()
-            .setEncoding(AudioFormat.ENCODING_PCM_16BIT)
-            .setSampleRate(SAMPLE_RATE)
-            .setChannelMask(AudioFormat.CHANNEL_IN_MONO)
-            .build()
-        val minBuffer = AudioRecord.getMinBufferSize(
-            SAMPLE_RATE,
-            AudioFormat.CHANNEL_IN_MONO,
-            AudioFormat.ENCODING_PCM_16BIT,
-        )
-        record = AudioRecord.Builder()
-            .setAudioFormat(pcm)
-            .setBufferSizeInBytes(maxOf(minBuffer * 2, 8_192))
-            .setAudioPlaybackCaptureConfig(capture)
-            .build()
-
         capturing = true
         video.start()
         audio.start()
-        record!!.startRecording()
+        sounds.onPlayed = { name, at -> played.add(name to at) }
         display = projection.createVirtualDisplay(
             "ChessLibraryRecord",
             width,
@@ -166,17 +152,18 @@ class Mp4Writer(
      */
     fun stop(): String? {
         if (!capturing) return null
+        stopAtNs = System.nanoTime()
         capturing = false
         try {
-            audioThread?.join(3_000)
+            // Ses izi durma anına kadar tamamlanıyor (bkz. pumpAudio).
+            audioThread?.join(15_000)
             video.signalEndOfInputStream()
             videoThread?.join(5_000)
         } catch (e: Exception) {
             Log.w(TAG, "durdururken", e)
         }
         display?.release()
-        runCatching { record?.stop() }
-        runCatching { record?.release() }
+        sounds.onPlayed = null
         runCatching { video.stop() }
         runCatching { video.release() }
         runCatching { audio.stop() }
@@ -221,50 +208,80 @@ class Mp4Writer(
         }
     }
 
+    /**
+     * Ses izini üretir: saat ilerledikçe 1024 örneklik bloklar; her blokta o
+     * ana kadar çalınmış seslerin örnekleri karıştırılıyor. Blok, saat
+     * bloğun sonunu [LAG_NS] kadar geçince yazılıyor: o sürede çalınan ses
+     * kaydedici iş parçacığına ulaşmış oluyor. Zaman damgaları görüntüyle
+     * aynı saatte (System.nanoTime), yani ses görüntüyle tam örtüşüyor.
+     */
     private fun pumpAudio() {
-        val rec = record ?: return
-        var startUs = System.nanoTime() / 1_000
-        var samples = 0L
+        val startNs = System.nanoTime()
+        val startUs = startNs / 1_000
+        var written = 0L
+        // Çalmakta olan sesler: PCM ve ses izindeki başlangıç örneği.
+        val active = ArrayList<Pair<ShortArray, Long>>()
+        val block = ShortArray(BLOCK)
         val info = MediaCodec.BufferInfo()
         var inputDone = false
         while (true) {
             if (!inputDone) {
                 val inIndex = audio.dequeueInputBuffer(10_000)
                 if (inIndex >= 0) {
-                    val buffer = audio.getInputBuffer(inIndex)!!
-                    buffer.clear()
-                    if (!capturing) {
-                        val pts = startUs + samples * 1_000_000L / SAMPLE_RATE
+                    val pts = startUs + written * 1_000_000L / SAMPLE_RATE
+                    val blockEndNs = startNs + (written + BLOCK) * 1_000_000_000L / SAMPLE_RATE
+                    // Kayıt durunca ses izi önce durma anına kadar
+                    // tamamlanıyor: üretici geride kalmışsa (yavaş cihaz)
+                    // son hamlelerin sesi kesilmesin.
+                    if (!capturing && blockEndNs > stopAtNs) {
                         audio.queueInputBuffer(inIndex, 0, 0, pts, MediaCodec.BUFFER_FLAG_END_OF_STREAM)
                         inputDone = true
                     } else {
-                        val read = rec.read(buffer, buffer.capacity())
-                        val size = maxOf(read, 0)
-                        // Zaman damgası örnek sayısından; ses gerçek zamanın
-                        // gerisine düşerse (yakalama bir süre veri vermezse)
-                        // saate yeniden hizalanıyor. Yoksa ses görüntünün
-                        // gerisinde kalıyordu (öykünücüde 9 sn'de ~1 sn).
-                        var pts = startUs + samples * 1_000_000L / SAMPLE_RATE
-                        val bufferUs = (size / 2) * 1_000_000L / SAMPLE_RATE
-                        val realStart = System.nanoTime() / 1_000 - bufferUs
-                        if (realStart - pts > RESYNC_US) {
-                            startUs += realStart - pts
-                            pts = realStart
+                        val waitNs = blockEndNs + LAG_NS - System.nanoTime()
+                        if (capturing && waitNs > 0) {
+                            Thread.sleep(waitNs / 1_000_000, (waitNs % 1_000_000).toInt())
                         }
-                        samples += size / 2
-                        audio.queueInputBuffer(inIndex, 0, size, pts, 0)
+                        while (true) {
+                            val (name, at) = played.poll() ?: break
+                            val data = sounds.pcmOf(name) ?: continue
+                            val first = maxOf(0L, (at - startNs) * SAMPLE_RATE / 1_000_000_000L)
+                            active.add(data to first)
+                        }
+                        block.fill(0)
+                        val iterator = active.iterator()
+                        while (iterator.hasNext()) {
+                            val (data, first) = iterator.next()
+                            for (i in 0 until BLOCK) {
+                                val index = written + i - first
+                                if (index < 0 || index >= data.size) continue
+                                val mixed = block[i] + data[index.toInt()]
+                                block[i] = mixed.coerceIn(-32_768, 32_767).toShort()
+                            }
+                            if (written + BLOCK - first >= data.size) iterator.remove()
+                        }
+                        val buffer = audio.getInputBuffer(inIndex)!!
+                        buffer.clear()
+                        buffer.order(ByteOrder.LITTLE_ENDIAN).asShortBuffer().put(block)
+                        audio.queueInputBuffer(inIndex, 0, BLOCK * 2, pts, 0)
+                        written += BLOCK
                     }
                 }
             }
-            val outIndex = audio.dequeueOutputBuffer(info, 0)
-            if (outIndex == MediaCodec.INFO_OUTPUT_FORMAT_CHANGED) {
-                synchronized(lock) {
-                    audioTrack = muxer!!.addTrack(audio.outputFormat)
-                    startMuxerIfReady()
+            // Çıkan bütün kodlanmış parçalar alınıyor (yalnızca biri
+            // alınırsa kodlayıcının çıkışı dolup girişi bekletiyordu).
+            while (true) {
+                val outIndex = audio.dequeueOutputBuffer(info, 0)
+                if (outIndex == MediaCodec.INFO_OUTPUT_FORMAT_CHANGED) {
+                    synchronized(lock) {
+                        audioTrack = muxer!!.addTrack(audio.outputFormat)
+                        startMuxerIfReady()
+                    }
+                } else if (outIndex >= 0) {
+                    writeSample(audio, outIndex, info, isVideo = false)
+                    if (info.flags and MediaCodec.BUFFER_FLAG_END_OF_STREAM != 0) return
+                } else {
+                    break
                 }
-            } else if (outIndex >= 0) {
-                writeSample(audio, outIndex, info, isVideo = false)
-                if (info.flags and MediaCodec.BUFFER_FLAG_END_OF_STREAM != 0) return
             }
         }
     }
@@ -311,8 +328,11 @@ class Mp4Writer(
         private const val FPS = 30
         private const val SAMPLE_RATE = 44_100
 
-        /** Sesin saatten bu kadar geride kalması yeniden hizalatıyor. */
-        private const val RESYNC_US = 60_000L
+        /** Ses bloğu (örnek): 23 ms. */
+        private const val BLOCK = 1_024
+
+        /** Blok, saat sonunu bu kadar geçince yazılıyor (bkz. [pumpAudio]). */
+        private const val LAG_NS = 60_000_000L
         const val RELATIVE_DIR = "Movies/Chess Library"
     }
 }

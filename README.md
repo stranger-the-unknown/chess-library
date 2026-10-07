@@ -146,9 +146,9 @@ to finish and takes the recording itself: no starting the recorder and
 pressing play at the start, no stopping it in time and trimming at the end.
 
 1. The board goes back to the start. Android asks every time whether the
-   screen may be recorded (the first time also for the audio recording
-   permission, to capture the app's own sounds; the microphone is not
-   used).
+   screen may be recorded. The video's sound is made from the app's own
+   move sounds: every sound complete and in step with the picture; no
+   audio recording permission is needed.
 2. Recording starts once the dialogs have fully closed: 1 second of the
    starting position, then playback at the playback speed, then 2 seconds
    on the final position.
@@ -534,7 +534,7 @@ to keep them: take a backup before you uninstall.
 - **Show the result at the end** — in saved games the result card appears
   at the last move, so a screen recording does not give the result away.
   Its space is always reserved, so the board does not move when it
-  appears. Off by default.
+  appears. On by default.
 - **Engine** — **Turn the engine back on after watching**: an engine that
   was on before watching comes back on when playback stops or ends.
   **Turn the engine on for trial moves**: trying a move on the board in a

@@ -1,8 +1,7 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
-    <!-- Ekran kaydı (10.10.0): uygulamanın kendi seslerini yakalamak için
-         ses kaydı izni (AudioPlaybackCapture; mikrofon kullanılmıyor) ve
-         ekran yansıtma türünde ön plan hizmeti. Bkz. RecordService.kt. -->
-    <uses-permission android:name="android.permission.RECORD_AUDIO" />
+    <!-- Ekran kaydı (10.10.0): ekran yansıtma türünde ön plan hizmeti.
+         Videonun sesi uygulamanın kendi seslerinden üretiliyor; ses kaydı
+         izni 10.10.1'den beri yok. Bkz. RecordService.kt, Mp4Writer.kt. -->
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_MEDIA_PROJECTION" />
     <application

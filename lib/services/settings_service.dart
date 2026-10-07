@@ -107,7 +107,8 @@ class SettingsService extends ChangeNotifier {
 
   /// Kayıtlı oyunda sonuç kartı yalnızca son hamlede görünsün mü?
   /// Ekran kaydıyla paylaşılan oyunda sonuç baştan belli olmasın diye.
-  bool _resultAtEnd = false;
+  /// 10.10.1'den beri varsayılan açık (kullanıcının isteği).
+  bool _resultAtEnd = true;
 
   /// Motora karşı oyunda son seçilen renk: 0 beyaz, 1 siyah, 2 rastgele.
   /// Zorluk gibi hatırlanıyor; eskiden pencere her açılışta "Beyaz"la
@@ -245,7 +246,7 @@ class SettingsService extends ChangeNotifier {
     _resumeEngineAfterWatch = prefs.getBool('resumeEngineAfterWatch') ?? true;
     _exploreStartsEngine = prefs.getBool('exploreStartsEngine') ?? true;
     _engineColor = (prefs.getInt('engineColor') ?? 0).clamp(0, 2);
-    _resultAtEnd = prefs.getBool('resultAtEnd') ?? false;
+    _resultAtEnd = prefs.getBool('resultAtEnd') ?? true;
     _openingWatchSpeed = _watchSpeed(prefs.getInt('openingWatchSpeed'));
     _gameWatchSpeed = _watchSpeed(prefs.getInt('gameWatchSpeed'));
     notifyListeners();

@@ -138,8 +138,8 @@ kaydı kendisi alır: başta kaydı başlatıp oynatmaya basmak, sonda
 zamanında durdurmak ve fazlasını kırpmak gerekmez.
 
 1. Tahta başa sarılır. Android her seferinde "ekranı kaydetsin mi?" diye
-   sorar (ilk seferde bir de ses kaydı izni: uygulamanın kendi seslerini
-   yakalamak için; mikrofon kullanılmaz).
+   sorar. Videonun sesi uygulamanın kendi hamle seslerinden üretilir: her
+   ses eksiksiz ve görüntüyle aynı anda; ses kaydı izni gerekmez.
 2. Kayıt, pencereler tamamen kapandıktan sonra başlar: 1 saniye başlangıç
    konumu, sonra izleme hızıyla oynatma, sonda 2 saniye son konum.
 3. Video kendiliğinden durur ve kaydedilir: Android'de **Filmler/Chess
@@ -511,7 +511,7 @@ silmeden önce yedek al.
 - **Sonucu oyunun sonunda göster** — kayıtlı oyunlarda sonuç kartı son
   hamleye gelince görünür; ekran kaydıyla paylaşılan oyunda sonuç baştan
   belli olmaz. Kartın yeri hep ayrılı, çıkınca tahta kaymaz. Varsayılan
-  kapalı.
+  açık.
 - **Motor** — **İzleme bitince motoru geri aç**: izlemeden önce açık olan
   motor izleme durunca ya da bitince yeniden açılır. **Deneme hamlesinde
   motoru aç**: kayıtlı bir oyunda tahtada hamle denenince motor

@@ -14,10 +14,6 @@ enum RecordStart {
   /// yok.
   cancelled,
 
-  /// Android: ses kaydı izni verilmedi (uygulamanın kendi seslerini
-  /// yakalamak için gerekiyor; mikrofon kullanılmıyor).
-  noAudioPermission,
-
   /// Bu sistemde yapılamıyor; sebep [ScreenRecording.lastError] içinde.
   unsupported,
 
@@ -31,8 +27,9 @@ enum RecordStart {
 /// oynatmaya basmak, sonda kaydı zamanında durdurmak ve fazlasını kırpmak
 /// gerekiyordu. Bunu uygulama yapıyor; akış [RecordingSession] içinde.
 ///
-/// * Android (10+): ekran yansıtma + uygulamanın kendi sesleri, MP4,
-///   Filmler/Chess Library (`Mp4Writer.kt`, `RecordService.kt`).
+/// * Android (10+): ekran yansıtma; ses izi kayıt sürerken çalınan hamle
+///   seslerinden üretiliyor (10.10.1), MP4, Filmler/Chess Library
+///   (`Mp4Writer.kt`, `RecordService.kt`).
 /// * Linux (X11): uygulamanın penceresi + bilgisayarın ses çıkışı,
 ///   GStreamer ile MP4, Videolar/Chess Library ([LinuxScreenRecorder]).
 class ScreenRecording {
@@ -87,8 +84,6 @@ class ScreenRecording {
           return RecordStart.ok;
         case 'cancelled':
           return RecordStart.cancelled;
-        case 'noAudioPermission':
-          return RecordStart.noAudioPermission;
         case 'unsupported':
           return RecordStart.unsupported;
         default:

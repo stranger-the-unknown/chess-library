@@ -120,11 +120,12 @@ void main() {
   tearDown(() => Strings.language = AppLanguage.system);
 
   group('Sonucu oyunun sonunda göster', () {
-    test('varsayılan kapalı', () {
-      expect(_settings.resultAtEnd, isFalse);
+    test('varsayılan açık (10.10.1)', () {
+      expect(_settings.resultAtEnd, isTrue);
     });
 
     testWidgets('kapalıyken sonuç baştan görünüyor', (tester) async {
+      _settings.resultAtEnd = false;
       await _pump(tester, _game);
       expect(_resultVisible(tester), isTrue);
     });

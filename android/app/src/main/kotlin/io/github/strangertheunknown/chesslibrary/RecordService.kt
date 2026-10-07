@@ -130,7 +130,7 @@ object Capture {
     }
 
     /** Kaydı başlatır; hata metni ya da null. */
-    fun begin(context: Context, name: String): String? {
+    fun begin(context: Context, name: String, sounds: GameSounds): String? {
         val current = projection ?: return "ekran yansıtma hazır değil"
         return try {
             val metrics = context.resources.displayMetrics
@@ -142,7 +142,7 @@ object Capture {
             }
             val w = bounds?.width() ?: metrics.widthPixels
             val h = bounds?.height() ?: metrics.heightPixels
-            writer = Mp4Writer(context.applicationContext, current, w, h, metrics.densityDpi, name)
+            writer = Mp4Writer(context.applicationContext, current, w, h, metrics.densityDpi, name, sounds)
                 .also { it.start() }
             null
         } catch (e: Exception) {

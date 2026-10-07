@@ -177,9 +177,10 @@ ilgili paket güncellenirse kaldırılabilirler.
 ## Kod düzeni üzerine notlar
 
 - **Ekran kaydı (Android)**: `RecordService.kt` (ekran yansıtma türünde
-  ön plan hizmeti), `Mp4Writer.kt` (H.264 + uygulamanın kendi sesi AAC,
-  MediaStore Movies/Chess Library), `MainActivity` (`chess_library/record`;
-  ses kaydı izni ve onay penceresi). Android 14+ pencere tüm ekranla
+  ön plan hizmeti), `Mp4Writer.kt` (H.264; ses izi kayıt sürerken çalınan
+  seslerin WAV'larından karıştırılıp AAC — 10.10.0'daki AudioPlaybackCapture
+  her yeni seste kopup sesleri düşürüyordu; MediaStore Movies/Chess
+  Library), `MainActivity` (`chess_library/record`, onay penceresi). Android 14+ pencere tüm ekranla
   açılıyor: "tek uygulama" seçilince uygulama kendini seçtiğinde kayıt
   hemen kesiliyordu. Akış ve süreler `lib/services/recording_session.dart`.
 - **Sesler platforma göre üç yoldan çalıyor** (`lib/services/sound_service.dart`):

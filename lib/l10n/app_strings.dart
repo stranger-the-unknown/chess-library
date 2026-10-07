@@ -664,9 +664,6 @@ class Strings {
     'record.menu': 'Ekran kaydı al',
     'record.saved': 'Video kaydedildi: {path}',
     'record.notSaved': 'Kayıt kaydedilemedi.',
-    'record.noAudioPermission':
-        'Kayda uygulamanın seslerini katmak için ses kaydı izni gerekiyor '
-            '(mikrofon kullanılmıyor). İzin verilmediği için kayıt başlamadı.',
     'record.unsupported': 'Ekran kaydı Android 10 ve sonrasında yapılabiliyor.',
     'record.linuxX11': 'Ekran kaydı şimdilik yalnızca X11 oturumunda yapılabiliyor.',
     'record.linuxMissing': 'Ekran kaydı için şunlar gerekiyor: {missing}',
@@ -1293,10 +1290,6 @@ class Strings {
     'record.menu': 'Record the screen',
     'record.saved': 'Video saved: {path}',
     'record.notSaved': 'The recording could not be saved.',
-    'record.noAudioPermission':
-        'Recording the app\'s own sounds needs the audio recording permission '
-            '(the microphone is not used). It was not granted, so recording '
-            'did not start.',
     'record.unsupported': 'Screen recording needs Android 10 or later.',
     'record.linuxX11': 'Screen recording works only in an X11 session for now.',
     'record.linuxMissing': 'Screen recording needs: {missing}',

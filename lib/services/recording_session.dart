@@ -67,9 +67,6 @@ class RecordingSession {
           break;
         case RecordStart.cancelled:
           return;
-        case RecordStart.noAudioPermission:
-          AppDialogs.snack(context, t('record.noAudioPermission'));
-          return;
         case RecordStart.unsupported:
           AppDialogs.snack(context, _unsupportedText(recorder.lastError));
           return;
