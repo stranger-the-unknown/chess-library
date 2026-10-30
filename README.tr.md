@@ -224,6 +224,8 @@ ekleyebilir, çözüldü olarak işaretleyebilir ve not düşebilirsin.
   dokununca kaldığın yere dönersin.
 - Motor bir hamleyi yargılayamazsa (cevap vermediyse) hamle oynanmaz ve
   bu söylenir; doğru ya da yanlış sayılmaz.
+- Doğru/yanlış kartı birkaç saniye sonra solarak kaybolur; bulmaca
+  bitince çıkan bayraklı kart ise kalır.
 
 **Numaralar** — Her bulmacanın numarası **listedeki asıl sırasıdır**
 (kaynak dosyada numara verilmişse o kullanılır). Süzgeç açıkken de,

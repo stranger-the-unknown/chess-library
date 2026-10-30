@@ -240,6 +240,8 @@ favorites, mark it solved and write a note.
   to come back.
 - If the engine cannot judge a move (it gave no answer), the move is not
   played and the app says so, rather than counting it as right or wrong.
+- The right/wrong card fades away after a few seconds; the card with the
+  flag that appears when the puzzle is over stays.
 
 **Numbers** — A puzzle's number is its **real place in the list** (or the
 number given in the source file). The same number is shown whatever

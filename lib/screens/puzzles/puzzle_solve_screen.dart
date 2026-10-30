@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import '../../services/settings_service.dart';
 import 'package:flutter/material.dart';
 
@@ -140,8 +142,19 @@ class _PuzzleSolveScreenState extends State<PuzzleSolveScreen> {
 
   /// Kullanıcı kayıtlı çözüm dizisini takip ediyor mu?
   bool _onSolutionLine = false;
-  _Feedback _feedback = _Feedback.none;
+  _Feedback _feedbackKind = _Feedback.none;
   String _feedbackText = '';
+
+  /// Her geri bildirimde artan sayı: kartın solma sayacı bununla baştan
+  /// başlıyor. Yazı aynı olsa bile (aynı yanlış hamle iki kez) yeni kart
+  /// yeniden görünüyor.
+  int _feedbackSerial = 0;
+
+  _Feedback get _feedback => _feedbackKind;
+  set _feedback(_Feedback value) {
+    _feedbackKind = value;
+    _feedbackSerial++;
+  }
   bool _busy = false;
 
   /// Bulmacanın konumu okunamıyorsa hata metni; okunuyorsa `null`.
@@ -1196,7 +1209,7 @@ class _PuzzleSolveScreenState extends State<PuzzleSolveScreen> {
       _Feedback.none => (scheme.onSurfaceVariant, Icons.info_outline, ''),
     };
 
-    return Container(
+    final card = Container(
       width: double.infinity,
       margin: const EdgeInsets.fromLTRB(12, 8, 12, 4),
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
@@ -1227,6 +1240,17 @@ class _PuzzleSolveScreenState extends State<PuzzleSolveScreen> {
             ),
         ],
       ),
+    );
+
+    // Doğru/yanlış kartı bir süre sonra soluyor: özellikle yanlış kartı
+    // kalınca ekran kötü görünüyordu. "Bitti" (bayrak) kalıyor, çünkü
+    // bulmacanın bittiğini o söylüyor; düşünüyor ve motor hatası da
+    // kalıyor. Motor çalışırken (dönen simge) sayaç işlemiyor.
+    return _FadingFeedback(
+      key: ValueKey(_feedbackSerial),
+      fades: !_busy &&
+          (_feedback == _Feedback.correct || _feedback == _Feedback.wrong),
+      child: card,
     );
   }
 
@@ -1339,6 +1363,73 @@ class _PuzzleSolveScreenState extends State<PuzzleSolveScreen> {
           style: const TextStyle(fontSize: 13),
         ),
       ),
+    );
+  }
+}
+
+/// Bir süre görünüp solarak kaybolan geri bildirim kartı.
+///
+/// Solan kart yerini koruyor (saydam kalıyor): tahta aşağı yukarı
+/// kaymasın (bkz. `_feedbackCard`).
+class _FadingFeedback extends StatefulWidget {
+  final bool fades;
+  final Widget child;
+
+  const _FadingFeedback({
+    super.key,
+    required this.fades,
+    required this.child,
+  });
+
+  /// Kartın okunabilir kaldığı süre.
+  static const Duration linger = Duration(milliseconds: 2500);
+
+  /// Solma süresi.
+  static const Duration fadeOut = Duration(milliseconds: 400);
+
+  @override
+  State<_FadingFeedback> createState() => _FadingFeedbackState();
+}
+
+class _FadingFeedbackState extends State<_FadingFeedback> {
+  Timer? _timer;
+  bool _hidden = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _schedule();
+  }
+
+  @override
+  void didUpdateWidget(_FadingFeedback oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (widget.fades != oldWidget.fades) _schedule();
+  }
+
+  void _schedule() {
+    _timer?.cancel();
+    _timer = null;
+    _hidden = false;
+    if (!widget.fades) return;
+    _timer = Timer(_FadingFeedback.linger, () {
+      if (mounted) setState(() => _hidden = true);
+    });
+  }
+
+  @override
+  void dispose() {
+    _timer?.cancel();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AnimatedOpacity(
+      opacity: _hidden ? 0 : 1,
+      duration: _hidden ? _FadingFeedback.fadeOut : Duration.zero,
+      curve: Curves.easeOut,
+      child: widget.child,
     );
   }
 }

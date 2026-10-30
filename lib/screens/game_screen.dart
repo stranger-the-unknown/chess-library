@@ -407,6 +407,7 @@ class _GameScreenState extends State<GameScreen> {
   void _exploreMove(engine.ChessMove move) {
     final entry = MoveEntry.play(_game, move);
     setState(() {
+      _animateBoard = true;
       _explore.add(entry);
       // Denemenin amacı değerlendirmeyi görmek; analiz kapalıysa açılır.
       // 10.9.0'dan beri ayarla ("Deneme hamlesinde motoru aç").
@@ -420,6 +421,9 @@ class _GameScreenState extends State<GameScreen> {
   void _undoExplore() {
     if (_explore.isEmpty) return;
     setState(() {
+      // Geri almak da geri gidiş: önceki hamle yeniden oynanıyormuş gibi
+      // kaymasın (bkz. [_goTo]).
+      _animateBoard = false;
       _explore.removeLast();
       _game = _positionWithExplore();
     });
@@ -430,6 +434,7 @@ class _GameScreenState extends State<GameScreen> {
   void _clearExplore() {
     if (_explore.isEmpty) return;
     setState(() {
+      _animateBoard = false;
       _explore.clear();
       _game = _positionAt(_cursor);
     });
