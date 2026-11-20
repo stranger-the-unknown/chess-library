@@ -11,7 +11,7 @@ geçilmez); Maia testleri atlanır.
 
 ```bash
 flutter pub get
-flutter test          # 640 test (3'ü yalnızca POSIX'te koşar)
+flutter test          # 645 test (Windows'ta 8'i atlanır: POSIX kabuğu, ekran kaydı)
 ```
 
 Windows ve Linux'ta oyun listeleri, bulmacalar ve açılışlar
@@ -79,7 +79,25 @@ apksigner verify --print-certs build/app/outputs/flutter-apk/app-release.apk
 
 ## Windows
 
-Visual Studio'nun "Desktop development with C++" iş yükü gerekir.
+Windows paketi GitHub Actions'ta derleniyor
+(`.github/workflows/windows.yml`; `windows-*` dallarına gönderimde ya da
+elle). Geliştirme Linux'ta yapıldığı için yayımlanan Windows dosyalarının
+kaynağı bu iş akışı. Linux'takiyle aynı sırayı izliyor: Maia ağırlıklarını
+üretip SHA-256 ile doğruluyor, Stockfish 19'un resmi Windows ikilisini
+alıyor, testleri iki depoyla koşuyor, derliyor, Inno Setup ile kurulum
+dosyasını üretiyor. Kurulum dosyası sessizce kurulup deneme kurulan
+kopyayla yapılıyor (`.github/scripts/windows-probe.ps1`: 20 saniye açık
+kalma, pencere, veri klasörü, ekran görüntüsü, kapatma isteğiyle kapanma);
+ardından kaldırıcının uygulamayı ve veriyi sildiğine bakılıyor. Çıktı
+(`windows-package`): `Chess Library <sürüm> Kurulum.exe` ve taşınabilir
+`Chess Library <sürüm> Windows.zip`.
+
+Bilinen: koşucuda süreç kapanırken 0 yerine 0xC0000409 ile bitiyor
+(motor sökülürken `Windows.Media.dll`, ses oynatıcısı). 10.5.0 paketi de
+aynı; deneme bunu uyarı olarak geçiyor, başka bir çöküşte düşüyor.
+
+Yerelde (Windows): Visual Studio'nun "Desktop development with C++" iş
+yükü gerekir.
 
 ```bash
 flutter build windows --release
@@ -97,9 +115,11 @@ klasörü olmadan çalışmaz.
 ISCC.exe windows\installer\chess_library.iss
 ```
 
-Çıktı: `windows/installer/output/ChessLibrary-Kurulum-<sürüm>.exe`.
+Çıktı: `windows/installer/output/Chess Library <sürüm> Kurulum.exe`.
 Sürüm numarası betiğin başındaki `AppVersion` satırındadır; `pubspec.yaml`
-ile birlikte güncellenmelidir.
+ile birlikte güncellenmelidir (iş akışı ikisinin aynı olduğunu denetliyor).
+Stockfish ayrı süreç olduğu için derlemeden sonra `windows/stockfish/stockfish.exe`
+çıktı klasörüne, `ChessLibrary.exe`'nin yanına kopyalanmalıdır.
 
 ## Linux
 

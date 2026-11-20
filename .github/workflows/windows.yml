@@ -1,0 +1,222 @@
+# Windows sürümü: testler, derleme, kurulum dosyası, açılış denemesi ve paket.
+#
+# Elle başlatılır (Actions → Windows → Run workflow) ya da bir Windows
+# dalına (windows-*) gönderim yapılınca çalışır. Geliştirme Linux'ta
+# yapıldığı için Windows paketi yalnızca burada derleniyor. Ortaya çıkan
+# iki dosya ("Kurulum.exe" ve taşınabilir "Windows.zip") "artifact" olarak
+# iner; yayına kontrol edildikten sonra eklenir.
+#
+# Depoda olmayan iki ikili burada indirilip doğrulanıyor:
+# - Maia-3 ağırlıkları: HuggingFace'teki orijinal dosyadan
+#   tools/maia_export.py ile üretiliyor; sonuç Linux'ta üretilenle
+#   bit bit aynı olmalı (SHA-256).
+# - Stockfish 19: resmi sürümün Windows ikilisi (SHA-256 resmi sayfadan).
+name: Windows
+
+on:
+  workflow_dispatch:
+  push:
+    branches: ['windows-*']
+
+permissions:
+  contents: read
+
+jobs:
+  windows:
+    runs-on: windows-latest
+    timeout-minutes: 60
+    env:
+      # Koşucunun konsolu cp1252; betikler Türkçe çıktı yazıyor.
+      PYTHONUTF8: '1'
+    steps:
+      # Varlıklar (PGN, JSON, lisans) Linux ve Android paketlerindekiyle
+      # bayt bayt aynı kalsın: satır sonları çevrilmiyor.
+      - name: Satır sonları
+        run: git config --global core.autocrlf false
+
+      - uses: actions/checkout@v4
+
+      - uses: subosito/flutter-action@v2
+        with:
+          flutter-version: 3.47.2
+          channel: stable
+          cache: true
+
+      # Ağırlıkları dönüştüren betik için; Linux iş akışıyla aynı sürümler.
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.14'
+
+      - name: Maia ağırlıkları
+        shell: bash
+        run: |
+          python -m pip install --quiet numpy==2.5.3
+          python -m pip install --quiet torch==2.14.0 \
+            --index-url https://download.pytorch.org/whl/cpu
+          curl -sSL -o maia3-5m.pt \
+            https://huggingface.co/UofTCSSLab/Maia3-5M/resolve/main/maia3-5m.pt
+          echo "ba14208b2992d85502f5fb501934abf6aaaeb355e9f3fdf90e326911f562524f  maia3-5m.pt" | sha256sum -c
+          python tools/maia_export.py maia3-5m.pt assets/maia/maia3-5m.bin
+          echo "47aaea7f8fcd2101763afd5a7ffe50766ead70f52df60a8ec4a3178c45815d6a  assets/maia/maia3-5m.bin" | sha256sum -c
+          rm maia3-5m.pt
+
+      - name: Stockfish 19
+        shell: bash
+        working-directory: windows/stockfish
+        run: |
+          curl -sSL -o sf.zip \
+            https://github.com/official-stockfish/Stockfish/releases/download/sf_19/stockfish-windows-x86-64-universal.zip
+          echo "3c8bf1f9ea66a09350a40df4f632288285ac206d99f33ab5842c408fc30b48a7  sf.zip" | sha256sum -c
+          mkdir -p _extract
+          unzip -q -o sf.zip -d _extract
+          cp _extract/stockfish/stockfish-windows-x86-64-universal.exe stockfish.exe
+          # 9.0.7'den beri yayımlanan stockfish.exe ile aynı dosya.
+          echo "45bc8e4969147db9c2eb533810637994619bff0eacc81ccfd9854394901bcbd0  stockfish.exe" | sha256sum -c
+          ./stockfish.exe quit < /dev/null | head -n 1
+
+      - name: Sürüm
+        run: |
+          $version = (Select-String -Path pubspec.yaml -Pattern '^version:\s*([0-9.]+)').Matches[0].Groups[1].Value
+          $setup = (Select-String -Path windows\installer\chess_library.iss -Pattern '^#define AppVersion "(.+)"').Matches[0].Groups[1].Value
+          Write-Host "pubspec: $version, kurulum betiği: $setup"
+          if ($version -ne $setup) { throw "Kurulum betiğindeki AppVersion pubspec ile aynı değil" }
+          "VERSION=$version" >> $env:GITHUB_ENV
+
+      - run: flutter pub get
+      - run: flutter analyze
+
+      - name: Testler
+        timeout-minutes: 20
+        run: flutter test
+
+      - name: Testler (dosya deposu)
+        timeout-minutes: 15
+        run: >-
+          flutter test --dart-define=CL_FILE_STORE=true test/backup_test.dart
+          test/corrupt_data_test.dart test/opening_manage_test.dart
+          test/opening_san_case_test.dart test/opening_test.dart
+          test/puzzle_scale_test.dart test/storage_test.dart
+          test/v1020_store_test.dart test/v1040_openings_test.dart
+          test/v1040_fixes_test.dart test/v1050_openings_test.dart
+          test/v1060_lists_test.dart test/v1070_service_test.dart
+          test/v1080_service_test.dart
+
+      - name: Derleme
+        run: flutter build windows --release
+
+      # Stockfish ayrı süreç; yürütülebilir dosyanın yanında aranıyor.
+      - name: Stockfish'i yanına koy
+        run: |
+          $release = 'build\windows\x64\runner\Release'
+          Copy-Item windows\stockfish\stockfish.exe "$release\stockfish.exe" -Force
+          foreach ($f in 'ChessLibrary.exe', 'flutter_windows.dll', 'stockfish.exe',
+              'data\app.so', 'data\icudtl.dat',
+              'data\flutter_assets\assets\maia\maia3-5m.bin',
+              'data\flutter_assets\assets\sounds\move-self.mp3') {
+            if (-not (Test-Path "$release\$f")) { throw "eksik: $f" }
+          }
+          Get-ChildItem $release | Format-Table Name, Length
+
+      - name: Kurulum dosyası (Inno Setup)
+        run: |
+          $roots = @(${env:ProgramFiles(x86)}, $env:ProgramFiles)
+          $find = { Get-ChildItem -Path $roots -Filter ISCC.exe -Recurse -Depth 1 -ErrorAction SilentlyContinue | Select-Object -First 1 }
+          $iscc = & $find
+          if (-not $iscc) {
+            choco install innosetup -y --no-progress
+            $iscc = & $find
+          }
+          if (-not $iscc) { throw "ISCC.exe bulunamadı" }
+          Write-Host "Inno Setup: $($iscc.FullName) $($iscc.VersionInfo.ProductVersion)"
+          & $iscc.FullName windows\installer\chess_library.iss
+          if ($LASTEXITCODE -ne 0) { throw "ISCC $LASTEXITCODE" }
+          Get-ChildItem windows\installer\output
+
+      # Kurulum dosyası sessizce kuruluyor ve deneme kurulan kopyayla
+      # yapılıyor: eksik bir dosya varsa burada ortaya çıkar.
+      - name: Kurulum ve açılış denemesi
+        run: |
+          $setup = "windows\installer\output\Chess Library $env:VERSION Kurulum.exe"
+          $dir = "$env:RUNNER_TEMP\kurulu"
+          $p = Start-Process -FilePath $setup -Wait -PassThru -ArgumentList `
+            "/VERYSILENT /SUPPRESSMSGBOXES /NORESTART /CURRENTUSER /DIR=$dir /LOG=$env:RUNNER_TEMP\kurulum.log"
+          if ($p.ExitCode -ne 0) {
+            Get-Content "$env:RUNNER_TEMP\kurulum.log" -Tail 40
+            throw "Kurulum $($p.ExitCode)"
+          }
+          foreach ($f in 'ChessLibrary.exe', 'flutter_windows.dll', 'stockfish.exe',
+              'LICENSE', 'ASSETS.md', 'COPYRIGHT.md', 'unins000.exe',
+              'data\app.so', 'data\icudtl.dat',
+              'data\flutter_assets\assets\maia\maia3-5m.bin') {
+            if (-not (Test-Path "$dir\$f")) { throw "kurulumda eksik: $f" }
+          }
+          & .github\scripts\windows-probe.ps1 -App "$dir\ChessLibrary.exe" -Shot "$env:GITHUB_WORKSPACE\windows-screen.png"
+          if ($LASTEXITCODE -ne 0) { throw "Açılış denemesi $LASTEXITCODE" }
+
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: windows-screen
+          path: windows-screen.png
+          if-no-files-found: ignore
+
+      # Kaldırıcı veriyi soruyor; sessiz kaldırmada cevap "Evet".
+      - name: Kaldırma denemesi
+        run: |
+          $dir = "$env:RUNNER_TEMP\kurulu"
+          $data = Join-Path $env:APPDATA 'io.github.strangertheunknown\Chess Library'
+          if (-not (Test-Path $data)) { throw "veri klasörü yok: $data" }
+          $p = Start-Process -FilePath "$dir\unins000.exe" -Wait -PassThru -ArgumentList `
+            "/VERYSILENT /SUPPRESSMSGBOXES /NORESTART"
+          if ($p.ExitCode -ne 0) { throw "Kaldırma $($p.ExitCode)" }
+          # Kaldırıcı işini geçici bir kopyasına devrediyor; bitmesini bekle.
+          for ($i = 0; $i -lt 60; $i++) {
+            if (-not (Test-Path "$dir\ChessLibrary.exe") -and -not (Test-Path $data)) { break }
+            Start-Sleep -Milliseconds 500
+          }
+          if (Test-Path "$dir\ChessLibrary.exe") { throw "uygulama kaldırılmadı" }
+          if (Test-Path $data) { throw "veri klasörü kaldırılmadı" }
+          Write-Host "kaldırıldı; veri klasörü de gitti"
+
+      - name: Paket
+        shell: bash
+        run: |
+          mkdir -p dist
+          cp "windows/installer/output/Chess Library $VERSION Kurulum.exe" dist/
+          # Taşınabilir sürüm: içinde tek kök klasör, yanında lisans ve
+          # okuma dosyaları (Linux paketindeki gibi).
+          python - "$VERSION" <<'EOF'
+          import os, shutil, sys, zipfile
+          version = sys.argv[1]
+          release = os.path.join('build', 'windows', 'x64', 'runner', 'Release')
+          root = 'Chess Library %s' % version
+          stage = os.path.join('dist', '_staging')
+          shutil.copytree(release, stage)
+          for extra in ('LICENSE', 'COPYRIGHT.md', 'ASSETS.md', 'README.md',
+                        'README.tr.md'):
+              shutil.copy2(extra, stage)
+          out = os.path.join('dist', '%s Windows.zip' % root)
+          count = 0
+          with zipfile.ZipFile(out, 'w', zipfile.ZIP_DEFLATED,
+                               compresslevel=9) as z:
+              for folder, dirs, files in os.walk(stage):
+                  dirs.sort()
+                  for name in sorted(files):
+                      full = os.path.join(folder, name)
+                      rel = os.path.relpath(full, stage).replace(os.sep, '/')
+                      z.write(full, '%s/%s' % (root, rel))
+                      count += 1
+          shutil.rmtree(stage)
+          print('%s: %d dosya, %.1f MB' % (out, count,
+                                           os.path.getsize(out) / 1048576))
+          EOF
+          sha256sum dist/*
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: windows-package
+          path: |
+            dist/*.exe
+            dist/*.zip
+          if-no-files-found: error
+          compression-level: 0

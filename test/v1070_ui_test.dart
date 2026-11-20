@@ -50,12 +50,21 @@ void _silencePlugins() {
   }
 }
 
-Future<Opening> _add(String family, String variation, String moves) async =>
-    (await _openings.addFromSan(
-      family: family,
-      variation: variation,
-      moveText: moves,
-    ))!;
+/// Varyantın kimliği saatten geliyor (`u_<mikrosaniye>`). Windows'ta saat
+/// kaba adımlarla ilerliyor ve sahte saatli testte iki ekleme arasında
+/// neredeyse hiç gerçek zaman geçmiyor: art arda eklenen iki varyant aynı
+/// kimliği alıp çalışma ekranında tek varyant gibi davranıyordu (Windows
+/// CI'da dosyanın üç koşusundan biri düşüyordu). Her eklemeden önce saatin
+/// bir adım ilerlemesi bekleniyor.
+Future<Opening> _add(String family, String variation, String moves) async {
+  final before = DateTime.now().microsecondsSinceEpoch;
+  while (DateTime.now().microsecondsSinceEpoch == before) {}
+  return (await _openings.addFromSan(
+    family: family,
+    variation: variation,
+    moveText: moves,
+  ))!;
+}
 
 Future<void> _pump(
   WidgetTester tester,

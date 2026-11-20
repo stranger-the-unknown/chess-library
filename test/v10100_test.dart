@@ -21,6 +21,10 @@ import 'package:chess_pgn_reader/widgets/chess_board_widget.dart';
 
 final _settings = SettingsService.instance;
 
+/// Ekran kaydı yalnızca Android ve Linux'ta var; başka yerde (Windows)
+/// menüde seçenek hiç görünmüyor, akış testlerinin basacağı bir şey yok.
+final _noRecordMenu = !ScreenRecording.platformSupported;
+
 void _silencePlugins() {
   final messenger =
       TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger;
@@ -201,7 +205,7 @@ void main() {
       );
       await tester.pumpWidget(const SizedBox());
       await tester.pump(const Duration(seconds: 5));
-    });
+    }, skip: _noRecordMenu);
 
     testWidgets('kayıt sırasında dokunmak izlemeyi bozmuyor', (tester) async {
       await _pump(tester, _game);
@@ -219,7 +223,7 @@ void main() {
       expect(recorder.events.last, 'stop');
       await tester.pumpWidget(const SizedBox());
       await tester.pump(const Duration(seconds: 5));
-    });
+    }, skip: _noRecordMenu);
 
     testWidgets('dışarıdan durdurulunca o ana kadarki kısım kaydediliyor',
         (tester) async {
@@ -242,7 +246,7 @@ void main() {
       expect(_cursor(tester), at, reason: 'izleme de durdu');
       await tester.pumpWidget(const SizedBox());
       await tester.pump(const Duration(seconds: 5));
-    });
+    }, skip: _noRecordMenu);
 
     testWidgets('eksik parça varsa kayıt başlamıyor ve söyleniyor',
         (tester) async {
@@ -254,7 +258,7 @@ void main() {
       expect(_locked(tester), isFalse);
       expect(find.text(t('record.linuxMissing', {'missing': 'x264enc'})),
           findsOneWidget);
-    });
+    }, skip: _noRecordMenu);
 
     testWidgets('açılış: alıştırmadan izle kipine geçip kaydediyor',
         (tester) async {
@@ -284,7 +288,7 @@ void main() {
       expect(_cursor(tester), 5);
       await tester.pumpWidget(const SizedBox());
       await tester.pump(const Duration(seconds: 5));
-    });
+    }, skip: _noRecordMenu);
 
     testWidgets('motora karşı oyunda seçenek yok', (tester) async {
       await _pump(tester, const GameScreen(uciMoves: [], title: 'x'));
