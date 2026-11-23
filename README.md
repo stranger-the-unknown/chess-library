@@ -161,6 +161,11 @@ disturb playback. To finish early on Android, press **Stop** in the
 recording notification or leave the app; what was recorded so far is
 saved. On Android the whole screen is recorded (as with the phone's own
 recorder); turn on Do Not Disturb first if notifications should not show.
+While recording, the app is full screen: the phone's status bar (clock,
+battery) and navigation bar are hidden, so they are not in the video, and
+they come back when the recording ends. The first time an app goes full
+screen, Android shows a one-off "Viewing full screen" note that also ends
+up in that video; after **Got it** it does not appear again.
 On Linux only the app's window is recorded and the sound comes from the
 computer's main output (other sound playing meanwhile is recorded too); it
 needs an X11 session and GStreamer, and says what is missing. So that a

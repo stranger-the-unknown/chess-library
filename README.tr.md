@@ -150,6 +150,11 @@ izlemeyi bozmaz. Erken bitirmek için Android'de kayıt bildirimindeki
 **Durdur**'a bas ya da uygulamadan çık; o ana kadarki kısım kaydedilir.
 Android'de tüm ekran kaydedilir (telefonun kendi kaydedicisindeki gibi);
 bildirimler görünmesin istersen kayıttan önce Rahatsız Etmeyin'i aç.
+Kayıt sürerken uygulama tam ekrandır: telefonun üstteki durum çubuğu (saat,
+pil) ve alttaki gezinme çubuğu gizlenir, videoya girmez; kayıt bitince
+geri gelir. Bir uygulama ilk kez tam ekrana geçtiğinde Android bir kereye
+mahsus bir tam ekran uyarısı gösterir (yukarıdan kaydırarak çıkılabileceğini
+söyler), o da o videoya girer; uyarı onaylanınca bir daha çıkmaz.
 Linux'ta yalnızca uygulamanın penceresi kaydedilir, ses bilgisayarın genel
 çıkışından alınır (kayıt sırasında başka yerde çalan ses de girer); X11
 oturumu ve GStreamer gerekir, eksikse ne gerektiği söylenir. Paylaşımda

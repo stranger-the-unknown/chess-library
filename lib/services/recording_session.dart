@@ -1,6 +1,9 @@
 import 'dart:async';
+import 'dart:io';
 
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 
 import '../l10n/app_strings.dart';
 import '../widgets/app_dialogs.dart';
@@ -12,7 +15,9 @@ import 'screen_recording.dart';
 /// 1. Tahta başa sarılıyor, izin ve onay penceresi açılıyor.
 /// 2. Kayıt, pencereler tamamen kapandıktan sonra başlıyor: uygulama öne
 ///    döndükten sonra [settle] kadar bekleniyor. (Kullanıcının isteği:
-///    kapanmakta olan pencere videoya girmesin.)
+///    kapanmakta olan pencere videoya girmesin.) Android'de telefonun
+///    durum ve gezinme çubukları bu beklemeden önce gizleniyor
+///    ([systemBars]); yerleşimin kayması da videoya girmiyor.
 /// 3. [lead] boyunca başlangıç konumu, sonra izleme hızıyla oynatma.
 /// 4. Bitince [tail] kadar son konum, sonra kayıt duruyor ve kaydediliyor.
 ///
@@ -33,6 +38,38 @@ class RecordingSession {
   /// Testler için: beklemeler.
   @visibleForTesting
   static Future<void> Function(Duration) wait = Future<void>.delayed;
+
+  /// Telefonun durum çubuğunu (saat, pil) ve gezinme çubuğunu (alttaki
+  /// düğmeler) gizler (`true`) ya da geri getirir (`false`).
+  ///
+  /// Android'de kayıt ekranın tamamını alıyor: çubuklar videoya giriyordu.
+  /// Instagram onları kendiliğinden kırpıyordu, YouTube kırpmıyor
+  /// (kullanıcı, 24 Kasım 2026). Kayıt boyunca uygulama tam ekran; tahta da
+  /// biraz büyüyor. Linux'ta kayıt yalnızca pencereyi aldığı için bir şey
+  /// yapılmıyor. Testler değiştirebilir.
+  @visibleForTesting
+  static Future<void> Function(bool hidden) systemBars = _setSystemBars;
+
+  static Future<void> _setSystemBars(bool hidden) async {
+    if (kIsWeb || !Platform.isAndroid) return;
+    if (hidden) {
+      // "sticky": kenardan kaydırınca çubuklar bir an görünüp kayboluyor;
+      // kayıt dokunuşlara kapalı olsa da sistem hareketleri çalışıyor.
+      //
+      // Android, gezinme çubuğunu gizleyen her kipte (leanBack da; öykünücüde
+      // denendi) ilk seferde "Viewing full screen ... Got it" uyarısını
+      // gösteriyor; o kayıtta uyarı birkaç saniye sonra çıkıp ekranı
+      // karartıyor. Onay cihaz genelinde saklanıyor
+      // (Settings.Secure immersive_mode_confirmations = confirmed): bir kez
+      // "Got it" denince bir daha hiçbir uygulamada çıkmıyor.
+      await SystemChrome.setEnabledSystemUIMode(SystemUiMode.immersiveSticky);
+    } else {
+      // Uygulamanın açılıştaki hâli (Flutter'ın varsayılanı): iki çubuk da
+      // görünür.
+      await SystemChrome.setEnabledSystemUIMode(SystemUiMode.manual,
+          overlays: SystemUiOverlay.values);
+    }
+  }
 
   /// Kaydı yürütür.
   ///
@@ -55,6 +92,7 @@ class RecordingSession {
     String? savedOutside;
     AppLifecycleListener? lifecycle;
     OverlayEntry? heartbeat;
+    var barsHidden = false;
     try {
       rewind();
       final start = await recorder.prepare();
@@ -79,6 +117,10 @@ class RecordingSession {
       setLocked(true);
       // Onay penceresi tamamen kapansın, uygulama öne dönsün.
       await _untilResumed();
+      // Çubuklar beklemeden önce gizleniyor: kalkarken yerleşim kayıyor,
+      // o kayma da kayda girmesin.
+      barsHidden = true;
+      await systemBars(true);
       await wait(settle);
       if (!context.mounted) {
         await recorder.stop();
@@ -127,6 +169,9 @@ class RecordingSession {
       heartbeat?.remove();
       lifecycle?.dispose();
       recorder.onStoppedOutside = null;
+      // Kayıt nasıl biterse bitsin (sonuna kadar, dışarıdan durdurma,
+      // hata, ekrandan çıkma) çubuklar geri geliyor.
+      if (barsHidden) await systemBars(false);
       setLocked(false);
       active = false;
     }

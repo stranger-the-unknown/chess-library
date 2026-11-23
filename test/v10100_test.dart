@@ -11,6 +11,7 @@ import 'package:chess_pgn_reader/l10n/app_strings.dart';
 import 'package:chess_pgn_reader/models/opening.dart';
 import 'package:chess_pgn_reader/screens/game_screen.dart';
 import 'package:chess_pgn_reader/screens/openings/opening_study_screen.dart';
+import 'package:chess_pgn_reader/services/recording_session.dart';
 import 'package:chess_pgn_reader/services/screen_recording.dart';
 import 'package:chess_pgn_reader/widgets/move_list.dart';
 import 'package:chess_pgn_reader/services/settings_service.dart';
@@ -161,13 +162,23 @@ void main() {
 
   group('Ekran kaydı: akış', () {
     late _FakeRecorder recorder;
+    // Sistem çubuklarına yapılan her çağrı ve o anda kaydedicinin
+    // gördükleri (sıra doğrulansın diye).
+    late List<(bool, List<String>)> bars;
+    final originalBars = RecordingSession.systemBars;
     setUp(() {
       recorder = _FakeRecorder();
       ScreenRecording.linux = recorder;
+      bars = [];
+      RecordingSession.systemBars =
+          (hidden) async => bars.add((hidden, List.of(recorder.events)));
       _settings.gameWatchSpeed = WatchSpeed.veryFast;
       _settings.openingWatchSpeed = WatchSpeed.veryFast;
     });
-    tearDown(() => ScreenRecording.linux = LinuxScreenRecorder());
+    tearDown(() {
+      ScreenRecording.linux = LinuxScreenRecorder();
+      RecordingSession.systemBars = originalBars;
+    });
 
     testWidgets('oyun: pencereler kapanınca başlıyor, 1 sn başlangıç, '
         'izleme, 2 sn son, kaydediliyor', (tester) async {
@@ -258,6 +269,7 @@ void main() {
       expect(_locked(tester), isFalse);
       expect(find.text(t('record.linuxMissing', {'missing': 'x264enc'})),
           findsOneWidget);
+      expect(bars, isEmpty, reason: 'kayıt başlamadı, çubuklara dokunulmadı');
     }, skip: _noRecordMenu);
 
     testWidgets('açılış: alıştırmadan izle kipine geçip kaydediyor',
@@ -300,6 +312,46 @@ void main() {
       expect(find.text(t('record.menu')), findsNothing,
           reason: 'hamlesi olmayan tahtada da yok');
     });
+
+    // 24 Kasım 2026: Android'de kayıt ekranın tamamını alıyor; telefonun
+    // durum ve gezinme çubukları YouTube videolarında görünüyordu.
+    testWidgets('çubuklar kayıt başlamadan gizleniyor, bitince geri geliyor',
+        (tester) async {
+      await _pump(tester, _game);
+      await _openMenuItem(tester, t('record.menu'));
+      expect(bars, hasLength(1));
+      expect(bars[0].$1, isTrue, reason: 'gizlendi');
+      expect(bars[0].$2, ['prepare'],
+          reason: 'onaydan sonra, kayıt başlamadan (kayma videoya girmesin)');
+
+      await tester.pump(const Duration(milliseconds: 650));
+      expect(recorder.events.last, startsWith('begin '));
+      expect(bars, hasLength(1), reason: 'kayıt boyunca gizli');
+
+      for (var i = 0; i < 12; i++) {
+        await tester.pump(const Duration(milliseconds: 500));
+      }
+      await tester.pump();
+      expect(recorder.events.last, 'stop');
+      expect(bars, hasLength(2));
+      expect(bars[1].$1, isFalse, reason: 'geri geldi');
+      expect(bars[1].$2.last, 'stop', reason: 'kayıt bittikten sonra');
+      await tester.pumpWidget(const SizedBox());
+      await tester.pump(const Duration(seconds: 5));
+    }, skip: _noRecordMenu);
+
+    testWidgets('dışarıdan durdurulunca da çubuklar geri geliyor',
+        (tester) async {
+      await _pump(tester, _game);
+      await _openMenuItem(tester, t('record.menu'));
+      await tester.pump(const Duration(milliseconds: 2200));
+      recorder.exit!('Videolar/Chess Library/yarım.mp4');
+      await tester.pump();
+      await tester.pump();
+      expect([for (final b in bars) b.$1], [true, false]);
+      await tester.pumpWidget(const SizedBox());
+      await tester.pump(const Duration(seconds: 5));
+    }, skip: _noRecordMenu);
   });
 
   group('Ekran kaydı: Linux komutu', () {
