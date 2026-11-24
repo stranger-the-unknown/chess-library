@@ -119,8 +119,11 @@ object Capture {
     /** Onay ve hizmet hazır olunca çağrılır (hata metni ya da null). */
     var onPrepared: ((String?) -> Unit)? = null
 
-    /** Kayıt dışarıdan bittiğinde (bildirim, sistem): kaydedilen yol. */
-    var onStoppedOutside: ((String?) -> Unit)? = null
+    /**
+     * Kayıt dışarıdan bittiğinde (bildirim, sistem): kaydedilen yol ve
+     * kaydın sonunun eksik olabileceği ([Mp4Writer.incomplete]).
+     */
+    var onStoppedOutside: ((String?, Boolean) -> Unit)? = null
 
     fun prepared(value: MediaProjection?, error: String?) {
         projection = value
@@ -154,23 +157,27 @@ object Capture {
     }
 
     /**
-     * Kaydı bitirir; sonuç (kaydedilen yol ya da null) ana iş parçacığında
-     * [done]'a gelir. [fromOutside]: bildirimden ya da sistemden durduruldu.
+     * Kaydı bitirir; sonuç (kaydedilen yol ya da null, sonunun eksik olup
+     * olamayacağı) ana iş parçacığında [done]'a gelir. [fromOutside]:
+     * bildirimden ya da sistemden durduruldu.
      */
-    fun finish(fromOutside: Boolean = false, done: ((String?) -> Unit)? = null) {
+    fun finish(fromOutside: Boolean = false, done: ((String?, Boolean) -> Unit)? = null) {
         val current = writer
         writer = null
         if (current == null) {
             release()
-            done?.invoke(null)
+            done?.invoke(null, false)
             return
         }
         Thread {
-            val saved = runCatching { current.stop() }.getOrNull()
+            val saved = runCatching { current.stop() }
+                .onFailure { Log.e(TAG, "kayıt kapatılamadı", it) }
+                .getOrNull()
+            val incomplete = current.incomplete
             main.post {
                 release()
-                done?.invoke(saved)
-                if (fromOutside) onStoppedOutside?.invoke(saved)
+                done?.invoke(saved, incomplete)
+                if (fromOutside) onStoppedOutside?.invoke(saved, incomplete)
             }
         }.start()
     }

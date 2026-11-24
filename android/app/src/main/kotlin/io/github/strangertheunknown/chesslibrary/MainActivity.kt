@@ -61,7 +61,9 @@ class MainActivity : FlutterActivity() {
         Capture.appContext = applicationContext
         val record = MethodChannel(flutterEngine.dartExecutor.binaryMessenger, recordChannelName)
         recordChannel = record
-        Capture.onStoppedOutside = { saved -> record.invokeMethod("stopped", saved) }
+        Capture.onStoppedOutside = { saved, incomplete ->
+            record.invokeMethod("stopped", stopResult(saved, incomplete))
+        }
         record.setMethodCallHandler { call, result ->
             when (call.method) {
                 // Uygulamanın kendi sesini yakalamak Android 10 ister.
@@ -71,11 +73,20 @@ class MainActivity : FlutterActivity() {
                     val name = call.argument<String>("name") ?: "Chess Library"
                     result.success(Capture.begin(this, name, gameSounds))
                 }
-                "stop" -> Capture.finish { saved -> result.success(saved) }
+                "stop" -> Capture.finish { saved, incomplete ->
+                    result.success(stopResult(saved, incomplete))
+                }
                 else -> result.notImplemented()
             }
         }
     }
+
+    /**
+     * Kaydın sonucu Dart'a: kaydedilen yol (ya da null) ve kaydın sonunun
+     * eksik olabileceği ([Mp4Writer.incomplete]).
+     */
+    private fun stopResult(saved: String?, incomplete: Boolean): Map<String, Any?> =
+        mapOf("path" to saved, "incomplete" to incomplete)
 
     /**
      * Android'in "ekranı kaydetsin mi?" penceresi. Cevap: "ok",

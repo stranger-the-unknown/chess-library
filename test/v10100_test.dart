@@ -9,6 +9,8 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 import 'package:chess_pgn_reader/l10n/app_strings.dart';
 import 'package:chess_pgn_reader/models/opening.dart';
+import 'package:chess_pgn_reader/models/playlist.dart';
+import 'package:chess_pgn_reader/screens/list_game_screen.dart';
 import 'package:chess_pgn_reader/screens/game_screen.dart';
 import 'package:chess_pgn_reader/screens/openings/opening_study_screen.dart';
 import 'package:chess_pgn_reader/services/recording_session.dart';
@@ -68,6 +70,9 @@ class _FakeRecorder extends LinuxScreenRecorder {
   String? saved = 'Videolar/Chess Library/oyun.mp4';
   void Function(String?)? exit;
 
+  /// Android'deki "kaydın sonu eksik olabilir" durumunun yerine.
+  bool incomplete = false;
+
   @override
   Future<String?> prepare() async {
     events.add('prepare');
@@ -84,6 +89,7 @@ class _FakeRecorder extends LinuxScreenRecorder {
   @override
   Future<String?> stop() async {
     events.add('stop');
+    if (incomplete) ScreenRecording.instance.lastIncomplete = true;
     return saved;
   }
 }
@@ -178,6 +184,9 @@ void main() {
     tearDown(() {
       ScreenRecording.linux = LinuxScreenRecorder();
       RecordingSession.systemBars = originalBars;
+      // Yarıda düşen bir test kaydı "sürüyor" bırakmasın; yoksa sonraki
+      // testlerde kayıt hiç başlamıyor ve onlar da düşüyor.
+      RecordingSession.active = false;
     });
 
     testWidgets('oyun: pencereler kapanınca başlıyor, 1 sn başlangıç, '
@@ -190,6 +199,8 @@ void main() {
       expect(recorder.events, ['prepare']);
       expect(_cursor(tester), -1, reason: 'önce başa sarıldı');
       expect(_locked(tester), isTrue, reason: 'kayıt sürerken dokunuş yok');
+      expect(find.byType(AppBar), findsNothing,
+          reason: 'üst çubuk kayıt başlamadan kalktı (24 Kasım 2026)');
 
       await tester.pump(const Duration(milliseconds: 500));
       expect(recorder.events, ['prepare'],
@@ -209,6 +220,7 @@ void main() {
       expect(recorder.events.last, 'stop');
       await tester.pump();
       expect(_locked(tester), isFalse);
+      expect(find.byType(AppBar), findsOneWidget, reason: 'geri geldi');
       expect(
         find.text(t('record.saved',
             {'path': 'Videolar/Chess Library/oyun.mp4'})),
@@ -287,6 +299,10 @@ void main() {
       await tester.tap(find.text(t('openings.practice')));
       await tester.pumpAndSettle();
       await _openMenuItem(tester, t('record.menu'));
+      expect(find.byType(AppBar), findsNothing,
+          reason: 'açılışta da üst çubuk kayıtta yok');
+      expect(find.text('İtalyan · Giuoco Piano'), findsOneWidget,
+          reason: 'varyantın adı tahtanın üstündeki satıra geçti');
       final segmented = tester.widget<SegmentedButton<StudyMode>>(
           find.byType(SegmentedButton<StudyMode>));
       expect(segmented.selected, {StudyMode.watch});
@@ -298,6 +314,9 @@ void main() {
       expect(recorder.events[1], startsWith('begin İtalyan - Giuoco Piano '));
       expect(recorder.events.last, 'stop');
       expect(_cursor(tester), 5);
+      await tester.pump();
+      expect(find.byType(AppBar), findsOneWidget, reason: 'geri geldi');
+      expect(find.text('İtalyan · Giuoco Piano'), findsNothing);
       await tester.pumpWidget(const SizedBox());
       await tester.pump(const Duration(seconds: 5));
     }, skip: _noRecordMenu);
@@ -312,6 +331,166 @@ void main() {
       expect(find.text(t('record.menu')), findsNothing,
           reason: 'hamlesi olmayan tahtada da yok');
     });
+
+    // 24 Kasım 2026: kayıtta tahtanın üstündeki "Oyun 1 / 2" satırı ve
+    // önceki / sonraki okları da yok (üst çubuk gibi; kullanıcının isteği).
+    testWidgets('listedeki oyunda sıra satırı kayıtta yok, sonra geri geliyor',
+        (tester) async {
+      SavedGame game(String white) => SavedGame(
+            name: '$white - Rakip',
+            uciMoves: _italian,
+            createdAt: DateTime(2026, 11, 24),
+            white: white,
+            black: 'Rakip',
+          );
+      await _pump(
+        tester,
+        ListGameScreen(games: [game('Birinci'), game('İkinci')], initialIndex: 0),
+      );
+      final position = t('lists.gamePosition', {'n': 1, 'total': 2});
+      expect(find.text(position), findsOneWidget);
+      expect(find.byTooltip(t('lists.nextGame')), findsOneWidget);
+
+      await _openMenuItem(tester, t('record.menu'));
+      expect(find.text(position), findsNothing);
+      expect(find.byTooltip(t('lists.nextGame')), findsNothing);
+      expect(find.byTooltip(t('lists.previousGame')), findsNothing);
+      expect(find.text('Birinci'), findsOneWidget, reason: 'oyuncu satırı');
+
+      for (var i = 0; i < 14; i++) {
+        await tester.pump(const Duration(milliseconds: 500));
+      }
+      await tester.pump();
+      expect(recorder.events.last, 'stop');
+      await tester.pump();
+      expect(find.text(position), findsOneWidget, reason: 'geri geldi');
+      expect(find.byTooltip(t('lists.nextGame')), findsOneWidget);
+      await tester.pumpWidget(const SizedBox());
+      await tester.pump(const Duration(seconds: 5));
+    }, skip: _noRecordMenu);
+
+    // Kullanıcının sorusu (24 Kasım 2026): üst çubuk kalkmışken son hamlede
+    // sonuç kartı çıkınca yazılar bozuluyor mu? Kartın yeri baştan ayrılı:
+    // tahta ve adlar yerinde kalmalı, kart adlarla çakışmamalı.
+    testWidgets('kayıtta sonuç kartı çıkınca tahta ve adlar kaymıyor',
+        (tester) async {
+      expect(_settings.resultAtEnd, isTrue, reason: 'varsayılan (10.10.1)');
+      SavedGame game(String white) => SavedGame(
+            name: '$white - Rakip',
+            uciMoves: _italian,
+            createdAt: DateTime(2026, 11, 24),
+            result: '1-0',
+            white: white,
+            black: 'Maxime Vachier-Lagrave',
+          );
+      await _pump(
+        tester,
+        ListGameScreen(
+          games: [game('Ian Nepomniachtchi'), game('Magnus Carlsen')],
+          initialIndex: 0,
+        ),
+      );
+      await _openMenuItem(tester, t('record.menu'));
+      await tester.pump(const Duration(milliseconds: 650));
+      expect(recorder.events.last, startsWith('begin '));
+      expect(find.byType(AppBar), findsNothing);
+      expect(_resultVisible(tester), isFalse, reason: 'başta sonuç gizli');
+
+      Rect rectOf(Finder f) => tester.getRect(f);
+      final board = rectOf(find.byType(ChessBoardWidget));
+      final top = rectOf(find.text('Maxime Vachier-Lagrave'));
+      final bottom = rectOf(find.text('Ian Nepomniachtchi'));
+
+      for (var i = 0; i < 9; i++) {
+        await tester.pump(const Duration(milliseconds: 500));
+      }
+      expect(_cursor(tester), 5, reason: 'son hamle');
+      expect(recorder.events.last, isNot('stop'), reason: 'sondaki 2 sn');
+      expect(_resultVisible(tester), isTrue, reason: 'kart çıktı');
+      expect(rectOf(find.byType(ChessBoardWidget)), board,
+          reason: 'tahta kaymadı');
+      expect(rectOf(find.text('Maxime Vachier-Lagrave')), top);
+      expect(rectOf(find.text('Ian Nepomniachtchi')), bottom);
+      // Kayıtta (üst çubuk ve sıra satırı yokken) de adlar tahtaya bitişik.
+      expect(board.top - top.bottom, lessThan(24), reason: 'üst ad bitişik');
+      expect(bottom.top - board.bottom, lessThan(24), reason: 'alt ad bitişik');
+      final card = rectOf(find.textContaining(t('game.whiteWon')));
+      expect(card.overlaps(bottom), isFalse, reason: 'adla çakışmıyor');
+      expect(card.overlaps(board), isFalse, reason: 'tahtayla çakışmıyor');
+      expect(card.top, greaterThan(bottom.bottom), reason: 'altta duruyor');
+      expect(tester.takeException(), isNull, reason: 'taşma yok');
+
+      for (var i = 0; i < 6; i++) {
+        await tester.pump(const Duration(milliseconds: 500));
+      }
+      await tester.pump();
+      expect(recorder.events.last, 'stop');
+      await tester.pumpWidget(const SizedBox());
+      await tester.pump(const Duration(seconds: 5));
+    }, skip: _noRecordMenu);
+
+    // 24 Kasım 2026: Android'de kaydı yazan iş parçacığı zamanında
+    // bitmeyince uygulama düşüyordu. Artık video kaydediliyor; sonu eksik
+    // olabilirse bu söyleniyor (sessizce geçilmiyor).
+    testWidgets('kaydın sonu eksik olabilirse söyleniyor', (tester) async {
+      recorder.incomplete = true;
+      await _pump(tester, _game);
+      await _openMenuItem(tester, t('record.menu'));
+      for (var i = 0; i < 18; i++) {
+        await tester.pump(const Duration(milliseconds: 500));
+      }
+      await tester.pump();
+      expect(recorder.events.last, 'stop');
+      await tester.pump();
+      expect(
+        find.text(t('record.savedIncomplete',
+            {'path': 'Videolar/Chess Library/oyun.mp4'})),
+        findsOneWidget,
+      );
+      expect(find.text(t('record.saved',
+          {'path': 'Videolar/Chess Library/oyun.mp4'})), findsNothing);
+      await tester.pumpWidget(const SizedBox());
+      await tester.pump(const Duration(seconds: 5));
+    }, skip: _noRecordMenu);
+
+    testWidgets('açılışta varyant okları kayıtta yok, sonra geri geliyor',
+        (tester) async {
+      Opening line(String id, String variation) => Opening(
+            id: id,
+            eco: 'C50',
+            family: 'İtalyan',
+            variation: variation,
+            uciMoves: _italian,
+            sanMoves: const ['e4', 'e5', 'Nf3', 'Nc6', 'Bc4', 'Bc5'],
+            custom: true,
+          );
+      final first = line('o1', 'Giuoco Piano');
+      await _pump(
+        tester,
+        OpeningStudyScreen(
+          opening: first,
+          sequence: [first, line('o2', 'Evans Gambiti')],
+        ),
+      );
+      expect(find.byTooltip(t('openings.nextVariation')), findsOneWidget);
+
+      await _openMenuItem(tester, t('record.menu'));
+      expect(find.byTooltip(t('openings.nextVariation')), findsNothing);
+      expect(find.byTooltip(t('openings.previousVariation')), findsNothing);
+      expect(find.text('İtalyan · Giuoco Piano'), findsOneWidget,
+          reason: 'satır duruyor, varyantın adıyla');
+
+      for (var i = 0; i < 14; i++) {
+        await tester.pump(const Duration(milliseconds: 500));
+      }
+      await tester.pump();
+      expect(recorder.events.last, 'stop');
+      await tester.pump();
+      expect(find.byTooltip(t('openings.nextVariation')), findsOneWidget,
+          reason: 'geri geldi');
+      await tester.pumpWidget(const SizedBox());
+      await tester.pump(const Duration(seconds: 5));
+    }, skip: _noRecordMenu);
 
     // 24 Kasım 2026: Android'de kayıt ekranın tamamını alıyor; telefonun
     // durum ve gezinme çubukları YouTube videolarında görünüyordu.
@@ -352,6 +531,22 @@ void main() {
       await tester.pumpWidget(const SizedBox());
       await tester.pump(const Duration(seconds: 5));
     }, skip: _noRecordMenu);
+  });
+
+  group('Ekran kaydı: Android kanalının sonucu', () {
+    test('yol ve "sonu eksik olabilir" ayrıştırılıyor', () {
+      final parse = ScreenRecording.parseStopResult;
+      expect(parse({'path': 'Movies/Chess Library/a.mp4', 'incomplete': false}),
+          (path: 'Movies/Chess Library/a.mp4', incomplete: false));
+      expect(parse({'path': 'Movies/Chess Library/a.mp4', 'incomplete': true}),
+          (path: 'Movies/Chess Library/a.mp4', incomplete: true));
+      expect(parse({'path': null, 'incomplete': true}),
+          (path: null, incomplete: true));
+      expect(parse('Movies/Chess Library/a.mp4'),
+          (path: 'Movies/Chess Library/a.mp4', incomplete: false),
+          reason: 'eski biçim');
+      expect(parse(null), (path: null, incomplete: false));
+    });
   });
 
   group('Ekran kaydı: Linux komutu', () {

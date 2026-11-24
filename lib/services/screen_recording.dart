@@ -50,6 +50,26 @@ class ScreenRecording {
   /// Son hatanın metni ([RecordStart.unsupported], [RecordStart.failed]).
   String? lastError;
 
+  /// Son kaydın sonu eksik kalmış olabilir (Android: kaydı yazan iş
+  /// parçacığı hata verdi ya da zamanında bitmedi; video yine kaydedildi).
+  /// Kullanıcıya söyleniyor (bkz. [RecordingSession]).
+  bool lastIncomplete = false;
+
+  /// Kanalın "stop" / "stopped" sonucu: `{path, incomplete}` (10.12.0)
+  /// ya da eski biçimde yalnızca yol.
+  @visibleForTesting
+  static ({String? path, bool incomplete}) parseStopResult(Object? value) {
+    if (value is String) return (path: value, incomplete: false);
+    if (value is Map) {
+      final path = value['path'];
+      return (
+        path: path is String ? path : null,
+        incomplete: value['incomplete'] == true,
+      );
+    }
+    return (path: null, incomplete: false);
+  }
+
   /// Kayıt dışarıdan bittiğinde (Android'de bildirim ya da sistemin durdurma
   /// düğmesi, Linux'ta GStreamer'ın kapanması): kaydedilen yol ya da null.
   void Function(String? saved)? onStoppedOutside;
@@ -61,7 +81,9 @@ class ScreenRecording {
     _channelReady = true;
     channel.setMethodCallHandler((call) async {
       if (call.method == 'stopped') {
-        onStoppedOutside?.call(call.arguments as String?);
+        final result = parseStopResult(call.arguments);
+        lastIncomplete = result.incomplete;
+        onStoppedOutside?.call(result.path);
       }
       return null;
     });
@@ -111,9 +133,12 @@ class ScreenRecording {
   /// Kaydı bitirir; kaydedilen yol (gösterilecek biçimde) ya da null.
   /// Hazırlanıp başlatılmamış bir kaydı da kapatır.
   Future<String?> stop() async {
+    lastIncomplete = false;
     if (!kIsWeb && Platform.isLinux) return linux.stop();
     try {
-      return await channel.invokeMethod<String>('stop');
+      final result = parseStopResult(await channel.invokeMethod<Object?>('stop'));
+      lastIncomplete = result.incomplete;
+      return result.path;
     } catch (_) {
       return null;
     }

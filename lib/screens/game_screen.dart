@@ -87,6 +87,7 @@ class GameScreen extends StatefulWidget {
     this.uciMoves,
     this.startFen,
     this.title,
+    this.showTitle = true,
     this.initialResult,
     this.playerColor = engine.Color.white,
     this.engineLevelIndex,
@@ -100,6 +101,17 @@ class GameScreen extends StatefulWidget {
 
   /// Motor analizi açık başlasın (listede önceki oyundan taşınıyor).
   final bool startWithAnalysis;
+
+  /// [title] üst çubukta yazsın mı.
+  ///
+  /// Listeden ya da PGN'den açılan oyunda yazmıyor (24 Kasım 2026,
+  /// kullanıcının isteği): adı çoğu zaman "Beyaz - Siyah" ve iki ad
+  /// tahtanın yanındaki oyuncu satırlarında zaten tam yazıyor; telefonda
+  /// üst çubuğa hiç sığmıyor, oyun okurken ve ekran kaydında kesik
+  /// duruyordu. [title] yine kullanılıyor (kaydetme, PGN'in Event'i,
+  /// ekran kaydının dosya adı). Serbest tahta, motora karşı gibi
+  /// ekranların kısa başlıkları yazmaya devam ediyor.
+  final bool showTitle;
 
   /// Listeden açılan oyunda önceki / sonraki oyun; yoksa null.
   final GameSequence? sequence;
@@ -1310,16 +1322,23 @@ class _GameScreenState extends State<GameScreen> {
         wideEnough ? Layout.maxWideBoardSide : Layout.narrowBoardCap;
 
     final screen = Scaffold(
-      appBar: AppBar(
-        title: Text(
-          widget.title ??
-              (widget.mode == GameMode.versusEngine
-                  // Düzey burada yazmıyor: dar ekranda başlığa sığmayıp
-                  // üç noktaya iniyordu ve zaten tahtanın yanındaki
-                  // oyuncu satırında yazıyor.
-                  ? t('game.vsEngine')
-                  : t('game.board')),
-        ),
+      // Kayıt sürerken üst çubuk yok: ekran dokunuşlara kapalı, düğmeleri
+      // videoda işe yaramıyor; videoda oyuncular, tahta ve hamleler kalıyor
+      // (kullanıcının isteği). Kilit kayıt başlamadan önce devreye
+      // giriyor; yerleşimin kayması videoya girmiyor (bkz.
+      // [RecordingSession]).
+      appBar: _recordingLocked ? null : AppBar(
+        title: !widget.showTitle
+            ? null
+            : Text(
+                widget.title ??
+                    (widget.mode == GameMode.versusEngine
+                        // Düzey burada yazmıyor: dar ekranda başlığa
+                        // sığmayıp üç noktaya iniyordu ve zaten tahtanın
+                        // yanındaki oyuncu satırında yazıyor.
+                        ? t('game.vsEngine')
+                        : t('game.board')),
+              ),
         actions: [
           IconButton(
             tooltip: t('common.flipBoard'),
@@ -1445,7 +1464,8 @@ class _GameScreenState extends State<GameScreen> {
         ],
       ),
       body: SafeArea(
-        top: false,
+        // Üst çubuk yokken (kayıt) üstteki boşluğu SafeArea veriyor.
+        top: _recordingLocked,
         child: twoColumn
             ? _wideBody(
                 scheme,
@@ -1467,6 +1487,7 @@ class _GameScreenState extends State<GameScreen> {
                   atLive: atLive,
                   finished: finished,
                   cap: cap,
+                  expand: false,
                 ),
               ),
       ),
@@ -1630,53 +1651,54 @@ class _GameScreenState extends State<GameScreen> {
   static const double _nameStripGap = 12;
 
   /// Tahta ve çevresindeki boşluk; kalan alana sığan en büyük kare.
+  /// [expand]: tahta kalan bütün yeri alıp ortasına yerleşiyor (geniş
+  /// yerleşim; orada grubun boyu zaten tahtaya göre). `false`: yalnızca
+  /// tahtanın kendisi; yeri çağıran ayırıyor (dar yerleşim, [_narrowBody]).
   Widget _boardArea({
     required List<BoardArrow> arrows,
     required bool atLive,
     required bool finished,
     required double cap,
+    bool expand = true,
   }) {
-    return Expanded(
-      child: Center(
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-          child: LayoutBuilder(
-            builder: (context, constraints) {
-              final side = Layout.boardSide(
-                constraints.maxWidth,
-                constraints.maxHeight,
-                cap,
-              );
-              return RepaintBoundary(
-                key: _boardImageKey,
-                child: SizedBox(
-                  width: side,
-                  height: side,
-                  child: ChessBoardWidget(
-                    game: _game,
-                    flipped: _flipped,
-                    // Kayıtlı oyunda hamle oynamak oyunu değiştirmez;
-                    // deneme olarak çalışır.
-                    interactive:
-                        (_replayMode || atLive || _freeBoard) && !finished,
-                    animateLastMove: _animateBoard,
-                    movableSide:
-                        widget.mode == GameMode.versusEngine && !_engineStalled
-                            ? widget.playerColor
-                            : null,
-                    lastMove: _explore.isNotEmpty
-                        ? _explore.last.move
-                        : (_cursor >= 0 ? _history[_cursor].move : null),
-                    onMove: _onBoardMove,
-                    arrows: arrows,
-                  ),
-                ),
-              );
-            },
-          ),
-        ),
+    final area = Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+      child: LayoutBuilder(
+        builder: (context, constraints) {
+          final side = Layout.boardSide(
+            constraints.maxWidth,
+            constraints.maxHeight,
+            cap,
+          );
+          return RepaintBoundary(
+            key: _boardImageKey,
+            child: SizedBox(
+              width: side,
+              height: side,
+              child: ChessBoardWidget(
+                game: _game,
+                flipped: _flipped,
+                // Kayıtlı oyunda hamle oynamak oyunu değiştirmez;
+                // deneme olarak çalışır.
+                interactive:
+                    (_replayMode || atLive || _freeBoard) && !finished,
+                animateLastMove: _animateBoard,
+                movableSide:
+                    widget.mode == GameMode.versusEngine && !_engineStalled
+                        ? widget.playerColor
+                        : null,
+                lastMove: _explore.isNotEmpty
+                    ? _explore.last.move
+                    : (_cursor >= 0 ? _history[_cursor].move : null),
+                onMove: _onBoardMove,
+                arrows: arrows,
+              ),
+            ),
+          );
+        },
       ),
     );
+    return expand ? Expanded(child: Center(child: area)) : area;
   }
 
   /// Telefon ve dar pencere: her şey alt alta.
@@ -1684,11 +1706,28 @@ class _GameScreenState extends State<GameScreen> {
     return ContentWidth(
       child: Column(
         children: [
-          if (widget.sequence != null) _sequenceBar(scheme),
+          // Kayıt sürerken "Oyun 5 / 211" ve oklar videoda işe yaramıyor
+          // (kullanıcının isteği; üst çubuk gibi).
+          if (widget.sequence != null && !_recordingLocked)
+            _sequenceBar(scheme),
           if (_warning != null) _warningBanner(scheme),
-          _playerRow(scheme, top: true),
-          board,
-          _playerRow(scheme, top: false),
+          // Adlar tahtaya yapışık; üçü tek blok olarak kalan yerin
+          // ortasında (geniş yerleşimdeki gibi). Eskiden yalnızca tahta
+          // ortalanıyordu ve artan boşluk adlarla tahtanın arasına
+          // giriyordu: telefonda adlar tahtadan kopuk duruyordu, ekran
+          // kaydında (üst çubuk ve telefonun çubukları yokken) aralık daha
+          // da büyüyordu (kullanıcı, 24 Kasım 2026). Tahta yine sığdığı
+          // kadar büyük: kalan yeri [Flexible] veriyor.
+          Expanded(
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                _playerRow(scheme, top: true),
+                Flexible(child: board),
+                _playerRow(scheme, top: false),
+              ],
+            ),
+          ),
           if (_explore.isNotEmpty) _exploreCard(scheme),
           // Motor şeridi için sabit yükseklik: aç/kapa tahtayı kaydırmaz.
           SizedBox(
@@ -1816,7 +1855,8 @@ class _GameScreenState extends State<GameScreen> {
       clipBehavior: Clip.antiAlias,
       child: Column(
         children: [
-          if (widget.sequence != null) ...[
+          // Kayıt sürerken yok (bkz. dar yerleşim).
+          if (widget.sequence != null && !_recordingLocked) ...[
             _sequenceBar(scheme),
             Divider(height: 1, color: scheme.outlineVariant),
           ],

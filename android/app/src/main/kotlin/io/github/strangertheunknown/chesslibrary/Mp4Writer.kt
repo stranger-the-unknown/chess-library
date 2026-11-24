@@ -62,6 +62,20 @@ class Mp4Writer(
 
     @Volatile private var capturing = false
 
+    /**
+     * İş parçacıklarına "çık": [stop] onlar zamanında bitmeyince veriyor.
+     * Döngüler en geç 10 ms'de bir bakıyor. Kodlayıcılar ancak iş
+     * parçacıkları çıktıktan sonra kapatılıyor (bkz. [stop]).
+     */
+    @Volatile private var abandon = false
+
+    /**
+     * Kaydın sonu eksik kalmış olabilir: bir iş parçacığı hata verdi ya da
+     * zamanında bitmedi. Kayıt yine kaydediliyor, kullanıcıya söyleniyor.
+     */
+    @Volatile var incomplete = false
+        private set
+
     /** Kaydın durduğu an: ses izi buraya kadar tamamlanıyor. */
     @Volatile private var stopAtNs = Long.MAX_VALUE
     private var videoThread: Thread? = null
@@ -140,8 +154,10 @@ class Mp4Writer(
             null,
             null,
         )
-        videoThread = Thread({ drainVideo() }, "record-video").apply { start() }
-        audioThread = Thread({ pumpAudio() }, "record-audio").apply { start() }
+        videoThread = Thread({ guarded("görüntü") { drainVideo() } }, "record-video")
+            .apply { start() }
+        audioThread = Thread({ guarded("ses") { pumpAudio() } }, "record-audio")
+            .apply { start() }
         Log.i(TAG, "kayıt başladı: ${width}x$height, $name")
     }
 
@@ -154,15 +170,34 @@ class Mp4Writer(
         if (!capturing) return null
         stopAtNs = System.nanoTime()
         capturing = false
+        // Görüntünün kaynağı önce kapanıyor: kodlayıcıya yeni kare gelmiyor.
+        // Eskiden en sonda kapanıyordu; kodlayıcı "giriş bitti" işaretinden
+        // sonra da kare alıyordu.
+        display?.release()
+        display = null
         try {
             // Ses izi durma anına kadar tamamlanıyor (bkz. pumpAudio).
             audioThread?.join(15_000)
             video.signalEndOfInputStream()
-            videoThread?.join(5_000)
+            videoThread?.join(10_000)
         } catch (e: Exception) {
             Log.w(TAG, "durdururken", e)
         }
-        display?.release()
+        // Kodlayıcılar, onları kullanan iş parçacıkları bitmeden
+        // kapatılmıyor. 10.10.0–10.11.1'de görüntü iş parçacığı
+        // 5 sn'de bitmeyince kodlayıcı altından kapatılıyordu; iş parçacığı
+        // "Invalid to call during stop()" ile düşüyor, uygulamayı da
+        // götürüyordu ve video yarım (.pending) kalıyordu (öykünücüde,
+        // 24 Kasım 2026).
+        if (videoThread?.isAlive == true || audioThread?.isAlive == true) {
+            incomplete = true
+            Log.w(TAG, "iş parçacıkları zamanında bitmedi; kaydın sonu eksik olabilir")
+            abandon = true
+            runCatching {
+                videoThread?.join(5_000)
+                audioThread?.join(5_000)
+            }
+        }
         sounds.onPlayed = null
         runCatching { video.stop() }
         runCatching { video.release() }
@@ -192,9 +227,24 @@ class Mp4Writer(
         return "$RELATIVE_DIR/$name.mp4"
     }
 
+    /**
+     * İş parçacığının gövdesi: hata uygulamayı düşürmesin. Yakalanmayan bir
+     * hata bütün süreci kapatıyordu; video da yarım kalıyordu. Şimdi o ana
+     * kadar yazılan kısım kaydediliyor ve kaydın eksik olabileceği
+     * söyleniyor ([incomplete]).
+     */
+    private fun guarded(what: String, body: () -> Unit) {
+        try {
+            body()
+        } catch (e: Exception) {
+            incomplete = true
+            Log.e(TAG, "$what yazılırken hata", e)
+        }
+    }
+
     private fun drainVideo() {
         val info = MediaCodec.BufferInfo()
-        while (true) {
+        while (!abandon) {
             val index = video.dequeueOutputBuffer(info, 10_000)
             if (index == MediaCodec.INFO_OUTPUT_FORMAT_CHANGED) {
                 synchronized(lock) {
@@ -224,7 +274,7 @@ class Mp4Writer(
         val block = ShortArray(BLOCK)
         val info = MediaCodec.BufferInfo()
         var inputDone = false
-        while (true) {
+        while (!abandon) {
             if (!inputDone) {
                 val inIndex = audio.dequeueInputBuffer(10_000)
                 if (inIndex >= 0) {

@@ -663,6 +663,8 @@ class Strings {
     'settings.engineSection': 'Motor',
     'record.menu': 'Ekran kaydı al',
     'record.saved': 'Video kaydedildi: {path}',
+    'record.savedIncomplete':
+        'Video kaydedildi, ama sonu eksik olabilir: {path}',
     'record.notSaved': 'Kayıt kaydedilemedi.',
     'record.unsupported': 'Ekran kaydı Android 10 ve sonrasında yapılabiliyor.',
     'record.linuxX11': 'Ekran kaydı şimdilik yalnızca X11 oturumunda yapılabiliyor.',
@@ -1289,6 +1291,7 @@ class Strings {
     'settings.engineSection': 'Engine',
     'record.menu': 'Record the screen',
     'record.saved': 'Video saved: {path}',
+    'record.savedIncomplete': 'Video saved, but its end may be missing: {path}',
     'record.notSaved': 'The recording could not be saved.',
     'record.unsupported': 'Screen recording needs Android 10 or later.',
     'record.linuxX11': 'Screen recording works only in an X11 session for now.',

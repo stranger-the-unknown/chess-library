@@ -694,6 +694,7 @@ class HomeScreen extends StatelessWidget {
             uciMoves: game.uciMoves,
             startFen: game.startFen,
             title: game.title,
+            showTitle: false,
             initialResult: game.result,
             whiteName: game.white == '?' ? null : game.white,
             blackName: game.black == '?' ? null : game.black,

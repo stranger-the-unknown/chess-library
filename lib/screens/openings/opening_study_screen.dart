@@ -670,7 +670,10 @@ class _StudyViewState extends State<_StudyView> {
     final practiceSide = _flipped ? engine.Color.black : engine.Color.white;
 
     final screen = Scaffold(
-      appBar: AppBar(
+      // Kayıt sürerken üst çubuk yok (oyun ekranındaki gibi; bkz.
+      // GameScreen): düğmeleri videoda işe yaramıyor. Varyantın adı o sırada
+      // tahtanın üstündeki satırda, ailenin yanında yazıyor ([_header]).
+      appBar: _recordingLocked ? null : AppBar(
         title: Text(opening.variation),
         actions: [
           IconButton(
@@ -806,7 +809,8 @@ class _StudyViewState extends State<_StudyView> {
         ],
       ),
       body: SafeArea(
-        top: false,
+        // Üst çubuk yokken (kayıt) üstteki boşluğu SafeArea veriyor.
+        top: _recordingLocked,
         child: Layout.isTwoColumn(context)
             ? _wideBody(scheme, opening, practiceSide, arrows)
             : ContentWidth(
@@ -1004,7 +1008,9 @@ class _StudyViewState extends State<_StudyView> {
   }
 
   Widget _header(ColorScheme scheme) {
-    final sequence = widget.showSequence;
+    // Kayıt sürerken önceki / sonraki varyant okları yok: videoda işe
+    // yaramıyor (kullanıcının isteği; üst çubuk gibi). Satır kalıyor.
+    final sequence = widget.showSequence && !_recordingLocked;
     return Padding(
       // Oklar varken satır onların boyunda; dikey pay daralıyor ki tahta
       // küçülmesin.
@@ -1031,7 +1037,9 @@ class _StudyViewState extends State<_StudyView> {
           const SizedBox(width: 8),
           Expanded(
             child: Text(
-              widget.opening.family,
+              // Kayıt sürerken üst çubuk yok; varyantın adı yalnızca orada
+              // yazıyordu, videoda kaybolmasın diye burada da yazıyor.
+              _recordingLocked ? widget.opening.title : widget.opening.family,
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
               style: TextStyle(

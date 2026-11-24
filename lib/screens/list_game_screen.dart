@@ -72,6 +72,7 @@ class _ListGameScreenState extends State<ListGameScreen> {
       uciMoves: game.uciMoves,
       startFen: game.startFen,
       title: game.name,
+      showTitle: false,
       initialResult: game.result,
       whiteName: game.white,
       blackName: game.black,

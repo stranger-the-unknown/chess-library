@@ -155,6 +155,11 @@ pil) ve alttaki gezinme çubuğu gizlenir, videoya girmez; kayıt bitince
 geri gelir. Bir uygulama ilk kez tam ekrana geçtiğinde Android bir kereye
 mahsus bir tam ekran uyarısı gösterir (yukarıdan kaydırarak çıkılabileceğini
 söyler), o da o videoya girer; uyarı onaylanınca bir daha çıkmaz.
+Uygulamanın üst çubuğu (geri, tahtayı çevir, motor, ⋮) ve listeden açılan
+oyunda "Oyun 3 / 12" satırıyla okları da kayıt sürerken gizlenir; açılışın
+adı tahtanın üstündeki satıra geçer.
+Video kapatılırken bir sorun çıkarsa uygulama artık kapanmaz: kaydedilen
+kısım saklanır ve mesaj videonun sonunun eksik olabileceğini söyler.
 Linux'ta yalnızca uygulamanın penceresi kaydedilir, ses bilgisayarın genel
 çıkışından alınır (kayıt sırasında başka yerde çalan ses de girer); X11
 oturumu ve GStreamer gerekir, eksikse ne gerektiği söylenir. Paylaşımda
@@ -436,6 +441,8 @@ taşıma, silme.
   sıralama geçerli; oyunu açtığın andaki hâliyle sabittir (okundu
   işaretleyince kaymaz). Liste bitince durur, sonraki listeye geçmez.
   Tahtanın yönü ve açık motor yeni oyuna taşınır.
+- Listeden ya da PGN'den açılan oyunun adı üst çubukta yazmaz: telefonda
+  hiç sığmıyordu, iki oyuncunun tam adı zaten tahtanın yanında yazıyor.
 - **İzle**: oyun ekranındaki oynat tuşu hamleleri izleme hızıyla oynatır
   (gezinme satırındaki hız düğmesi ya da Ayarlar → **İzleme hızı**);
   sonda **Baştan izle** olur. Elle gezinmek, bir hamleye dokunmak ya da

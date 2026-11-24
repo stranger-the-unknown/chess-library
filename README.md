@@ -166,6 +166,12 @@ battery) and navigation bar are hidden, so they are not in the video, and
 they come back when the recording ends. The first time an app goes full
 screen, Android shows a one-off "Viewing full screen" note that also ends
 up in that video; after **Got it** it does not appear again.
+The app's own top bar (back, flip, engine, ⋮) and, in a game from a list,
+the "Game 3 of 12" row with its arrows are hidden while recording too; an
+opening's name moves to the line above the board.
+If something goes wrong while the video is being closed, the app no longer
+quits: what was recorded is saved and the message says its end may be
+missing.
 On Linux only the app's window is recorded and the sound comes from the
 computer's main output (other sound playing meanwhile is recorded too); it
 needs an X11 session and GStreamer, and says what is missing. So that a
@@ -456,6 +462,9 @@ delete them.
   the game (marking a game read does not shift it). It stops at the end
   of the list and does not move on to the next list. The board’s
   orientation and a running engine carry over to the new game.
+- A game opened from a list or a PGN does not repeat its name in the top
+  bar: on a phone it never fitted, and both players' full names are
+  already beside the board.
 - **Watch**: the play button on the game screen plays the moves at the
   playback speed (the speed button in the navigation row, or Settings →
   **Playback speed**); at the end it becomes **Watch from the start**.

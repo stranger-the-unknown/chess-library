@@ -44,8 +44,9 @@ class RecordingSession {
   ///
   /// Android'de kayıt ekranın tamamını alıyor: çubuklar videoya giriyordu.
   /// Instagram onları kendiliğinden kırpıyordu, YouTube kırpmıyor
-  /// (kullanıcı, 24 Kasım 2026). Kayıt boyunca uygulama tam ekran; tahta da
-  /// biraz büyüyor. Linux'ta kayıt yalnızca pencereyi aldığı için bir şey
+  /// (kullanıcı, 24 Kasım 2026). Kayıt boyunca uygulama tam ekran. (Dikey
+  /// telefonda tahta bundan büyümüyor: boyunu ekranın genişliği
+  /// belirliyor.) Linux'ta kayıt yalnızca pencereyi aldığı için bir şey
   /// yapılmıyor. Testler değiştirebilir.
   @visibleForTesting
   static Future<void> Function(bool hidden) systemBars = _setSystemBars;
@@ -163,7 +164,9 @@ class RecordingSession {
         context,
         saved == null
             ? t('record.notSaved')
-            : t('record.saved', {'path': saved}),
+            // Kaydın sonu eksik olabilirse söyleniyor (sessizce geçilmiyor).
+            : t(recorder.lastIncomplete ? 'record.savedIncomplete' : 'record.saved',
+                {'path': saved}),
       );
     } finally {
       heartbeat?.remove();
