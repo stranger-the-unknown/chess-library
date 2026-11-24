@@ -144,6 +144,10 @@ class _ChessBoardWidgetState extends State<ChessBoardWidget>
     if (!widget.interactive) {
       _dragFrom = null;
       _dragPosition = null;
+      // Seçim de kalkıyor: bulmacada bir taş seçiliyken "Çözüm"e basınca
+      // seçili kare ve hamle noktaları oynayan çözümün üstünde kalıyordu.
+      _selected = null;
+      _legalFromSelected = const [];
     }
 
     final previous = oldWidget.lastMove;

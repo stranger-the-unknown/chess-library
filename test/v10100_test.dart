@@ -13,6 +13,7 @@ import 'package:chess_pgn_reader/models/playlist.dart';
 import 'package:chess_pgn_reader/screens/list_game_screen.dart';
 import 'package:chess_pgn_reader/screens/game_screen.dart';
 import 'package:chess_pgn_reader/screens/openings/opening_study_screen.dart';
+import 'package:chess_pgn_reader/services/engine/search_result.dart';
 import 'package:chess_pgn_reader/services/recording_session.dart';
 import 'package:chess_pgn_reader/services/screen_recording.dart';
 import 'package:chess_pgn_reader/widgets/move_list.dart';
@@ -449,6 +450,56 @@ void main() {
       );
       expect(find.text(t('record.saved',
           {'path': 'Videolar/Chess Library/oyun.mp4'})), findsNothing);
+      await tester.pumpWidget(const SizedBox());
+      await tester.pump(const Duration(seconds: 5));
+    }, skip: _noRecordMenu);
+
+    // 10.13.0 (inceleme): motor açıkken kayıt alınınca başlangıç konumunda
+    // ve sondaki bekleyişte motor satırı ve ok videoya giriyordu.
+    testWidgets('kayıt boyunca motor kapalı, bitince geri açılıyor',
+        (tester) async {
+      final asked = <String>[];
+      GameScreen.debugAnalyze = (fen) async {
+        asked.add(fen);
+        return const SearchResult(
+          bestMoveUci: 'e2e4',
+          scoreCp: 20,
+          depth: 10,
+          nodes: 1,
+          pvUci: ['e2e4'],
+        );
+      };
+      addTearDown(() => GameScreen.debugAnalyze = null);
+      await _pump(
+        tester,
+        const GameScreen(
+          uciMoves: _italian,
+          title: 'Fischer - Spassky',
+          startWithAnalysis: true,
+        ),
+      );
+      await tester.pump(const Duration(seconds: 2));
+      expect(asked, isNotEmpty, reason: 'motor açık başladı');
+
+      await _openMenuItem(tester, t('record.menu'));
+      asked.clear();
+      // Son hamleden sonraki 2 saniyelik bekleyişin içine kadar.
+      for (var i = 0; i < 11; i++) {
+        await tester.pump(const Duration(milliseconds: 500));
+      }
+      expect(_cursor(tester), 5, reason: 'son hamle oynandı');
+      expect(recorder.events.last, isNot('stop'), reason: 'kayıt sürüyor');
+      expect(asked, isEmpty, reason: 'kayıt sürerken motora sorulmadı');
+
+      for (var i = 0; i < 8; i++) {
+        await tester.pump(const Duration(milliseconds: 500));
+      }
+      await tester.pump();
+      expect(recorder.events.last, 'stop');
+      await tester.pump(const Duration(seconds: 2));
+      expect(find.byTooltip(t('game.analysisOff')), findsOneWidget,
+          reason: 'kayıt bitince motor yeniden açık');
+      expect(asked, isNotEmpty);
       await tester.pumpWidget(const SizedBox());
       await tester.pump(const Duration(seconds: 5));
     }, skip: _noRecordMenu);

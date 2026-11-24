@@ -68,13 +68,26 @@ class PgnParser {
         game = engine.ChessGame();
       }
 
-      final body = _normalizeUnicode(_stripDecorations(pgn));
+      var body = _normalizeUnicode(_stripDecorations(pgn));
+      // Boşluklu yazılmış sonuç ("1/2 - 1/2") da sonuçtur.
+      body = body.replaceAllMapped(
+        RegExp(r'(?<![\w/])(1/2|1|0)\s+-\s+(1/2|1|0)(?![\w/])'),
+        (m) {
+          final joined = '${m[1]}-${m[2]}';
+          return const {'1-0', '0-1', '1/2-1/2'}.contains(joined)
+              ? joined
+              : m[0]!;
+        },
+      );
 
       final resultMatch = RegExp(r'(1-0|0-1|1/2-1/2)').firstMatch(body);
       gameResult = resultMatch?.group(1) ?? headers['Result'];
       if (gameResult == '*') gameResult = null;
 
       for (final token in _tokenize(body)) {
+        // Hamle olmayan işaretler ("e.p.", tek başına "!", "+-", "=") hamle
+        // kaybı değil: "okunamayan hamle" sayılmıyor.
+        if (_isAnnotationOnly(token)) continue;
         final uci = _matchSanToken(token);
         if (uci == null) {
           skippedTokens.add(token);
@@ -155,9 +168,18 @@ class PgnParser {
   /// Başlıkları, yorumları, varyasyonları ve NAG işaretlerini temizler.
   String _stripDecorations(String pgn) {
     var clean = pgn.replaceAll(RegExp(r'^\s*%.*$', multiLine: true), ' ');
-    clean = clean.replaceAll(RegExp(r'\[[^\]]*\]'), ' ');
+    // Başlıklar tırnağa bakılarak siliniyor ([_readHeaders] ile aynı kalıp).
+    // Eskiden ilk `]`'e kadar siliniyordu: değerinde köşeli ayraç olan bir
+    // başlık (`[Event "Titled Tuesday [Early] 2024"]`) hamle metnine artık
+    // bırakıyor, sorunsuz okunan oyun "eksik okundu" diye işaretleniyordu;
+    // kalan artıkta açık bir `(` varsa oyunun bütün hamleleri yutuluyordu.
+    clean = clean.replaceAll(
+        RegExp(r'\[\s*\w+\s*"(?:[^"\\]|\\.)*"\s*\]'), ' ');
+    // Yorumlar köşeli ayraçlardan önce: yorumun içindeki tek bir `[`,
+    // sonraki `[%clk …]`'in `]`'ine kadar aradaki hamleleri de siliyordu.
     clean = _stripBraces(clean);
     clean = clean.replaceAll(RegExp(r';[^\n]*'), ' ');
+    clean = clean.replaceAll(RegExp(r'\[[^\]]*\]'), ' ');
     clean = _stripParentheses(clean);
     clean = clean.replaceAll(RegExp(r'\$\d+'), ' ');
     return clean;
@@ -213,10 +235,20 @@ class PgnParser {
     text = text.replaceAll(RegExp(r'\b\d+\.(\.\.)?'), ' ');
     return text
         .split(RegExp(r'\s+'))
-        .map((token) => token.trim())
-        .where((token) => token.isNotEmpty && token != '.')
+        // "1. ...e5" ya da "1. ... e5": numaradan kalan noktalar hamlenin
+        // parçası değil. Yapışık yazılınca ("...e5") hamle kayboluyor, ayrı
+        // yazılınca "..." okunamayan hamle sayılıyordu.
+        .map((token) => token.trim().replaceFirst(RegExp(r'^\.+'), ''))
+        .where((token) => token.isNotEmpty)
         .toList();
   }
+
+  /// Hamle taşımayan belirteç: "e.p.", ya da yalnızca değerlendirme
+  /// işaretlerinden oluşan bir parça.
+  static bool _isAnnotationOnly(String token) =>
+      RegExp(r'^(e\.?p\.?|[!?+\-=/~]+)$', caseSensitive: false)
+          .hasMatch(token) ||
+      _normalizeSan(token).isEmpty;
 
   /// SAN metnini bu pozisyondaki bir hamleyle eşler.
   String? _matchSanToken(String token) {
@@ -239,7 +271,47 @@ class PgnParser {
       if (target != null && move.to.algebraic == target) continue;
       if (_matchesSan(move, wanted, moves)) return move.uci;
     }
-    return null;
+    return _matchLooseSan(wanted, moves);
+  }
+
+  /// Gereğinden fazla ayrıntıyla yazılmış hamleyi eşler: "Nge7" (öteki at
+  /// açmazda olduğu için yalın yazımı "Ne7"), "N1f3", uzun yazım
+  /// ("Ng1f3", "Ng1-f3", "e2e4").
+  ///
+  /// Yukarıdaki eşleme metni harfi harfine karşılaştırıyor; böyle bir hamle
+  /// atlanınca sıra kayıyor ve oyunun geri kalanı yanlış konumdan okunup
+  /// bozuluyordu. Eski veritabanlarında ve elle yazılmış dosyalarda bu
+  /// yazımlar var; PGN standardı okuyan tarafın kabul etmesini istiyor.
+  /// Yalnızca **tek** bir yasal hamleye uyuyorsa kabul ediliyor.
+  String? _matchLooseSan(String wanted, List<engine.ChessMove> moves) {
+    final match = RegExp(
+      r'^([KQRBN])?([a-h])?([1-8])?([a-h][1-8])(?:=?([QRBN]))?$',
+    ).firstMatch(wanted);
+    if (match == null) return null;
+    const pieces = {
+      'K': engine.PieceType.king,
+      'Q': engine.PieceType.queen,
+      'R': engine.PieceType.rook,
+      'B': engine.PieceType.bishop,
+      'N': engine.PieceType.knight,
+    };
+    final piece = pieces[match[1]] ?? engine.PieceType.pawn;
+    final fromFile = match[2];
+    final fromRank = match[3];
+    final target = match[4]!;
+    final promotion = pieces[match[5]];
+    engine.ChessMove? found;
+    for (final move in moves) {
+      if (move.to.algebraic != target) continue;
+      if (game.pieceAt(move.from)?.type != piece) continue;
+      final from = move.from.algebraic;
+      if (fromFile != null && from[0] != fromFile) continue;
+      if (fromRank != null && from[1] != fromRank) continue;
+      if (move.promotion != promotion) continue;
+      if (found != null) return null;
+      found = move;
+    }
+    return found?.uci;
   }
 
   /// Hamlenin SAN karşılığı aranan metinle aynı mı?
@@ -485,6 +557,10 @@ class PgnParser {
     if (tags != null) {
       for (final entry in tags.entries) {
         if (headerTags.containsKey(entry.key)) continue;
+        // Başlangıç konumu yalnızca geçerli [startFen]'den yazılıyor:
+        // içe alınırken reddedilmiş bir FEN başlıklarda kalmış olabilir,
+        // onu yazmak hamlelerin ait olmadığı bir konum bildirirdi.
+        if (entry.key == 'FEN' || entry.key == 'SetUp') continue;
         final value = entry.value.trim();
         if (value.isEmpty || value == '?' || value == '-') continue;
         headerTags[entry.key] = entry.value;

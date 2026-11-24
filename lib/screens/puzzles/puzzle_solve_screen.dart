@@ -295,8 +295,14 @@ class _PuzzleSolveScreenState extends State<PuzzleSolveScreen> {
         (String fen, {required int depth, required int movetimeMs}) =>
             EngineService.instance
                 .analyze(fen, depth: depth, movetimeMs: movetimeMs);
+    final token = _loadToken;
     final first = await analyze(fen, depth: depth, movetimeMs: movetimeMs);
     if (!first.cancelled) return first;
+    // Yalnızca cevaba hâlâ ihtiyaç varsa: bu arada başka bulmacaya
+    // geçildiyse (ya da ekran kapandıysa) yeniden sormak yeni bulmacanın
+    // isteğini düşürüyor, motor da iki fazladan arama yapıyordu ("sonraki"
+    // sonrası üç kat bekleme).
+    if (!mounted || token != _loadToken) return first;
     return analyze(fen, depth: depth, movetimeMs: movetimeMs);
   }
 
@@ -434,6 +440,11 @@ class _PuzzleSolveScreenState extends State<PuzzleSolveScreen> {
   /// Motor yargılayamadıysa (sonuç boş ya da iptal) `null` döner.
   Future<bool?> _isCorrect(engine.ChessMove move, engine.ChessGame after) async {
     if (after.isCheckmate) return true;
+    // Motor beklenirken "Yeniden"e basılmış ya da başka bulmacaya geçilmiş
+    // olabilir: o zaman sonuç bu bulmacaya yazılmamalı (bkz. aşağıdaki iki
+    // yer; eskiden sıfırlanan bulmaca "çözüm hattından çıktı" durumuna
+    // düşüyor, ipucu kapanıyordu).
+    final token = _loadToken;
 
     final expected = _expectedMove;
     if (expected != null) {
@@ -443,8 +454,15 @@ class _PuzzleSolveScreenState extends State<PuzzleSolveScreen> {
       final remaining = _puzzle.solution.length - _moves.length;
       final allowedMoves = (remaining + 1) ~/ 2;
       final reply = await _ask(after.fen, depth: 12, movetimeMs: 1200);
+      if (token != _loadToken) return null;
+      // `userMate`: bu hamleden **sonra** kullanıcının mat için oynaması
+      // gereken hamle sayısı. Bu hamleyle birlikte `userMate + 1` eder;
+      // kayıtlı çözümün süresini (`allowedMoves`) aşmamalı. Eskiden
+      // `<=` idi: "1 hamlede mat" bulmacasında mat etmeyip bir sonraki
+      // hamlede mat eden hamle "Doğru" sayılıyor, bulmaca çözüldü diye
+      // işaretleniyordu.
       final userMate = reply.mateIn == null ? null : -reply.mateIn!;
-      if (userMate != null && userMate > 0 && userMate <= allowedMoves) {
+      if (userMate != null && userMate > 0 && userMate < allowedMoves) {
         _onSolutionLine = false;
         return true;
       }
@@ -459,6 +477,7 @@ class _PuzzleSolveScreenState extends State<PuzzleSolveScreen> {
     if (baseline == null) {
       final fen = _game.fen;
       final fresh = await _ask(fen, depth: 13, movetimeMs: 1200);
+      if (token != _loadToken) return null;
       if (fresh.cancelled || fresh.bestMoveUci.isEmpty) return null;
       _baseline = fresh;
       _baselineFen = fen;
@@ -902,6 +921,10 @@ class _PuzzleSolveScreenState extends State<PuzzleSolveScreen> {
                       builder: (_) => GameScreen(
                         startFen: _puzzle.fen,
                         title: t('puzzles.analysisTitle'),
+                        // Tahta bulmacada göründüğü yönde açılıyor: siyah
+                        // çözüyorsa siyahın gözünden (açılış çalışma
+                        // ekranındaki gibi). Eskiden hep beyazdan açılıyordu.
+                        startFlipped: _flipped,
                       ),
                     ),
                   );

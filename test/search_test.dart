@@ -98,8 +98,11 @@ void main() {
       expect(pgn, contains('[Date "2026.01.02"]'));
       expect(pgn, contains('1. e4 e5 2. Nf3 1-0'));
       expect(pgn, contains('1. d4 d5 *'));
-      // Adı olmayan oyuncularda oyun adı kullanılır.
-      expect(pgn, contains('[White "İkinci"]'));
+      // Oyuncusu olmayan oyunda ad Event'e yazılır, oyuncular "?" kalır:
+      // dosya geri alınınca oyun aynı adla gelir (10.13.0; eskiden ad
+      // White'a yazılıyor, geri alınınca "İkinci - ?" oluyordu).
+      expect(pgn, contains('[Event "İkinci"]'));
+      expect(pgn, isNot(contains('[White "İkinci"]')));
     });
 
     test('boş liste boş metin verir', () {

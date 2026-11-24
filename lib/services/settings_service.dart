@@ -10,6 +10,7 @@ import 'engine/engine_service.dart' show EngineLevel;
 import 'prefs_write.dart';
 
 import '../l10n/app_strings.dart';
+import '../theme/app_look.dart';
 
 /// İzleme hızı: "İzle" ile oynatılırken hamleler arasındaki süre.
 ///
@@ -62,6 +63,10 @@ class SettingsService extends ChangeNotifier {
   // seçerse seçim kaydedilir ve cihazı izlemeyi bırakır.
   ThemeMode _themeMode = ThemeMode.system;
   AppLanguage _language = AppLanguage.system;
+
+  /// Uygulamanın görünümü (vurgu rengi, zemin tonu, simge); koyu / açık
+  /// kipten bağımsız (10.13.0).
+  AppLook _appLook = AppLook.yesil;
   static const String _defaultPieceSet = 'cburnett';
   static const String _defaultBoardTheme = 'brown';
 
@@ -132,6 +137,7 @@ class SettingsService extends ChangeNotifier {
   static bool? debugVibrationSupported;
 
   ThemeMode get themeMode => _themeMode;
+  AppLook get appLook => _appLook;
   AppLanguage get language => _language;
   String get pieceSet => _pieceSet;
   String get boardTheme => _boardTheme;
@@ -198,6 +204,9 @@ class SettingsService extends ChangeNotifier {
         (prefs.getInt('language') ?? AppLanguage.system.index)
             .clamp(0, AppLanguage.values.length - 1)];
     Strings.language = _language;
+    // Bilinmeyen ad (ya da başka türde bir değer) varsayılana düşer.
+    final storedLook = prefs.get('appLook');
+    _appLook = AppLook.byId(storedLook is String ? storedLook : null);
     // Kayitli ad artik listede yoksa (eski surumden guncelleme) varsayilana
     // donulur; aksi halde bulunamayan bir varlik yuklenmeye calisilir.
     final storedPieceSet = prefs.getString('pieceSet');
@@ -303,6 +312,13 @@ class SettingsService extends ChangeNotifier {
   set themeMode(ThemeMode value) {
     _themeMode = value;
     _set('themeMode', value.index);
+    notifyListeners();
+  }
+
+  set appLook(AppLook value) {
+    if (value == _appLook) return;
+    _appLook = value;
+    _set('appLook', value.id);
     notifyListeners();
   }
 

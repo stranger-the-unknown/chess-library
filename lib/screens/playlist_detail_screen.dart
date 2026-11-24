@@ -151,6 +151,7 @@ class _PlaylistDetailScreenState extends State<PlaylistDetailScreen> {
           // o oyuncunun olduğu oyunlarda onun gözünden.
           blackSide: _black,
           player: _player,
+          playlistId: widget.playlistId,
         ),
       ),
     );
@@ -480,7 +481,24 @@ class _PlaylistDetailScreenState extends State<PlaylistDetailScreen> {
     await _guard(() => _storage.toggleGameRead(widget.playlistId, game.id));
   }
 
+  /// Listedeki bütün oyunları okundu ya da okunmadı yapar.
+  ///
+  /// Önceki işaretler geri getirilemediği için önce soruluyor, sayısıyla
+  /// (açılışlardaki "Tümü öğrenildi" gibi; "onay pencereleri" ayarından
+  /// bağımsız). Eskiden menünün ilk iki maddesi sormadan çalışıyordu: bir
+  /// kayan parmak 200 oyunluk listenin okuma ilerlemesini siliyordu.
   Future<void> _setAllRead(bool read) async {
+    final count = _playlist?.games.length ?? 0;
+    final confirmed = await AppDialogs.confirm(
+      context,
+      title: t(read ? 'lists.markAllRead' : 'lists.markAllUnread'),
+      message: t(
+        read ? 'lists.markAllReadMessage' : 'lists.markAllUnreadMessage',
+        {'count': count},
+      ),
+      confirmLabel: t('openings.mark'),
+    );
+    if (!confirmed || !mounted) return;
     await _guard(() => _storage.setAllRead(widget.playlistId, read));
   }
 

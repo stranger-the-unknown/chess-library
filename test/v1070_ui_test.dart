@@ -648,11 +648,21 @@ void main() {
       await _dispose(tester);
     });
 
-    testWidgets('tek oyunluk listede sıra çubuğu yok', (tester) async {
+    testWidgets('tek oyunluk listede sıra ve ok yok, işaretler var',
+        (tester) async {
       final playlist = await list([_game('Ali', const ['e2e4'])]);
       await _pump(tester, PlaylistDetailScreen(playlistId: playlist.id));
       await open(tester, 'Ali');
       expect(find.byTooltip(t('lists.nextGame')), findsNothing);
+      expect(find.byTooltip(t('lists.previousGame')), findsNothing);
+      expect(find.text(t('lists.gamePosition', {'n': 1, 'total': 1})),
+          findsNothing);
+      // 10.13.0: okundu ve favori düğmeleri tek oyunda da var.
+      final screen = find.byType(GameScreen);
+      expect(
+          find.descendant(
+              of: screen, matching: find.byTooltip(t('lists.markRead'))),
+          findsOneWidget);
     });
   });
 

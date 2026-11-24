@@ -148,6 +148,10 @@ zamanında durdurmak ve fazlasını kırpmak gerekmez.
 Kayıt sürerken ekran dokunuşlara kapalıdır; yanlışlıkla bir dokunuş
 izlemeyi bozmaz. Erken bitirmek için Android'de kayıt bildirimindeki
 **Durdur**'a bas ya da uygulamadan çık; o ana kadarki kısım kaydedilir.
+Android 13 ve sonrasında bu bildirim yalnızca uygulamanın bildirimlerine
+izin verilmişse görünür (telefonun Ayarlar → Uygulamalar → Chess Library →
+Bildirimler); uygulama bu izni kendisi sormaz. İzin kapalıyken erken
+bitirmenin yolu uygulamadan çıkmaktır.
 Android'de tüm ekran kaydedilir (telefonun kendi kaydedicisindeki gibi);
 bildirimler görünmesin istersen kayıttan önce Rahatsız Etmeyin'i aç.
 Kayıt sürerken uygulama tam ekrandır: telefonun üstteki durum çubuğu (saat,
@@ -420,8 +424,12 @@ taşıma, silme.
   oyuncu, sonuç ve not üzerinde çalışır.
 - **Okundu işareti**: tek tek, tümü birden ya da **numara aralığı vererek**
   işaretleme; "okunmamış / okunan" filtresi. Okunan sayısı listeye girmeden
-  kartta görünür.
+  kartta görünür. **Tümünü okundu / okunmadı işaretle** önce sorar (kaç
+  oyunun işaretinin değişeceğini yazar): önceki işaretler geri getirilemez.
 - **Favoriler**: satırdaki yıldızla işaretlenir, kendi filtresi vardır.
+- Okundu işareti ve favori yıldızı **oyunun içinde de** var: listeden
+  açılan oyunda "Oyun 3 / 12" satırında, okların solunda. Oyunu bitirince
+  işaretlemek için listeye dönmek gerekmez.
 - **Oyun filtrele** — başlık menüsünden. Beyaz oyuncu, siyah oyuncu ya da
   ikisi; biri boş bırakılabilir. **Renk fark etmesin** işaretlenirse tek
   ad o oyuncunun bütün oyunlarını, iki ad da o iki kişinin birbirine
@@ -501,6 +509,16 @@ silmeden önce yedek al.
 ## Ayarlar
 
 - **Tema** — koyu, açık ya da sistemi izle. Varsayılan: sistemi izler.
+- **Renk ve simge** — on görünüm: Yeşil (varsayılan), Gece mavisi, Gök
+  mavisi, Petrol, Mor, Bordo, Mercan, Altın, Kahve, Antrasit. Seçilen
+  görünüm uygulamanın vurgu rengini, zeminlerin tonunu ve ana menüdeki
+  logoyu değiştirir; her görünümün koyu ve açık kipi vardır. **Android'de
+  uygulamanın simgesi de değişir**: simge değişirken uygulama bir kez
+  kendiliğinden kapanıp yeniden açılır (Android, eski simgeyle açılmış
+  uygulamayı kapatıyor), ana ekrandaki simgenin yenilenmesi birkaç saniye
+  sürebilir ve ana ekrana elle konmuş kısayol yerinden kalkabilir (uygulama
+  çekmecesinden yeniden eklenir). Linux'ta ve Windows'ta yalnızca renkler
+  değişir, simge aynı kalır.
 - **Dil** — sistem, Türkçe, İngilizce.
 - **Tahta görünümü** — 32 seçenek:
   - **12 düz renk** (kahve, yeşil, turnuva, mavi, gri, arduvaz, kum,

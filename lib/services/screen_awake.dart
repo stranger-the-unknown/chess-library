@@ -1,5 +1,6 @@
 import 'dart:async';
 
+import 'package:flutter/foundation.dart' show visibleForTesting;
 import 'package:wakelock_plus/wakelock_plus.dart';
 
 /// Ekranın kendiliğinden kapanmasını geçici olarak engeller.
@@ -47,7 +48,34 @@ class ScreenAwake {
     _setter(false);
   }
 
+  /// Ekranı şu an açık tutan örnek sayısı.
+  ///
+  /// Kilit telefonda tek ve ortak; eklenti saymıyor. İki ekran üst üste
+  /// bindiğinde (listede sonraki oyuna geçiş: yeni ekran kurulur, eskisi
+  /// aynı karenin sonunda kapanır; bulmacadan açılan analiz tahtasından
+  /// geri dönüş) kapanan ekranın bırakması kilidi ötekinin elinden de
+  /// alıyordu: ikinci oyundan itibaren telefon izlerken uyuyordu, öteki
+  /// ekran ise kilidi hâlâ tuttuğunu sanıp yeniden istemiyordu. Kilit artık
+  /// son tutan bırakınca kapanıyor.
+  static int _holders = 0;
+
+  /// Testler için: eklentinin yerine geçer.
+  @visibleForTesting
+  static void Function(bool keepOn)? debugPlatform;
+
   static void _platform(bool keepOn) {
+    if (keepOn) {
+      _holders++;
+      if (_holders > 1) return;
+    } else {
+      if (_holders > 0) _holders--;
+      if (_holders > 0) return;
+    }
+    final override = debugPlatform;
+    if (override != null) {
+      override(keepOn);
+      return;
+    }
     // Eklenti olmayan ortamda (test, desteklenmeyen platform) sessizce geç.
     final work = keepOn ? WakelockPlus.enable() : WakelockPlus.disable();
     work.catchError((Object _) {});

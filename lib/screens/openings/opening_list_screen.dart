@@ -93,16 +93,20 @@ class _OpeningListScreenState extends State<OpeningListScreen> {
       _all.where((o) => !_hidden.contains(o.family)).toList();
 
   List<Opening> get _visible {
-    final query = _query.trim().toLowerCase();
+    // Oyun ve bulmaca aramasındaki gibi Türkçe harfler katlanıyor: "sah"
+    // yazınca "Şah", "acik" yazınca "Açık" bulunuyor. Eskiden yalnızca
+    // küçük harfe çevriliyordu; ş, ç, ğ, ö, ü, ı tam yazılmadıkça açılış
+    // bulunmuyordu.
+    final query = foldForSearch(_query.trim());
     return _shown.where((opening) {
       if (_onlyFavorites && _progress[opening.id]?.favorite != true) {
         return false;
       }
       if (query.isEmpty) return true;
-      return opening.family.toLowerCase().contains(query) ||
-          opening.variation.toLowerCase().contains(query) ||
-          opening.eco.toLowerCase().contains(query) ||
-          opening.sanMoves.join(' ').toLowerCase().contains(query);
+      return foldForSearch(opening.family).contains(query) ||
+          foldForSearch(opening.variation).contains(query) ||
+          foldForSearch(opening.eco).contains(query) ||
+          foldForSearch(opening.sanMoves.join(' ')).contains(query);
     }).toList();
   }
 

@@ -123,6 +123,47 @@ void main() {
     }
   });
 
+  // 10.13.0 (inceleme): oyuncu adı olmayan oyunda ad üst çubuktan kalkınca
+  // oyunu tanıtan hiçbir şey kalmıyordu; eski "A - B" adlı kayıtlarda da
+  // adlar tahtanın yanına gelmiyordu.
+  testWidgets('oyuncusu olmayan oyunda ad üst çubukta kalıyor',
+      (tester) async {
+    await _pump(
+      tester,
+      ListGameScreen(
+        games: [
+          SavedGame(
+            name: 'Oyun 2026-11-24 10:05',
+            uciMoves: _italian,
+            createdAt: DateTime(2026, 11, 24),
+          ),
+        ],
+        initialIndex: 0,
+      ),
+    );
+    expect(_inAppBar(find.text('Oyun 2026-11-24 10:05')), findsOneWidget);
+  });
+
+  testWidgets('eski "A - B" adlı kayıtta adlar tahtanın yanında',
+      (tester) async {
+    await _pump(
+      tester,
+      ListGameScreen(
+        games: [
+          SavedGame(
+            name: 'Capablanca - Alekhine',
+            uciMoves: _italian,
+            createdAt: DateTime(2026, 11, 24),
+          ),
+        ],
+        initialIndex: 0,
+      ),
+    );
+    expect(find.text('Capablanca'), findsOneWidget);
+    expect(find.text('Alekhine'), findsOneWidget);
+    expect(_inAppBar(find.textContaining('Capablanca')), findsNothing);
+  });
+
   testWidgets('kısa ekran başlıkları duruyor', (tester) async {
     await _pump(tester, GameScreen(title: t('home.freeBoard')));
     expect(_inAppBar(find.text(t('home.freeBoard'))), findsOneWidget);

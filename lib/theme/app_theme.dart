@@ -1,6 +1,9 @@
+import 'dart:math' as math;
+
 import 'package:flutter/material.dart';
 
 import '../widgets/cursors.dart';
+import 'app_look.dart';
 
 /// Uygulamanın renk paleti ve tema tanımları.
 ///
@@ -79,6 +82,89 @@ class AppTheme {
 
   static ThemeData get dark => _build(_darkScheme);
   static ThemeData get light => _build(_lightScheme);
+
+  /// Seçili görünümün teması (10.13.0). [AppLook.yesil] bugüne kadarki
+  /// temanın aynısıdır; ötekilerde vurgu rengi ve zeminlerin tonu değişir.
+  static ThemeData darkFor(AppLook look) => _themeFor(look, Brightness.dark);
+  static ThemeData lightFor(AppLook look) =>
+      _themeFor(look, Brightness.light);
+
+  static final Map<String, ThemeData> _lookThemes = {};
+
+  static ThemeData _themeFor(AppLook look, Brightness brightness) =>
+      _lookThemes.putIfAbsent(
+        '${look.id}/${brightness.name}',
+        () => _build(schemeFor(look, brightness)),
+      );
+
+  /// Görünümün renk tablosu.
+  ///
+  /// Temel tablo (koyu ya da açık) olduğu gibi alınıyor; yalnızca vurgu
+  /// renkleri görünümünkilerle, zeminlerin **tonu** görünümün tonuyla
+  /// değişiyor. Zeminlerin açıklığı aynı kaldığı için yazıların zeminle
+  /// karşıtlığı da korunuyor (`test/app_look_test.dart` her görünümde
+  /// ölçüyor).
+  static ColorScheme schemeFor(AppLook look, Brightness brightness) {
+    final dark = brightness == Brightness.dark;
+    final base = dark ? _darkScheme : _lightScheme;
+    final hue = look.hue;
+    if (hue == null) return base;
+
+    // Açık zeminler zaten çok açık; aynı doygunluk orada boyalı durmasın.
+    final saturation = dark ? look.saturation : look.saturation * 0.8;
+    Color tint(Color color) => HSLColor.fromColor(color)
+        .withHue(hue)
+        .withSaturation(saturation)
+        .toColor();
+
+    final accent = dark ? look.accentDark : look.accentLight;
+    final accentHsl = HSLColor.fromColor(accent);
+    return base.copyWith(
+      primary: accent,
+      onPrimary: _readableOn(accent),
+      // Koyu kipte kap, vurgunun koyu tonu (yeşilde de öyle: greenDark);
+      // açık kipte vurgunun çok açık bir tonu.
+      primaryContainer: dark
+          ? look.accentLight
+          : accentHsl
+              .withSaturation(math.min(accentHsl.saturation, 0.55))
+              .withLightness(0.88)
+              .toColor(),
+      onPrimaryContainer: dark
+          ? HSLColor.fromColor(look.accentLight)
+              .withSaturation(
+                  math.min(HSLColor.fromColor(look.accentLight).saturation, 0.5))
+              .withLightness(0.95)
+              .toColor()
+          : accentHsl.withLightness(0.12).toColor(),
+      surface: tint(base.surface),
+      surfaceContainerLowest: tint(base.surfaceContainerLowest),
+      surfaceContainerLow: tint(base.surfaceContainerLow),
+      surfaceContainer: tint(base.surfaceContainer),
+      surfaceContainerHigh: tint(base.surfaceContainerHigh),
+      surfaceContainerHighest: tint(base.surfaceContainerHighest),
+      onSurfaceVariant: tint(base.onSurfaceVariant),
+      outline: tint(base.outline),
+      outlineVariant: tint(base.outlineVariant),
+      inverseSurface: tint(base.inverseSurface),
+      onInverseSurface: tint(base.onInverseSurface),
+    );
+  }
+
+  /// [background] üstünde daha iyi okunan yazı rengi: koyu ya da beyaz.
+  static Color _readableOn(Color background) {
+    const darkInk = Color(0xFF0E1207);
+    return contrast(background, Colors.white) >= contrast(background, darkInk)
+        ? Colors.white
+        : darkInk;
+  }
+
+  /// İki rengin karşıtlık oranı (WCAG): 1 (aynı) – 21 (siyah / beyaz).
+  static double contrast(Color a, Color b) {
+    final la = a.computeLuminance();
+    final lb = b.computeLuminance();
+    return (math.max(la, lb) + 0.05) / (math.min(la, lb) + 0.05);
+  }
 
   static ThemeData _build(ColorScheme scheme) {
     final isDark = scheme.brightness == Brightness.dark;
@@ -281,7 +367,11 @@ extension AppPalette on ColorScheme {
       ? const Color(0xFF7FC24A)
       : const Color(0xFF3F7D1E);
 
-  Color get warning => const Color(0xFFE0A83A);
+  /// Uyarı ve favori yıldızı. Açık temada koyu ton: açık zeminde sarı
+  /// 2:1 karşıtlıkla neredeyse görünmüyordu.
+  Color get warning => brightness == Brightness.dark
+      ? const Color(0xFFE0A83A)
+      : const Color(0xFF8A5C00);
 
   Color get drawColor => brightness == Brightness.dark
       ? const Color(0xFF9E958A)
@@ -297,6 +387,14 @@ extension AppPalette on ColorScheme {
   Color get checkSquare => const Color(0xB3E5484D);
 
   /// Doğru / yanlış bulmaca geri bildirimi.
-  Color get correct => const Color(0xFF57B84E);
-  Color get wrong => const Color(0xFFD1584C);
+  ///
+  /// Açık temada koyu tonlar: tek bir renk iki temada kullanılıyordu ve
+  /// açık zeminde "Doğru! …" yazısı 2,1:1, yanlış kartı 3,2:1 karşıtlıkla
+  /// okunmuyordu (inceleme, 24 Kasım 2026).
+  Color get correct => brightness == Brightness.dark
+      ? const Color(0xFF57B84E)
+      : const Color(0xFF276B18);
+  Color get wrong => brightness == Brightness.dark
+      ? const Color(0xFFD1584C)
+      : const Color(0xFFB3261E);
 }

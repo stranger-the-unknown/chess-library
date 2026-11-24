@@ -269,6 +269,9 @@ class BackupService {
       if (mode == ImportMode.replace) {
         for (final key in previous.keys) {
           if (_notBackedUp.contains(key) || data.containsKey(key)) continue;
+          // Okunamadığı için kenara alınmış kayıtlar ("…_bozuk") silinmiyor:
+          // yedek o veriden eskiyse verinin tek kopyası onlar.
+          if (key.endsWith(AppStore.quarantineSuffix)) continue;
           await store.remove(key);
         }
       }

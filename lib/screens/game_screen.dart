@@ -49,6 +49,10 @@ class GameSequence {
     required this.length,
     this.onPrevious,
     this.onNext,
+    this.read = false,
+    this.favorite = false,
+    this.onToggleRead,
+    this.onToggleFavorite,
   });
 
   /// 1'den başlayan sıra ve toplam: "Oyun 3 / 12".
@@ -58,6 +62,14 @@ class GameSequence {
   /// Null ise o yönde oyun yok (listenin başı ya da sonu).
   final void Function(GameCarry carry)? onPrevious;
   final void Function(GameCarry carry)? onNext;
+
+  /// Oyunun listedeki işaretleri ve onları değiştiren düğmeler (10.13.0):
+  /// oyunu bitirince listeye dönmeden okundu işaretlenebiliyor. Null ise
+  /// düğme yok.
+  final bool read;
+  final bool favorite;
+  final VoidCallback? onToggleRead;
+  final VoidCallback? onToggleFavorite;
 }
 
 /// Tahta ekranı: PGN okuma, serbest oynama, analiz ve motora karşı oyun.
@@ -93,6 +105,7 @@ class GameScreen extends StatefulWidget {
     this.engineLevelIndex,
     this.whiteName,
     this.blackName,
+    this.pgnTags,
     this.initialWarning,
     this.startFlipped = false,
     this.startWithAnalysis = false,
@@ -101,6 +114,10 @@ class GameScreen extends StatefulWidget {
 
   /// Motor analizi açık başlasın (listede önceki oyundan taşınıyor).
   final bool startWithAnalysis;
+
+  /// Kayıtlı oyunun PGN başlıkları (tarih, turnuva, puanlar); "PGN
+  /// kopyala" bunları da yazıyor.
+  final Map<String, String>? pgnTags;
 
   /// [title] üst çubukta yazsın mı.
   ///
@@ -239,10 +256,18 @@ class _GameScreenState extends State<GameScreen> {
   bool get _freeBoard =>
       widget.mode == GameMode.analysis && !_replayMode;
 
-  bool get _replayMode =>
-      widget.mode == GameMode.analysis &&
-      (widget.pgnContent != null || widget.uciMoves != null) &&
-      _history.isNotEmpty;
+  bool get _replayMode => widget.mode == GameMode.analysis && _loadedGame;
+
+  /// Ekranda kayıtlı bir oyun mu okunuyor ([_loadInitialPosition] yükledi
+  /// ve konum sonradan değiştirilmedi).
+  ///
+  /// Eskiden bu, "hamle listesi boş değil" diye **hesaplanıyordu**. Kayıtlı
+  /// oyunda "FEN yapıştır" ya da "Pozisyonu düzenle" listeyi boşaltınca
+  /// tahta serbest oluyor, ilk hamle oyuna giriyor, liste dolunca da aynı
+  /// tahta yeniden "kayıtlı oyun" sayılıp ikinci hamleden itibaren her şey
+  /// deneme hamlesi oluyordu: gezinince hamleler siliniyor, "Listeye
+  /// kaydet" tek hamlelik oyun kaydediyordu.
+  bool _loadedGame = false;
 
   // Motor
   bool _analysisOn = false;
@@ -361,6 +386,9 @@ class _GameScreenState extends State<GameScreen> {
           : '$_warning  ·  $initialWarning';
     }
 
+    _loadedGame = (widget.pgnContent != null || widget.uciMoves != null) &&
+        _history.isNotEmpty;
+
     _cursor = -1;
     _game = engine.ChessGame.fromFen(_startFen);
     _blackFirst = _game.sideToMove == engine.Color.black;
@@ -406,6 +434,9 @@ class _GameScreenState extends State<GameScreen> {
       _history.add(entry);
       _cursor = _history.length - 1;
       _resultText = null;
+      // Serbest tahtada pes ettikten sonra oynamaya devam edilebiliyor;
+      // sonradan çıkan sonuçta "Pes edildi" yazısı kalıyordu.
+      _resigned = false;
       _savedToList = false;
     });
 
@@ -629,14 +660,27 @@ class _GameScreenState extends State<GameScreen> {
         title: widget.title ?? t('game.board'),
         rewind: () {
           _stopAutoPlay();
+          // Motor kayıt boyunca kapalı: açıkken başlangıç konumunda ve
+          // sondaki bekleyişte motor satırı ve en iyi hamle oku videoya
+          // giriyordu. Kayıt bitince eski hâline dönüyor.
+          _analysisBeforeRecording = _analysisOn;
+          if (_analysisOn) _setAnalysis(false);
           _goTo(-1);
         },
         watch: _watchToEnd,
         stopWatch: _stopAutoPlay,
         setLocked: (locked) {
-          if (mounted) setState(() => _recordingLocked = locked);
+          if (!mounted) return;
+          setState(() => _recordingLocked = locked);
+          if (!locked && _analysisBeforeRecording) {
+            _analysisBeforeRecording = false;
+            _setAnalysis(true);
+          }
         },
       );
+
+  /// Kayıt başlamadan önce motor açık mıydı ([_recordScreen] geri açar).
+  bool _analysisBeforeRecording = false;
 
   /// Kullanıcının kendi gezinmesi (düğmeler, hamleye dokunma) izlemeyi
   /// durduruyor: tahtayı o anda kendisi yönetmek istiyor.
@@ -796,7 +840,9 @@ class _GameScreenState extends State<GameScreen> {
     final sign = side == engine.Color.white ? 1 : -1;
     setState(() {
       _analysis = result;
-      _evalScoreCp = result.scoreCp * sign;
+      // Mat skoru ±(100000 − n) olarak geliyor; sonraki konum düşünülürken
+      // şeritte "+999.97" diye görünüyordu. Mat varken eski skor tutulmuyor.
+      _evalScoreCp = result.mateIn != null ? null : result.scoreCp * sign;
       _thinking = false;
     });
   }
@@ -846,7 +892,11 @@ class _GameScreenState extends State<GameScreen> {
     // alttaki ekran çoktan canlıyken çalışıyor. Konum hâlâ motorun
     // sırasında, o yüzden bir kez daha soruyoruz. Tek tekrar: döngüye
     // dönmesin.
-    if (result.cancelled) {
+    // Yalnızca bu istek hâlâ geçerliyse: ekran kapandıysa (çıkarken
+    // `stopAll` bu isteği düşürür) ya da konum değiştiyse yeniden sormak
+    // motoru saniyelerce boşuna çalıştırıyor, sonraki ekranın analizi de
+    // onun arkasında bekliyordu.
+    if (result.cancelled && mounted && token == _engineToken) {
       result = await EngineService.instance
           .bestMoveForLevel(fen, _level, history: history);
     }
@@ -936,11 +986,26 @@ class _GameScreenState extends State<GameScreen> {
   // -------------------------------------------------------------------------
 
   String _buildPgn() {
+    // Kayıtlı oyunda oyunun kendi başlıkları (tarih, turnuva, puanlar) ve
+    // oyuncuları yazılıyor. Eskiden yalnızca Event (oyunun adı) yazılıyor,
+    // oyuncular "?" kalıyor, tarih de bugünün tarihi oluyordu: metin geri
+    // yapıştırılınca oyuncusuz ve yanlış yıllı bir oyun çıkıyordu.
+    final white = widget.whiteName?.trim() ?? '';
+    final black = widget.blackName?.trim() ?? '';
+    final tags = <String, String>{
+      if (_loadedGame) ...?widget.pgnTags,
+      if (white.isNotEmpty) 'White': white,
+      if (black.isNotEmpty) 'Black': black,
+    };
+    final event = (tags['Event'] ?? '').trim();
+    if (event.isEmpty || event == '?' || event == '-') {
+      tags['Event'] = widget.title ?? t('app.title');
+    }
     return PgnParser.buildPgn(
       uciMoves: _history.map((e) => e.uci).toList(),
       startFen: _startFen == engine.ChessGame().fen ? null : _startFen,
       result: _resultText,
-      tags: {'Event': widget.title ?? t('app.title')},
+      tags: tags,
     );
   }
 
@@ -969,6 +1034,8 @@ class _GameScreenState extends State<GameScreen> {
     _stopAutoPlay();
     setState(() {
       _startFen = fen;
+      // Artık kayıtlı oyun değil, bu konumdan başlayan serbest bir tahta.
+      _loadedGame = false;
       _history.clear();
       _explore.clear();
       _cursor = -1;
@@ -1003,6 +1070,8 @@ class _GameScreenState extends State<GameScreen> {
   }
 
   Future<void> _editPosition() async {
+    // İzleme, düzenleyicinin arkasında oynamaya devam etmesin.
+    _stopAutoPlay();
     final fen = await Navigator.push<String>(
       context,
       MaterialPageRoute(
@@ -1157,6 +1226,8 @@ class _GameScreenState extends State<GameScreen> {
             children: [
               DropdownButtonFormField<String>(
                 mouseCursor: kClickable,
+                // Uzun liste adı pencereden taşmasın (üç noktayla kısalsın).
+                isExpanded: true,
                 initialValue: selectedId,
                 decoration: InputDecoration(labelText: t('game.list')),
                 items: playlists
@@ -1885,16 +1956,20 @@ class _GameScreenState extends State<GameScreen> {
   /// Sağa / sola oklar hamleler için kullanılıyor.
   Widget _sequenceBar(ColorScheme scheme) {
     final sequence = widget.sequence!;
+    // Tek oyunda sıra da ok da yok; satır yalnızca işaret düğmeleri için.
+    final single = sequence.length < 2;
     return Padding(
       padding: const EdgeInsets.fromLTRB(14, 1, 6, 1),
       child: Row(
         children: [
           Expanded(
             child: Text(
-              t('lists.gamePosition', {
-                'n': sequence.position,
-                'total': sequence.length,
-              }),
+              single
+                  ? ''
+                  : t('lists.gamePosition', {
+                      'n': sequence.position,
+                      'total': sequence.length,
+                    }),
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
               style: TextStyle(
@@ -1904,18 +1979,64 @@ class _GameScreenState extends State<GameScreen> {
               ),
             ),
           ),
-          _sequenceButton(
-            Icons.keyboard_arrow_up_rounded,
-            t('lists.previousGame'),
-            sequence.onPrevious,
-          ),
-          _sequenceButton(
-            Icons.keyboard_arrow_down_rounded,
-            t('lists.nextGame'),
-            sequence.onNext,
-          ),
+          if (sequence.onToggleRead != null)
+            _markButton(
+              sequence.read
+                  ? Icons.check_circle_rounded
+                  : Icons.circle_outlined,
+              sequence.read ? t('lists.markUnread') : t('lists.markRead'),
+              sequence.read ? scheme.success : scheme.onSurfaceVariant,
+              sequence.onToggleRead!,
+            ),
+          if (sequence.onToggleFavorite != null)
+            _markButton(
+              sequence.favorite
+                  ? Icons.star_rounded
+                  : Icons.star_border_rounded,
+              sequence.favorite
+                  ? t('common.favoriteRemove')
+                  : t('common.favoriteAdd'),
+              sequence.favorite ? scheme.warning : scheme.onSurfaceVariant,
+              sequence.onToggleFavorite!,
+            ),
+          if (!single) ...[
+            if (sequence.onToggleRead != null ||
+                sequence.onToggleFavorite != null)
+              const SizedBox(width: 6),
+            _sequenceButton(
+              Icons.keyboard_arrow_up_rounded,
+              t('lists.previousGame'),
+              sequence.onPrevious,
+            ),
+            _sequenceButton(
+              Icons.keyboard_arrow_down_rounded,
+              t('lists.nextGame'),
+              sequence.onNext,
+            ),
+          ],
         ],
       ),
+    );
+  }
+
+  /// Sıra satırındaki "okundu" ve "favori" düğmeleri; liste kartındaki
+  /// simgeler ve renklerle aynı.
+  Widget _markButton(
+    IconData icon,
+    String tooltip,
+    Color color,
+    VoidCallback onPressed,
+  ) {
+    return IconButton(
+      tooltip: tooltip,
+      icon: Icon(icon, color: color),
+      iconSize: 21,
+      style: IconButton.styleFrom(
+        minimumSize: const Size(40, 34),
+        padding: EdgeInsets.zero,
+        tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+      ),
+      onPressed: onPressed,
     );
   }
 

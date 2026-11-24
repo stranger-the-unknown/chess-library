@@ -9,7 +9,11 @@ import io.flutter.embedding.engine.FlutterEngine
 import io.flutter.plugin.common.MethodChannel
 import java.io.File
 
-class MainActivity : FlutterActivity() {
+/**
+ * Uygulamanın tek etkinliği. 10.12.0'a kadar adı `MainActivity` idi; o ad
+ * artık başlatıcı girdilerinden birinin (bkz. [AppIcon], manifest).
+ */
+class ChessActivity : FlutterActivity() {
     private val channelName = "chess_library/native"
 
     /** Hamle sesleri (bkz. [GameSounds]); Dart'taki `AndroidSound`. */
@@ -54,6 +58,20 @@ class MainActivity : FlutterActivity() {
                         result.success(gameSounds.play(name))
                     }
                     "failures" -> result.success(gameSounds.failures())
+                    else -> result.notImplemented()
+                }
+            }
+
+        // Uygulamanın simgesi (bkz. [AppIcon]); Dart'ta `AppIcon`.
+        MethodChannel(flutterEngine.dartExecutor.binaryMessenger, "chess_library/icon")
+            .setMethodCallHandler { call, result ->
+                when (call.method) {
+                    "set" -> try {
+                        result.success(AppIcon.set(this, call.arguments as? String ?: ""))
+                    } catch (e: Exception) {
+                        result.error("icon", e.message ?: e.toString(), null)
+                    }
+                    "current" -> result.success(AppIcon.current(this))
                     else -> result.notImplemented()
                 }
             }

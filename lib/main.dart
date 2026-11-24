@@ -9,6 +9,7 @@ import 'package:path_provider/path_provider.dart';
 import 'l10n/app_strings.dart';
 import 'widgets/responsive.dart';
 import 'screens/home_shell.dart';
+import 'services/app_icon.dart';
 import 'services/app_store.dart';
 import 'services/backup_service.dart';
 import 'services/corrupt_data.dart';
@@ -17,6 +18,7 @@ import 'services/prefs_write.dart';
 import 'services/settings_service.dart';
 import 'services/sound_service.dart';
 import 'services/unsaved_work.dart';
+import 'theme/app_look.dart';
 import 'theme/app_theme.dart';
 
 Future<void> main() async {
@@ -142,12 +144,33 @@ class _ChessAppState extends State<ChessApp> {
     return UnsavedWork.confirmExit(_navigatorKey.currentContext);
   }
 
+  /// Simgesi en son hangi görünüme çevrildi (aynısı yeniden istenmesin).
+  AppLook? _iconLook;
+
+  /// Uygulamanın simgesini seçili görünüme çevirir. Olmazsa söyler:
+  /// görünüm değişip simge eskide kalırsa kullanıcı nedenini bilmeli.
+  Future<void> _syncIcon() async {
+    final look = SettingsService.instance.appLook;
+    if (look == _iconLook) return;
+    _iconLook = look;
+    final error = await AppIcon.apply(look);
+    if (error == null || !mounted) return;
+    _messengerKey.currentState
+      ?..hideCurrentSnackBar()
+      ..showSnackBar(
+          SnackBar(content: Text(t('look.iconFailed', {'error': error}))));
+  }
+
   @override
   void initState() {
     super.initState();
     _windowChannel.setMethodCallHandler(_onWindowCall);
     diskWriteFailures.addListener(_onWriteFailure);
     corruptRecords.addListener(_onCorruptRecord);
+    // Uygulamanın simgesi görünümü izliyor: açılışta (yedekten dönen ya da
+    // yarıda kalmış bir değişiklik için) ve görünüm her değiştiğinde.
+    SettingsService.instance.addListener(_syncIcon);
+    _syncIcon();
     // Açılışta veri toparlandıysa ilk karede söyle.
     if (PrefsRecovery.quarantined.value != null || _restoreRolledBack) {
       WidgetsBinding.instance.addPostFrameCallback((_) => _onDataRecovered());
@@ -159,6 +182,7 @@ class _ChessAppState extends State<ChessApp> {
     _windowChannel.setMethodCallHandler(null);
     diskWriteFailures.removeListener(_onWriteFailure);
     corruptRecords.removeListener(_onCorruptRecord);
+    SettingsService.instance.removeListener(_syncIcon);
     super.dispose();
   }
 
@@ -212,6 +236,7 @@ class _ChessAppState extends State<ChessApp> {
       animation: SettingsService.instance,
       builder: (context, _) {
         final mode = SettingsService.instance.themeMode;
+        final look = SettingsService.instance.appLook;
         final isDark = mode == ThemeMode.dark ||
             (mode == ThemeMode.system &&
                 MediaQuery.platformBrightnessOf(context) == Brightness.dark);
@@ -222,8 +247,8 @@ class _ChessAppState extends State<ChessApp> {
             statusBarIconBrightness:
                 isDark ? Brightness.light : Brightness.dark,
             systemNavigationBarColor: isDark
-                ? AppTheme.dark.colorScheme.surface
-                : AppTheme.light.colorScheme.surface,
+                ? AppTheme.darkFor(look).colorScheme.surface
+                : AppTheme.lightFor(look).colorScheme.surface,
             systemNavigationBarIconBrightness:
                 isDark ? Brightness.light : Brightness.dark,
           ),
@@ -244,8 +269,8 @@ class _ChessAppState extends State<ChessApp> {
           supportedLocales: const [Locale('tr'), Locale('en')],
           title: t('app.title'),
           debugShowCheckedModeBanner: false,
-          theme: AppTheme.light,
-          darkTheme: AppTheme.dark,
+          theme: AppTheme.lightFor(look),
+          darkTheme: AppTheme.darkFor(look),
           themeMode: mode,
           home: const HomeShell(),
       // Masaüstünde bütün yazılar aynı oranda büyüyor, Linux'ta ayrıca

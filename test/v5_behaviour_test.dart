@@ -547,12 +547,12 @@ C00|French|İleri Varyant|e4 e6 d4 d5 e5
       // "Hamle sesleri"ne kadar gidilirse başlık yukarıda kalıyor ve
       // liste onu ağaçtan düşürüyor.
       await tester.scrollUntilVisible(
-        find.text('Ses ve titreşim'.toUpperCase()),
+        find.text(Strings.upper('Ses ve titreşim')),
         100,
       );
       await tester.pumpAndSettle();
 
-      expect(find.text('Ses ve titreşim'.toUpperCase()), findsOneWidget);
+      expect(find.text(Strings.upper('Ses ve titreşim')), findsOneWidget);
       expect(find.text('Titreşim'), findsOneWidget);
       expect(find.text('Kapalıyken titreşim de verilmez.'), findsOneWidget);
 
@@ -579,13 +579,13 @@ C00|French|İleri Varyant|e4 e6 d4 d5 e5
         (tester) async {
       SettingsService.debugVibrationSupported = false;
       await _pump(tester, const SettingsScreen());
-      await tester.scrollUntilVisible(find.text('Ses'.toUpperCase()), 100);
+      await tester.scrollUntilVisible(find.text(Strings.upper('Ses')), 100);
       await tester.pumpAndSettle();
 
       expect(find.text('Titreşim'), findsNothing);
       expect(find.text('Kapalıyken titreşim de verilmez.'), findsNothing);
-      expect(find.text('Ses ve titreşim'.toUpperCase()), findsNothing);
-      expect(find.text('Ses'.toUpperCase()), findsOneWidget);
+      expect(find.text(Strings.upper('Ses ve titreşim')), findsNothing);
+      expect(find.text(Strings.upper('Ses')), findsOneWidget);
     });
   });
 

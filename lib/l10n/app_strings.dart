@@ -32,6 +32,12 @@ class Strings {
   ///
   /// [AppLanguage.system] seçiliyken cihazın dili destekleniyorsa o,
   /// desteklenmiyorsa İngilizce kullanılır.
+  /// Metni büyük harfe çevirir. Türkçede i → İ, ı → I: düz büyütme
+  /// bölüm başlıklarını "VERI", "SES VE TITREŞIM" diye yazıyordu.
+  static String upper(String text) => code == 'tr'
+      ? text.replaceAll('i', 'İ').replaceAll('ı', 'I').toUpperCase()
+      : text.toUpperCase();
+
   static String get code {
     switch (language) {
       case AppLanguage.turkish:
@@ -407,7 +413,7 @@ class Strings {
     'lists.moveCount': '{count} hamle',
     'lists.customPosition': 'özel pozisyon',
     'lists.name': 'Ad',
-    'lists.search': 'Ara: numara, oyun adı, oyuncu ya da sonuç',
+    'lists.search': 'Ara: numara, ad, oyuncu, sonuç',
     'lists.noMatch': 'Bu filtreyle eşleşen oyun yok.',
     'lists.saveFailed':
         'Kaydedilemedi: cihazda yer kalmamış olabilir.',
@@ -443,6 +449,10 @@ class Strings {
     'lists.markUnread': 'Okunmadı işaretle',
     'lists.markAllRead': 'Tümünü okundu işaretle',
     'lists.markAllUnread': 'Tümünü okunmadı işaretle',
+    'lists.markAllReadMessage':
+        'Listedeki {count} oyunun tümü okundu olarak işaretlensin mi?',
+    'lists.markAllUnreadMessage':
+        'Listedeki {count} oyunun tümü okunmadı olarak işaretlensin mi?',
 
     // Bulmacalar
     'puzzles.title': 'Bulmacalar',
@@ -641,6 +651,18 @@ class Strings {
     'settings.themeDark': 'Koyu',
     'settings.themeLight': 'Açık',
     'settings.themeSystem': 'Sistem ayarı',
+    'settings.look': 'Renk ve simge',
+    'look.yesil': 'Yeşil',
+    'look.gece': 'Gece mavisi',
+    'look.gok': 'Gök mavisi',
+    'look.petrol': 'Petrol',
+    'look.mor': 'Mor',
+    'look.bordo': 'Bordo',
+    'look.mercan': 'Mercan',
+    'look.altin': 'Altın',
+    'look.kahve': 'Kahve',
+    'look.antrasit': 'Antrasit',
+    'look.iconFailed': 'Uygulamanın simgesi değiştirilemedi: {error}',
     'settings.language': 'Dil',
     'settings.languageSystem': 'Sistem dili',
     'settings.languageTurkish': 'Türkçe',
@@ -1044,7 +1066,7 @@ class Strings {
     'lists.moveCount': '{count} moves',
     'lists.customPosition': 'custom position',
     'lists.name': 'Name',
-    'lists.search': 'Search: number, game name, player or result',
+    'lists.search': 'Search: number, name, player, result',
     'lists.noMatch': 'No game matches this filter.',
     'lists.saveFailed':
         'Could not save: the device may be out of space.',
@@ -1080,6 +1102,9 @@ class Strings {
     'lists.markUnread': 'Mark as unread',
     'lists.markAllRead': 'Mark all as read',
     'lists.markAllUnread': 'Mark all as unread',
+    'lists.markAllReadMessage': 'Mark all {count} games in the list as read?',
+    'lists.markAllUnreadMessage':
+        'Mark all {count} games in the list as unread?',
     'puzzles.title': 'Puzzles',
     'puzzles.newCollection': 'New puzzle list',
     'puzzles.renameCollection': 'Rename list',
@@ -1269,6 +1294,18 @@ class Strings {
     'settings.themeDark': 'Dark',
     'settings.themeLight': 'Light',
     'settings.themeSystem': 'Follow system',
+    'settings.look': 'Colour and icon',
+    'look.yesil': 'Green',
+    'look.gece': 'Night blue',
+    'look.gok': 'Sky blue',
+    'look.petrol': 'Teal',
+    'look.mor': 'Purple',
+    'look.bordo': 'Burgundy',
+    'look.mercan': 'Coral',
+    'look.altin': 'Gold',
+    'look.kahve': 'Coffee',
+    'look.antrasit': 'Charcoal',
+    'look.iconFailed': 'The app icon could not be changed: {error}',
     'settings.language': 'Language',
     'settings.languageSystem': 'System language',
     'settings.languageTurkish': 'Turkish',

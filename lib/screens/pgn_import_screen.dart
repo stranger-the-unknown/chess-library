@@ -80,7 +80,8 @@ class _PgnImportScreenState extends State<PgnImportScreen> {
           uciMoves: game.uciMoves,
           startFen: game.startFen,
           title: game.title,
-          showTitle: false,
+          // Oyuncusu olmayan oyunda ad (Event) üst çubukta kalıyor.
+          showTitle: game.white == '?' && game.black == '?',
           initialResult: game.result,
           whiteName: game.white == '?' ? null : game.white,
           blackName: game.black == '?' ? null : game.black,

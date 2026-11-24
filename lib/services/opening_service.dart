@@ -815,6 +815,21 @@ class OpeningService {
       notes[openingId] = note;
     }
     await writeString(_notesKey, jsonEncode(notes));
+    // Not varyantın kendi kaydında da durabiliyor: liste her kaydedildiğinde
+    // ([_saveCustom]) bellekteki not kayda yazılıyor. Silinen not yalnızca
+    // not tablosundan çıkınca uygulama yeniden açıldığında kayıttaki eski
+    // kopya geri geliyordu ([all] not tablosunda yoksa kayıttakine bakıyor).
+    if (note.trim().isEmpty) {
+      final custom = await _loadCustom();
+      var changed = false;
+      for (final opening in custom) {
+        if (opening.id == openingId && opening.note != null) {
+          opening.note = null;
+          changed = true;
+        }
+      }
+      if (changed) await _saveCustom();
+    }
   }
 
   // ---------------------------------------------------------------------

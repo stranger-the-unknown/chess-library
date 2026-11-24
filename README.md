@@ -159,7 +159,10 @@ pressing play at the start, no stopping it in time and trimming at the end.
 While recording, the screen ignores touches, so an accidental tap does not
 disturb playback. To finish early on Android, press **Stop** in the
 recording notification or leave the app; what was recorded so far is
-saved. On Android the whole screen is recorded (as with the phone's own
+saved. On Android 13 and later that notification is only shown if
+notifications are allowed for the app (the phone's Settings → Apps → Chess
+Library → Notifications); the app does not ask for this permission itself.
+With it off, leaving the app is the way to finish early. On Android the whole screen is recorded (as with the phone's own
 recorder); turn on Do Not Disturb first if notifications should not show.
 While recording, the app is full screen: the phone's status bar (clock,
 battery) and navigation bar are hidden, so they are not in the video, and
@@ -439,8 +442,14 @@ delete them.
   game name, the players, the result and your note.
 - **Read marks**: one at a time, all at once, or by giving a **range of
   numbers**; there is an unread / read filter. The number you have read
-  is shown on the card without opening the list.
+  is shown on the card without opening the list. **Mark all as read /
+  unread** asks first (and says how many games it will change): the
+  previous marks cannot be brought back.
 - **Favorites**: set with the star on a row, with a filter of their own.
+- The read mark and the favourite star are **inside the game too**: in a
+  game opened from a list they sit on the "Game 3 of 12" row, to the left
+  of the arrows, so you do not have to go back to the list to mark a game
+  you have finished.
 - **Filter games** — in the title menu. White player, black player, or
   both; either can be left blank. **Ignore colour** finds a named
   player with either colour, or — with two names — every game those
@@ -528,6 +537,16 @@ to keep them: take a backup before you uninstall.
 
 - **Theme** — dark, light or follow the system. Default: follows the
   system.
+- **Colour and icon** — ten looks: Green (the default), Night blue, Sky
+  blue, Teal, Purple, Burgundy, Coral, Gold, Coffee, Charcoal. A look
+  changes the app's accent colour, the tint of its surfaces and the logo
+  on the main menu; each look has a dark and a light mode. **On Android
+  the app's icon changes too**: when it does, the app closes and reopens
+  itself once (Android closes an app that was opened from the old icon),
+  the icon on the home screen may take a few seconds to refresh, and a
+  shortcut you placed on the home screen by hand may disappear (add it
+  again from the app drawer). On Linux and Windows only the colours
+  change; the icon stays the same.
 - **Language** — system, Turkish, English.
 - **Board style** — 32 choices:
   - **12 flat colours** (brown, green, tournament, blue, grey, slate,

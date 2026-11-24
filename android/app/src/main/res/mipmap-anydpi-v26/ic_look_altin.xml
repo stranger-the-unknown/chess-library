@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- tools/make_look_icons.py üretiyor; elle düzenleme. -->
+<adaptive-icon xmlns:android="http://schemas.android.com/apk/res/android">
+  <background android:drawable="@color/ic_look_altin_bg"/>
+  <foreground android:drawable="@drawable/ic_look_altin_fg"/>
+</adaptive-icon>

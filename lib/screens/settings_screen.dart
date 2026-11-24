@@ -15,6 +15,8 @@ import '../services/settings_service.dart';
 import '../services/file_pick.dart';
 import '../services/text_file_service.dart';
 import '../widgets/app_dialogs.dart';
+import '../widgets/app_logo.dart';
+import '../widgets/look_picker.dart';
 import '../widgets/picker_panel.dart';
 import '../widgets/piece_widget.dart';
 import '../widgets/cursors.dart';
@@ -74,6 +76,15 @@ class _SettingsScreenState extends State<SettingsScreen> {
                     onSelectionChanged: (selection) =>
                         _settings.themeMode = selection.first,
                   ),
+                ),
+                const Divider(height: 1, indent: 16, endIndent: 16),
+                // Renkler ve uygulamanın simgesi birlikte değişiyor.
+                ListTile(
+                  leading: const Icon(Icons.palette_outlined),
+                  title: Text(t('settings.look')),
+                  subtitle: Text(t('look.${_settings.appLook.id}')),
+                  trailing: AppLogo(look: _settings.appLook, size: 36),
+                  onTap: _pickLook,
                 ),
               ]),
               const SizedBox(height: 8),
@@ -377,11 +388,18 @@ class _SettingsScreenState extends State<SettingsScreen> {
     );
   }
 
+  /// Görünüm seçimi. Uygulamanın renkleri hemen değişir; simgeyi
+  /// uygulamanın kökü ayarı izleyerek değiştirir (bkz. main.dart).
+  Future<void> _pickLook() async {
+    final look = await showLookPicker(context, _settings.appLook);
+    if (look != null) _settings.appLook = look;
+  }
+
   Widget _section(String title) {
     return Padding(
       padding: const EdgeInsets.fromLTRB(4, 8, 4, 8),
       child: Text(
-        title.toUpperCase(),
+        Strings.upper(title),
         style: TextStyle(
           fontSize: 11.5,
           fontWeight: FontWeight.w800,

@@ -14,6 +14,7 @@ import '../services/pgn_import_service.dart';
 import '../services/engine/engine_service.dart';
 import '../services/settings_service.dart';
 import '../widgets/app_dialogs.dart';
+import '../widgets/app_logo.dart';
 import 'board_editor_screen.dart';
 import 'game_screen.dart';
 import 'pgn_import_screen.dart';
@@ -118,38 +119,9 @@ class HomeScreen extends StatelessWidget {
     );
   }
 
-  Widget _logo(ColorScheme scheme) {
-    return Container(
-      width: 54,
-      height: 54,
-      decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(16),
-        gradient: const LinearGradient(
-          colors: [Color(0xFF8FBB57), Color(0xFF4E7327)],
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-        ),
-      ),
-      alignment: Alignment.center,
-      // Yazı tipi açıkça veriliyor: sistem yazı tipine bırakılınca at
-      // Android'de ve Windows'ta farklı çiziliyordu. Uygulama simgesi de
-      // bu widget'tan rasterize ediliyor (tool/export_home_logo.dart).
-      // Noto'nun ♞ glifi satır kutusunda yukarıda duruyor; kareye tam
-      // ortalamak için ölçülen kadar (54 pikselde 5) aşağı alınıyor.
-      child: Transform.translate(
-        offset: const Offset(0, 5),
-        child: const Text(
-          '♞',
-          style: TextStyle(
-            fontFamily: 'NotoSansSymbols2',
-            fontSize: 30,
-            color: Colors.white,
-            height: 1.1,
-          ),
-        ),
-      ),
-    );
-  }
+  /// Logo, seçili görünümün simgesiyle aynı (bkz. [AppLogo]).
+  Widget _logo(ColorScheme scheme) =>
+      AppLogo(look: SettingsService.instance.appLook);
 
   Widget _primaryCard(
     BuildContext context, {
@@ -694,7 +666,8 @@ class HomeScreen extends StatelessWidget {
             uciMoves: game.uciMoves,
             startFen: game.startFen,
             title: game.title,
-            showTitle: false,
+            // Oyuncusu olmayan oyunda ad (Event) üst çubukta kalıyor.
+            showTitle: game.white == '?' && game.black == '?',
             initialResult: game.result,
             whiteName: game.white == '?' ? null : game.white,
             blackName: game.black == '?' ? null : game.black,

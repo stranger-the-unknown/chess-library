@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- tools/make_look_icons.py üretiyor; elle düzenleme. -->
+<resources>
+    <color name="ic_look_gece_bg">#25334D</color>
+    <color name="ic_look_gok_bg">#3F8CCD</color>
+    <color name="ic_look_petrol_bg">#1C7C7D</color>
+    <color name="ic_look_mor_bg">#60469A</color>
+    <color name="ic_look_bordo_bg">#752637</color>
+    <color name="ic_look_mercan_bg">#D86C45</color>
+    <color name="ic_look_altin_bg">#D2A04E</color>
+    <color name="ic_look_kahve_bg">#EADBC0</color>
+    <color name="ic_look_antrasit_bg">#3A3C41</color>
+</resources>

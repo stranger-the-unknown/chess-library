@@ -4,6 +4,10 @@
          izni 10.10.1'den beri yok. Bkz. RecordService.kt, Mp4Writer.kt. -->
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_MEDIA_PROJECTION" />
+    <!-- Kayıt bildirimi ("Durdur") Android 13+ sürümlerinde yalnızca bu
+         izin verilmişse görünüyor. Uygulama izni sormuyor; burada
+         bildirilmezse kullanıcı sistem ayarından da açamıyor (10.13.0). -->
+    <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
     <application
         android:extractNativeLibs="true"
         android:label="Chess Library"
@@ -21,9 +25,11 @@
         <property
             android:name="android.window.PROPERTY_COMPAT_ALLOW_RESTRICTED_RESIZABILITY"
             android:value="true" />
+        <!-- Uygulamanın tek etkinliği. Başlatıcıdan doğrudan değil, aşağıdaki
+             girdilerden (activity-alias) biriyle açılıyor. -->
         <activity
-            android:name=".MainActivity"
-            android:exported="true"
+            android:name=".ChessActivity"
+            android:exported="false"
             android:launchMode="singleTop"
             android:taskAffinity=""
             android:theme="@style/LaunchTheme"
@@ -38,11 +44,167 @@
               android:name="io.flutter.embedding.android.NormalTheme"
               android:resource="@style/NormalTheme"
               />
+        </activity>
+        <!-- Başlatıcı girdileri: her görünümün (Ayarlar → Renk ve simge) kendi
+             simgesiyle bir girdisi var; yalnızca biri açık. Simgeyi AppIcon.kt
+             değiştiriyor; simgeleri tools/make_look_icons.py üretiyor.
+
+             Varsayılan girdi etkinliğin eski adını (.MainActivity) taşıyor:
+             ana ekrandaki kısayollar bu adı sakladığı için güncellemeden
+             sonra da çalışıyorlar.
+
+             NormalTheme her girdide yineleniyor: Flutter bu bilgiyi
+             açılırken kullanılan girdiden okuyor, etkinlikten değil. -->
+        <activity-alias
+            android:name=".MainActivity"
+            android:targetActivity=".ChessActivity"
+            android:exported="true"
+            android:enabled="true"
+            android:icon="@mipmap/ic_launcher">
+            <meta-data
+              android:name="io.flutter.embedding.android.NormalTheme"
+              android:resource="@style/NormalTheme"
+              />
             <intent-filter>
                 <action android:name="android.intent.action.MAIN"/>
                 <category android:name="android.intent.category.LAUNCHER"/>
             </intent-filter>
-        </activity>
+        </activity-alias>
+        <activity-alias
+            android:name=".IconGece"
+            android:targetActivity=".ChessActivity"
+            android:exported="true"
+            android:enabled="false"
+            android:icon="@mipmap/ic_look_gece">
+            <meta-data
+              android:name="io.flutter.embedding.android.NormalTheme"
+              android:resource="@style/NormalTheme"
+              />
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN"/>
+                <category android:name="android.intent.category.LAUNCHER"/>
+            </intent-filter>
+        </activity-alias>
+        <activity-alias
+            android:name=".IconGok"
+            android:targetActivity=".ChessActivity"
+            android:exported="true"
+            android:enabled="false"
+            android:icon="@mipmap/ic_look_gok">
+            <meta-data
+              android:name="io.flutter.embedding.android.NormalTheme"
+              android:resource="@style/NormalTheme"
+              />
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN"/>
+                <category android:name="android.intent.category.LAUNCHER"/>
+            </intent-filter>
+        </activity-alias>
+        <activity-alias
+            android:name=".IconPetrol"
+            android:targetActivity=".ChessActivity"
+            android:exported="true"
+            android:enabled="false"
+            android:icon="@mipmap/ic_look_petrol">
+            <meta-data
+              android:name="io.flutter.embedding.android.NormalTheme"
+              android:resource="@style/NormalTheme"
+              />
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN"/>
+                <category android:name="android.intent.category.LAUNCHER"/>
+            </intent-filter>
+        </activity-alias>
+        <activity-alias
+            android:name=".IconMor"
+            android:targetActivity=".ChessActivity"
+            android:exported="true"
+            android:enabled="false"
+            android:icon="@mipmap/ic_look_mor">
+            <meta-data
+              android:name="io.flutter.embedding.android.NormalTheme"
+              android:resource="@style/NormalTheme"
+              />
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN"/>
+                <category android:name="android.intent.category.LAUNCHER"/>
+            </intent-filter>
+        </activity-alias>
+        <activity-alias
+            android:name=".IconBordo"
+            android:targetActivity=".ChessActivity"
+            android:exported="true"
+            android:enabled="false"
+            android:icon="@mipmap/ic_look_bordo">
+            <meta-data
+              android:name="io.flutter.embedding.android.NormalTheme"
+              android:resource="@style/NormalTheme"
+              />
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN"/>
+                <category android:name="android.intent.category.LAUNCHER"/>
+            </intent-filter>
+        </activity-alias>
+        <activity-alias
+            android:name=".IconMercan"
+            android:targetActivity=".ChessActivity"
+            android:exported="true"
+            android:enabled="false"
+            android:icon="@mipmap/ic_look_mercan">
+            <meta-data
+              android:name="io.flutter.embedding.android.NormalTheme"
+              android:resource="@style/NormalTheme"
+              />
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN"/>
+                <category android:name="android.intent.category.LAUNCHER"/>
+            </intent-filter>
+        </activity-alias>
+        <activity-alias
+            android:name=".IconAltin"
+            android:targetActivity=".ChessActivity"
+            android:exported="true"
+            android:enabled="false"
+            android:icon="@mipmap/ic_look_altin">
+            <meta-data
+              android:name="io.flutter.embedding.android.NormalTheme"
+              android:resource="@style/NormalTheme"
+              />
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN"/>
+                <category android:name="android.intent.category.LAUNCHER"/>
+            </intent-filter>
+        </activity-alias>
+        <activity-alias
+            android:name=".IconKahve"
+            android:targetActivity=".ChessActivity"
+            android:exported="true"
+            android:enabled="false"
+            android:icon="@mipmap/ic_look_kahve">
+            <meta-data
+              android:name="io.flutter.embedding.android.NormalTheme"
+              android:resource="@style/NormalTheme"
+              />
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN"/>
+                <category android:name="android.intent.category.LAUNCHER"/>
+            </intent-filter>
+        </activity-alias>
+        <activity-alias
+            android:name=".IconAntrasit"
+            android:targetActivity=".ChessActivity"
+            android:exported="true"
+            android:enabled="false"
+            android:icon="@mipmap/ic_look_antrasit">
+            <meta-data
+              android:name="io.flutter.embedding.android.NormalTheme"
+              android:resource="@style/NormalTheme"
+              />
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN"/>
+                <category android:name="android.intent.category.LAUNCHER"/>
+            </intent-filter>
+        </activity-alias>
         <service
             android:name=".RecordService"
             android:exported="false"

@@ -205,7 +205,13 @@ class Mp4Writer(
         runCatching { audio.release() }
         val ok = synchronized(lock) {
             val started = muxerStarted
+            // Dosya kapatılamadıysa (depolama doldu, yazma hatası) dizini
+            // eksik kalır: "kaydedildi" denmesin, sonu eksik olabilir densin.
             runCatching { if (started) muxer?.stop() }
+                .onFailure {
+                    incomplete = true
+                    Log.e(TAG, "dosya kapatılamadı", it)
+                }
             runCatching { muxer?.release() }
             started && wroteVideo
         }
@@ -329,6 +335,7 @@ class Mp4Writer(
                 } else if (outIndex >= 0) {
                     writeSample(audio, outIndex, info, isVideo = false)
                     if (info.flags and MediaCodec.BUFFER_FLAG_END_OF_STREAM != 0) return
+                    if (abandon) return
                 } else {
                     break
                 }
@@ -356,7 +363,7 @@ class Mp4Writer(
         }
         synchronized(lock) {
             var waited = 0
-            while (!muxerStarted && waited < 3_000) {
+            while (!muxerStarted && waited < 3_000 && !abandon) {
                 lock.wait(50)
                 waited += 50
             }

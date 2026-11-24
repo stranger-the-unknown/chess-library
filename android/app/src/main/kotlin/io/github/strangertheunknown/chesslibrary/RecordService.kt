@@ -22,7 +22,7 @@ import android.util.Log
  * Android 10'dan beri ekran yansıtma yalnızca böyle bir hizmet açıkken
  * yapılabiliyor; Android 14'ten beri hizmet kullanıcının onayından
  * **sonra** başlatılmalı ve izin belgesi (token) ancak ondan sonra
- * kullanılabiliyor. Akış: MainActivity onay penceresini açar → onay
+ * kullanılabiliyor. Akış: ChessActivity onay penceresini açar → onay
  * gelince bu hizmeti başlatır → hizmet yansıtmayı alır ve [Capture]'a
  * verir → Dart "begin" der → kayıt başlar.
  *
@@ -102,7 +102,7 @@ class RecordService : Service() {
 }
 
 /**
- * Kaydın durumu: MainActivity (kanal), [RecordService] ve [Mp4Writer]
+ * Kaydın durumu: ChessActivity (kanal), [RecordService] ve [Mp4Writer]
  * arasında. Hepsi ana iş parçacığında çağrılıyor; dosyanın kapatılması
  * ayrı bir iş parçacığında.
  */
@@ -113,7 +113,7 @@ object Capture {
     private var projection: MediaProjection? = null
     private var writer: Mp4Writer? = null
 
-    /** Hizmeti durdurmak için; MainActivity veriyor. */
+    /** Hizmeti durdurmak için; ChessActivity veriyor. */
     var appContext: Context? = null
 
     /** Onay ve hizmet hazır olunca çağrılır (hata metni ya da null). */

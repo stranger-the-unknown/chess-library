@@ -54,8 +54,12 @@ class PuzzleService {
     if (_collections != null) return _collections!;
     final raw = await AppStore.instance.getString(_collectionsKey);
     if (raw == null) {
+      // Kayıt yokken bir şey **yazılmıyor**. Masaüstünde dosya deposu bir
+      // açılışta açılamazsa uygulama tercih deposuyla çalışıyor ve burada
+      // boş liste görüyor; onu yazmak, bir sonraki açılışta ("tercih
+      // dosyasındaki geçerli" kuralıyla) gerçek bulmaca dosyasının boş
+      // listeyle değiştirilmesine yol açıyordu.
       _collections = List<PuzzleCollection>.from(_defaults);
-      await _saveCollections();
     } else {
       final list = await readOrQuarantine<List<PuzzleCollection>>(
         _collectionsKey,
@@ -181,14 +185,20 @@ class PuzzleService {
         continue;
       }
       if (override['deleted'] == true) continue;
-      result.add(
-        puzzle.copyWith(
-          fen: override['fen'] as String?,
-          title: override['title'] as String?,
-          note: override['note'] as String?,
-          tags: (override['tags'] as List?)?.map((e) => e.toString()).toList(),
-        ),
+      final copy = puzzle.copyWith(
+        fen: override['fen'] as String?,
+        title: override['title'] as String?,
+        note: override['note'] as String?,
+        tags: (override['tags'] as List?)?.map((e) => e.toString()).toList(),
       );
+      // `copyWith` boş değeri "olduğu gibi kalsın" sayıyor: silinen not
+      // (ya da ad) temel kayıttakiyle geri geliyordu. Değişiklik kaydında
+      // alan varsa, boş da olsa, o geçerli.
+      if (override.containsKey('note')) copy.note = override['note'] as String?;
+      if (override.containsKey('title')) {
+        copy.title = override['title'] as String?;
+      }
+      result.add(copy);
     }
 
     // Hazır listeye kullanıcı tarafından eklenen bulmacalar.
@@ -571,9 +581,22 @@ class PuzzleService {
     return entry.favorite;
   }
 
+  /// Listenin çözüldü işaretlerini ve deneme sayılarını siler.
+  ///
+  /// Favoriler kalıyor: onay penceresi yalnızca çözüldü işaretlerinden söz
+  /// ediyor. Eskiden kaydın tamamı siliniyor, listedeki bütün yıldızlar da
+  /// geri alınamaz biçimde gidiyordu.
   Future<void> resetProgress(String collectionId) async {
     final progress = await _loadProgress();
-    progress.removeWhere((key, _) => key.startsWith('$collectionId#'));
+    progress.removeWhere((key, entry) {
+      if (!key.startsWith('$collectionId#')) return false;
+      entry
+        ..solved = false
+        ..solvedAt = null
+        ..attempts = 0
+        ..lastAttempt = null;
+      return !entry.favorite;
+    });
     await _saveProgress();
   }
 }

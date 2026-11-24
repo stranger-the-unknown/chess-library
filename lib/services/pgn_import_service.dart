@@ -119,17 +119,17 @@ String _gameToPgn(Playlist playlist, SavedGame game) {
   if (event == null || event.isEmpty || event == '?' || event == '-') {
     tags['Event'] = playlist.name;
   }
-  final white = game.white?.trim();
-  if (white != null && white.isNotEmpty && white != '?' && white != '-') {
-    tags['White'] = white;
-  } else if ((tags['White'] ?? '').trim().isEmpty ||
-      tags['White'] == '?' ||
-      tags['White'] == '-') {
-    tags['White'] = game.name;
-  }
-  final black = game.black?.trim();
-  if (black != null && black.isNotEmpty && black != '?' && black != '-') {
-    tags['Black'] = black;
+  // Oyuncular kartta göründüğü gibi (alan, başlık ya da "A - B" biçimindeki
+  // eski ad). Hiç oyuncu yoksa oyunun adı Event'e yazılıyor ve oyuncular
+  // "?" kalıyor: dosya geri alınınca oyun aynı adla geliyor. Eskiden ad
+  // White'a yazılıyordu; geri alınan oyunun adı "Oyun 2026-… - ?" oluyor,
+  // beyaz oyuncusu da o ad çıkıyordu.
+  final white = game.resolvedWhite;
+  final black = game.resolvedBlack;
+  if (white != null) tags['White'] = white;
+  if (black != null) tags['Black'] = black;
+  if (white == null && black == null && game.name.trim().isNotEmpty) {
+    tags['Event'] = game.name.trim();
   }
   final date = tags['Date']?.trim();
   if (date == null || date.isEmpty || date == '?' || date.startsWith('?')) {

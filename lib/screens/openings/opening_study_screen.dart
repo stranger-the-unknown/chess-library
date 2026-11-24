@@ -414,6 +414,17 @@ class _StudyViewState extends State<_StudyView> {
     // cevabı iptal olsun. Eskiden yalnızca okunuyordu ve "Göster"e
     // basınca iki yarım hamle üst üste geliyordu.
     final token = ++_token;
+    // Alıştırmada sıra kullanıcıda değilse (rakibin cevabı ya da siyahla
+    // çalışırken tahtanın ilk hamlesi beklemede) "Göster" yalnızca o
+    // bekleyen hamleyi öne alıyor. Eskiden onu "gösterilen hamle" sayıp
+    // ardından kullanıcının hamlesini de oynuyordu: sıra kayıyor, tahta
+    // kullanıcının hamlelerini kendi oynuyor ve "Baştan"a kadar hiçbir
+    // hamleyi kabul etmiyordu.
+    final userSide = _flipped ? engine.Color.black : engine.Color.white;
+    if (_mode == StudyMode.practice && _game.sideToMove != userSide) {
+      _goTo(_cursor + 1);
+      return;
+    }
     // Hamleyi tahta oynuyor: bu hat "hatasız bitirildi" sayılmamalı,
     // yoksa "Göster" ile geçilen varyant öğrenilmiş gibi kaydediliyordu.
     _mistakeMade = true;
@@ -510,6 +521,10 @@ class _StudyViewState extends State<_StudyView> {
         context: context,
         title: '${widget.opening.family} - ${widget.opening.variation}',
         rewind: () {
+          // Motor kayıt boyunca kapalı (oyun ekranındaki gibi): açıkken
+          // başta ve sondaki bekleyişte motor satırı videoya giriyordu.
+          _analysisBeforeRecording = _analysisOn;
+          if (_analysisOn) _setAnalysis(false);
           if (_mode != StudyMode.watch) {
             _setMode(StudyMode.watch);
           } else {
@@ -520,9 +535,17 @@ class _StudyViewState extends State<_StudyView> {
         watch: _watchToEnd,
         stopWatch: _stopAutoPlay,
         setLocked: (locked) {
-          if (mounted) setState(() => _recordingLocked = locked);
+          if (!mounted) return;
+          setState(() => _recordingLocked = locked);
+          if (!locked && _analysisBeforeRecording) {
+            _analysisBeforeRecording = false;
+            _setAnalysis(true);
+          }
         },
       );
+
+  /// Kayıt başlamadan önce motor açık mıydı ([_recordScreen] geri açar).
+  bool _analysisBeforeRecording = false;
 
   /// Ekrandaki hız düğmesi: ayara yazıyor, izleme sürüyorsa hemen geçerli.
   void _setWatchSpeed(WatchSpeed speed) {

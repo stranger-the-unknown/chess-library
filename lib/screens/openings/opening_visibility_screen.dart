@@ -4,6 +4,7 @@ import '../../l10n/app_strings.dart';
 import '../../models/opening.dart';
 import '../../services/opening_service.dart';
 import '../../widgets/app_dialogs.dart';
+import '../../models/puzzle_search.dart' show foldForSearch;
 
 /// Açılış başlıklarını gizleyip gösterir.
 ///
@@ -57,10 +58,10 @@ class _OpeningVisibilityScreenState extends State<OpeningVisibilityScreen> {
   }
 
   List<String> get _listed {
-    final query = _query.trim().toLowerCase();
+    final query = foldForSearch(_query.trim());
     if (query.isEmpty) return _families.keys.toList();
     return _families.keys
-        .where((name) => name.toLowerCase().contains(query))
+        .where((name) => foldForSearch(name).contains(query))
         .toList();
   }
 
