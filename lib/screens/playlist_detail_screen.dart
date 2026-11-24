@@ -130,6 +130,15 @@ class _PlaylistDetailScreenState extends State<PlaylistDetailScreen> {
     await _load();
   }
 
+  /// "Devam et": görünen sıradaki ilk okunmamış oyun; hepsi okunmuşsa
+  /// ilk oyun. Bulmaca listesindeki düğmeyle aynı kural.
+  Future<void> _continueReading() async {
+    final visible = _visible;
+    if (visible.isEmpty) return;
+    await _openGame(
+        visible.firstWhere((g) => !g.read, orElse: () => visible.first));
+  }
+
   Future<void> _openGame(SavedGame game) async {
     // Oyun ekranındaki "önceki / sonraki oyun" listede görünen sırayı
     // izliyor (arama, süzgeç, aralık, ters sıra) ve o sıra açıldığı
@@ -152,6 +161,10 @@ class _PlaylistDetailScreenState extends State<PlaylistDetailScreen> {
           blackSide: _black,
           player: _player,
           playlistId: widget.playlistId,
+          // Oyun ekranı listedeki gerçek numarayı gösteriyor: süzgeç ya da
+          // ters sıra açıkken "Oyun 1 / 150" değil "Oyun 62 / 211".
+          numbers: Map<String, int>.from(_numbers),
+          total: _playlist?.games.length,
         ),
       ),
     );
@@ -560,8 +573,10 @@ class _PlaylistDetailScreenState extends State<PlaylistDetailScreen> {
           'min': numbers.first,
           'max': numbers.last,
         }),
-        markLabel: t('lists.markRead'),
-        unmarkLabel: t('lists.markUnread'),
+        // Kısa adlar: "Okunmadı işaretle" dar telefonda iki satıra
+        // bölünüyordu; pencerenin başlığı zaten "işaretle" diyor.
+        markLabel: t('lists.rangeRead'),
+        unmarkLabel: t('lists.rangeUnread'),
       ),
     );
     if (result == null || !mounted) return;
@@ -732,6 +747,15 @@ class _PlaylistDetailScreenState extends State<PlaylistDetailScreen> {
                 ),
               ),
       ),
+      // Her oturumda listeyi açıp "Okunmamış"a basarak kalınan yeri
+      // aramak gerekiyordu (10.14.0).
+      floatingActionButton: _loading || visible.isEmpty
+          ? null
+          : FloatingActionButton.extended(
+              onPressed: _continueReading,
+              icon: const Icon(Icons.play_arrow_rounded),
+              label: Text(t('puzzles.continue')),
+            ),
       body: _loading
           ? const Center(child: CircularProgressIndicator())
           : total == 0
@@ -878,7 +902,8 @@ class _PlaylistDetailScreenState extends State<PlaylistDetailScreen> {
                         16,
                         8,
                         16,
-                        28 + MediaQuery.viewPaddingOf(context).bottom,
+                        // "Devam et" düğmesi son satırı örtmesin.
+                        90 + MediaQuery.viewPaddingOf(context).bottom,
                       ),
                       builder: (context, padding) => ListView.separated(
                         key: const Key('gameList'),
@@ -920,6 +945,14 @@ class _PlaylistDetailScreenState extends State<PlaylistDetailScreen> {
               t('lists.emptyGames'),
               textAlign: TextAlign.center,
               style: TextStyle(color: scheme.onSurfaceVariant, height: 1.4),
+            ),
+            const SizedBox(height: 18),
+            // Listeyi doldurmanın asıl yolu; eskiden yalnızca üst çubukta,
+            // adı yazmayan bir dosya simgesiydi.
+            OutlinedButton.icon(
+              onPressed: _importPgnFile,
+              icon: const Icon(Icons.file_open_outlined),
+              label: Text(t('pgn.importIntoList')),
             ),
           ],
         ),
@@ -1171,6 +1204,11 @@ class _PlaylistDetailScreenState extends State<PlaylistDetailScreen> {
       '0-1' => scheme.error,
       _ => scheme.drawColor,
     };
+    // Açık temada yazı bir ton koyu: 11 puntoluk yazı kendi renginin açık
+    // zemininde 3,4–4,2:1 karşıtlıkla okunmuyordu.
+    final ink = scheme.brightness == Brightness.light
+        ? Color.lerp(color, Colors.black, 0.25)!
+        : color;
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 1),
       decoration: BoxDecoration(
@@ -1182,7 +1220,7 @@ class _PlaylistDetailScreenState extends State<PlaylistDetailScreen> {
         style: TextStyle(
           fontSize: 11,
           fontWeight: FontWeight.w700,
-          color: color,
+          color: ink,
         ),
       ),
     );

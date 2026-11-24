@@ -58,6 +58,13 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   }),
                   trailing: SegmentedButton<ThemeMode>(
                     showSelectedIcon: false,
+                    // Sıkı düğmeler: dar telefonda alt yazı ("Sistemi
+                    // izle") iki satıra bölünüyordu.
+                    style: SegmentedButton.styleFrom(
+                      visualDensity: VisualDensity.compact,
+                      tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                      padding: const EdgeInsets.symmetric(horizontal: 10),
+                    ),
                     segments: const [
                       ButtonSegment(
                         value: ThemeMode.light,

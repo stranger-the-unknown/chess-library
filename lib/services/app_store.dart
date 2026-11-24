@@ -126,6 +126,139 @@ class PrefsStore extends AppStore {
   }
 }
 
+/// Veri anahtarlarını yalnızca bellekte tutan depo; diske yazmaz.
+///
+/// Masaüstünde dosya deposu açılamadığında kullanılıyor (bkz.
+/// [openDesktopStore]). Eskiden o durumda sessizce [PrefsStore]'a
+/// düşülüyordu: veri dosyalarda durduğu için uygulama boş açılıyor, o
+/// oturumda eklenenler tercih dosyasına yazılıyor ve bir sonraki açılışta
+/// "tercih dosyasındaki geçerli" kuralı gereği gerçek dosyaların yerine
+/// geçiyordu. Burada hiçbir veri diske ulaşmıyor; kullanıcıya da
+/// söyleniyor.
+///
+/// Ayar anahtarları [FileStore]'daki gibi tercih dosyasına gidiyor.
+class MemoryStore extends AppStore {
+  MemoryStore([Map<String, Object>? seed]) {
+    if (seed != null) _data.addAll(seed);
+  }
+
+  final Map<String, Object> _data = {};
+
+  Future<SharedPreferences> get _prefs => SharedPreferences.getInstance();
+
+  @override
+  Future<String?> getString(String key) async {
+    final value =
+        AppStore.isDataKey(key) ? _data[key] : (await _prefs).get(key);
+    return value is String ? value : null;
+  }
+
+  @override
+  Future<List<String>?> getStringList(String key) async {
+    final value =
+        AppStore.isDataKey(key) ? _data[key] : (await _prefs).get(key);
+    return value is List ? value.map((e) => '$e').toList() : null;
+  }
+
+  @override
+  Future<bool> setString(String key, String value) async {
+    if (!AppStore.isDataKey(key)) return (await _prefs).setString(key, value);
+    _data[key] = value;
+    return true;
+  }
+
+  @override
+  Future<bool> setStringList(String key, List<String> value) async {
+    if (!AppStore.isDataKey(key)) {
+      return (await _prefs).setStringList(key, value);
+    }
+    _data[key] = List<String>.from(value);
+    return true;
+  }
+
+  @override
+  Future<bool> remove(String key) async {
+    if (!AppStore.isDataKey(key)) return (await _prefs).remove(key);
+    _data.remove(key);
+    return true;
+  }
+
+  @override
+  Future<Map<String, Object>> readAll() async {
+    final prefs = await _prefs;
+    final result = <String, Object>{};
+    for (final key in prefs.getKeys()) {
+      if (AppStore.isDataKey(key)) continue;
+      final value = prefs.get(key);
+      if (value != null) result[key] = value;
+    }
+    for (final entry in _data.entries) {
+      result[entry.key] = entry.value is List
+          ? List<String>.from(entry.value as List)
+          : entry.value;
+    }
+    return result;
+  }
+
+  @override
+  Future<void> clear() async {
+    _data.clear();
+    final prefs = await _prefs;
+    for (final key in prefs.getKeys().toList()) {
+      if (!AppStore.isDataKey(key)) await prefs.remove(key);
+    }
+  }
+}
+
+/// Masaüstünde açılışta deponun açılması.
+///
+/// Dosya deposu açılamazsa (bir veri dosyası o anda kilitli, klasör
+/// listelenemiyor) kısa bir beklemeyle **bir kez daha** deneniyor: sebep
+/// çoğu zaman geçici (virüs tarayıcısı, dizinleyici).
+///
+/// İkisi de olmazsa:
+/// * `veri` klasörü hiç yoksa (ilk kurulumda oluşturulamadı) veri hâlâ
+///   tercih dosyasında: [PrefsStore], eskisi gibi.
+/// * Klasör varsa veri oradadır ama okunamıyor: [MemoryStore] ve
+///   `readOnly: true`. Tercih dosyasında kalmış (henüz taşınmamış) veri
+///   görünsün diye ona ekiliyor. Çağıran kullanıcıya söylemeli.
+Future<({AppStore store, bool readOnly})> openDesktopStore(
+  Directory supportDir, {
+  Future<AppStore> Function(Directory supportDir)? open,
+  Duration retryDelay = const Duration(milliseconds: 400),
+}) async {
+  final opener = open ?? FileStore.open;
+  for (var attempt = 0; attempt < 2; attempt++) {
+    try {
+      return (store: await opener(supportDir), readOnly: false);
+    } catch (_) {
+      if (attempt == 0) await Future<void>.delayed(retryDelay);
+    }
+  }
+  bool used;
+  try {
+    used = await Directory(
+            '${supportDir.path}${Platform.pathSeparator}veri')
+        .exists();
+  } catch (_) {
+    used = true;
+  }
+  if (!used) return (store: PrefsStore(), readOnly: false);
+
+  final seed = <String, Object>{};
+  final prefs = await SharedPreferences.getInstance();
+  for (final key in prefs.getKeys()) {
+    if (!AppStore.isDataKey(key)) continue;
+    final value = prefs.get(key);
+    if (value is String) {
+      seed[key] = value;
+    } else if (value is List) {
+      seed[key] = value.map((e) => '$e').toList();
+    }
+  }
+  return (store: MemoryStore(seed), readOnly: true);
+}
+
 /// Windows: veri anahtarları `veri\` klasöründe, her biri kendi
 /// dosyasında.
 ///

@@ -50,9 +50,13 @@ class Puzzle {
   int get mateInMoves => (solution.length + 1) ~/ 2;
 
   /// Hamle sırası kimde?
+  ///
+  /// Motorun okuduğu gibi: alanlar arasında birden çok boşluk olabilir,
+  /// harf büyük yazılmış olabilir. Eskiden çift boşluklu ya da `B` yazılı
+  /// bir FEN'de etiket ve küçük tahtanın yönü yanlış taraftaydı.
   engine.Color get sideToMove {
-    final parts = fen.split(' ');
-    return (parts.length > 1 && parts[1] == 'b')
+    final parts = fen.trim().split(RegExp(r'\s+'));
+    return (parts.length > 1 && parts[1].toLowerCase() == 'b')
         ? engine.Color.black
         : engine.Color.white;
   }

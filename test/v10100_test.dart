@@ -365,7 +365,9 @@ void main() {
       expect(recorder.events.last, 'stop');
       await tester.pump();
       expect(find.text(position), findsOneWidget, reason: 'geri geldi');
-      expect(find.byTooltip(t('lists.nextGame')), findsOneWidget);
+      // Üstteki ok ve (oyun sonda olduğu için) gezinme satırındaki
+      // "sonraki oyun" düğmesi (10.14.0).
+      expect(find.byTooltip(t('lists.nextGame')), findsNWidgets(2));
       await tester.pumpWidget(const SizedBox());
       await tester.pump(const Duration(seconds: 5));
     }, skip: _noRecordMenu);
@@ -537,7 +539,9 @@ void main() {
       await tester.pump();
       expect(recorder.events.last, 'stop');
       await tester.pump();
-      expect(find.byTooltip(t('openings.nextVariation')), findsOneWidget,
+      // Üstteki ok ve (varyant sonda olduğu için) gezinme satırındaki
+      // "sonraki varyant" düğmesi (10.14.0).
+      expect(find.byTooltip(t('openings.nextVariation')), findsNWidgets(2),
           reason: 'geri geldi');
       await tester.pumpWidget(const SizedBox());
       await tester.pump(const Duration(seconds: 5));
@@ -644,6 +648,47 @@ void main() {
       expect(saved, endsWith('Chess Library/Fischer - Spassky.mp4'));
     });
 
+    test('kendiliğinden ölen kaydedicinin dizinsiz dosyası "kaydedildi" değil',
+        () async {
+      // 10.14.0: süreç bir hatayla ölürse MP4'ün dizini (moov) yazılmıyor,
+      // video oynamıyor; eskiden dosya boş değil diye "kaydedildi" deniyordu.
+      List<int> box(String type) => [0, 0, 0, 16, ...type.codeUnits, ...List.filled(8, 0)];
+      Future<String?> exitWith(List<int> bytes, int code) async {
+        final folder = Directory.systemTemp.createTempSync('cl_record_');
+        addTearDown(() => folder.deleteSync(recursive: true));
+        final recorder = LinuxScreenRecorder();
+        recorder.run = (command, arguments) async {
+          if (command == 'pactl') return ProcessResult(0, 0, 'hoparlor\n', '');
+          if (command == 'xdg-user-dir') {
+            return ProcessResult(0, 0, '${folder.path}\n', '');
+          }
+          return ProcessResult(0, 0, '', '');
+        };
+        recorder.captureTarget =
+            () async => {'xid': 42, 'width': 1000, 'height': 700};
+        late _FakeProcess process;
+        late String location;
+        recorder.start = (command, arguments) async {
+          location = arguments
+              .firstWhere((a) => a.startsWith('location='))
+              .substring(9);
+          return process = _FakeProcess(onInterrupt: () {});
+        };
+        expect(await recorder.prepare(), isNull);
+        final exited = Completer<String?>();
+        expect(await recorder.begin('Oyun', onExit: exited.complete), isNull);
+        File(location).writeAsBytesSync(bytes);
+        process.die(code);
+        return exited.future.timeout(const Duration(seconds: 2));
+      }
+
+      expect(await exitWith([...box('ftyp'), ...box('mdat')], 1), isNull,
+          reason: 'dizini olmayan dosya oynamaz');
+      expect(await exitWith([...box('ftyp'), ...box('mdat'), ...box('moov')], 0),
+          endsWith('Chess Library/Oyun.mp4'),
+          reason: 'pencere kapanınca düzgün biten kayıt kaydedilmiş sayılır');
+    });
+
     test('eksik GStreamer parçaları sayılıyor', () async {
       final recorder = LinuxScreenRecorder();
       recorder.run = (command, arguments) async => ProcessResult(
@@ -695,6 +740,12 @@ class _FakeProcess implements Process {
     if (!_exit.isCompleted) _exit.complete(0);
     _out.close();
     return true;
+  }
+
+  /// Süreç kendiliğinden kapanıyor (hata ya da pencerenin kapanması).
+  void die(int code) {
+    if (!_exit.isCompleted) _exit.complete(code);
+    _out.close();
   }
 
   @override

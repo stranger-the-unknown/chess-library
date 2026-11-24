@@ -162,6 +162,39 @@ class Mp4Writer(
     }
 
     /**
+     * Başlayamayan kaydı toparlar ([start] hata verdiğinde): sanal ekran,
+     * kodlayıcılar, açık dosya ve galerideki bekleyen satır. Eskiden
+     * hiçbiri kapatılmıyordu; satır "bekliyor" olarak kalıyor, kodlayıcılar
+     * çöp toplayıcıya kadar açık duruyordu.
+     */
+    fun discard() {
+        capturing = false
+        abandon = true
+        sounds.onPlayed = null
+        runCatching { display?.release() }
+        display = null
+        runCatching {
+            videoThread?.join(2_000)
+            audioThread?.join(2_000)
+        }
+        runCatching { video.stop() }
+        runCatching { video.release() }
+        runCatching { audio.stop() }
+        runCatching { audio.release() }
+        synchronized(lock) {
+            runCatching { muxer?.release() }
+            muxer = null
+        }
+        runCatching { file?.close() }
+        file = null
+        uri?.let { target ->
+            runCatching { context.contentResolver.delete(target, null, null) }
+        }
+        uri = null
+        Log.w(TAG, "kayıt başlayamadı; yarım kalanlar toparlandı")
+    }
+
+    /**
      * Kaydı bitirir ve dosyayı galeriye açar. Kaydedilen yolu döner
      * ("Movies/Chess Library/….mp4"); hiç kare yazılmadıysa dosyayı
      * siler ve null döner.

@@ -113,6 +113,18 @@ object Capture {
     private var projection: MediaProjection? = null
     private var writer: Mp4Writer? = null
 
+    /**
+     * Dosya kapatılıyor (ayrı iş parçacığında) ve sonucu bekleyenler.
+     *
+     * Sistem kaydı kesince (durum çubuğundaki düğme, ekran kilidi) dosya
+     * kapatılırken Dart tarafı da "stop" isteyebiliyor. Eskiden o isteğe
+     * hemen "kayıt yok" deniyordu: ekran "Kayıt kaydedilemedi" diyor,
+     * video ise galeride duruyordu. Artık istek sürmekte olan kapatmanın
+     * sonucunu bekliyor.
+     */
+    private var stopping = false
+    private val waiting = mutableListOf<(String?, Boolean) -> Unit>()
+
     /** Hizmeti durdurmak için; ChessActivity veriyor. */
     var appContext: Context? = null
 
@@ -145,13 +157,22 @@ object Capture {
             }
             val w = bounds?.width() ?: metrics.widthPixels
             val h = bounds?.height() ?: metrics.heightPixels
-            writer = Mp4Writer(context.applicationContext, current, w, h, metrics.densityDpi, name, sounds)
-                .also { it.start() }
+            val created =
+                Mp4Writer(context.applicationContext, current, w, h, metrics.densityDpi, name, sounds)
+            try {
+                created.start()
+            } catch (e: Exception) {
+                // Yarım başlayan yazıcı toparlanıyor: galerideki bekleyen
+                // satır, açık dosya ve kodlayıcılar eskiden kalıyordu.
+                runCatching { created.discard() }
+                throw e
+            }
+            writer = created
             null
         } catch (e: Exception) {
             Log.w(TAG, "başlatılamadı", e)
             writer = null
-            release()
+            release(projection)
             e.message ?: e.toString()
         }
     }
@@ -165,27 +186,45 @@ object Capture {
         val current = writer
         writer = null
         if (current == null) {
-            release()
+            if (stopping) {
+                // Kapatma sürüyor: sonucu o verecek.
+                if (done != null) waiting.add(done)
+                return
+            }
+            release(projection)
             done?.invoke(null, false)
             return
         }
+        stopping = true
+        if (done != null) waiting.add(done)
+        // Bu kaydın yansıtması: kapatma bitene kadar yeni bir kayıt
+        // hazırlanmışsa onunkine dokunulmasın.
+        val mine = projection
         Thread {
             val saved = runCatching { current.stop() }
                 .onFailure { Log.e(TAG, "kayıt kapatılamadı", it) }
                 .getOrNull()
             val incomplete = current.incomplete
             main.post {
-                release()
-                done?.invoke(saved, incomplete)
-                if (fromOutside) onStoppedOutside?.invoke(saved, incomplete)
+                stopping = false
+                release(mine)
+                val callbacks = waiting.toList()
+                waiting.clear()
+                callbacks.forEach { it(saved, incomplete) }
+                // Sonucu bekleyen bir "stop" varsa Dart onu aldı; yoksa
+                // dışarıdan durdurulduğu ayrıca bildiriliyor.
+                if (fromOutside && callbacks.isEmpty()) {
+                    onStoppedOutside?.invoke(saved, incomplete)
+                }
             }
         }.start()
     }
 
-    private fun release() {
-        val current = projection
+    /** [target] yansıtmasını kapatır; hâlâ geçerli olan oysa hizmeti de. */
+    private fun release(target: MediaProjection?) {
+        runCatching { target?.stop() }
+        if (projection !== target) return
         projection = null
-        runCatching { current?.stop() }
         appContext?.let { context ->
             runCatching { context.stopService(Intent(context, RecordService::class.java)) }
         }

@@ -23,7 +23,20 @@ class ImportResult {
   final int added;
   final int skipped;
 
-  const ImportResult({required this.added, required this.skipped});
+  /// Geçersiz bir hamlede kesilip o hâliyle eklenen satır sayısı (örn.
+  /// parantezli yan varyant: `2. Nf3 (2. c3) d6` üç hamle olarak eklenir).
+  final int truncated;
+
+  /// Hiç okunamayan satır sayısı: alan sayısı tutmuyor ya da tek bir
+  /// geçerli hamlesi yok.
+  final int invalid;
+
+  const ImportResult({
+    required this.added,
+    required this.skipped,
+    this.truncated = 0,
+    this.invalid = 0,
+  });
 }
 
 class OpeningService {
@@ -378,6 +391,11 @@ class OpeningService {
     // oldukları için ayrı varyant sayılır.
     final known = custom.map((o) => o.uciMoves.join(' ')).toSet();
     final blackInFile = <String>{};
+    // Dosya yolu eskiden bunları saymıyordu (form yolu `truncated` diyor):
+    // satır kısalarak ekleniyor ya da hiç eklenmiyor, mesaj yalnızca
+    // "N varyant eklendi" diyordu.
+    int truncated = 0;
+    int invalid = 0;
 
     for (int i = 0; i < lines.length; i++) {
       final text = lines[i].trim();
@@ -408,20 +426,28 @@ class OpeningService {
           moves = parts[4];
         }
 
+        final uci = <String>[];
+        final san = <String>[];
+        var tokenCount = 0;
         if (moves.trim().isNotEmpty) {
           final position = engine.ChessGame();
-          final uci = <String>[];
-          final san = <String>[];
-          for (final token in _tokenize(moves)) {
+          final tokens = _tokenize(moves);
+          tokenCount = tokens.length;
+          for (final token in tokens) {
             final move = _matchSan(position, token);
             if (move == null) break;
             san.add(position.sanFor(move));
             uci.add(move.uci);
             position.makeMove(move);
           }
-          if (uci.isNotEmpty && !known.add(uci.join(' '))) {
+        }
+        if (uci.isEmpty) {
+          invalid++;
+        } else {
+          if (!known.add(uci.join(' '))) {
             skipped++;
-          } else if (uci.isNotEmpty) {
+          } else {
+            if (uci.length < tokenCount) truncated++;
             final resolvedFamily =
                 family.isEmpty ? t('openings.ownFamily') : family;
             custom.add(Opening(
@@ -456,7 +482,12 @@ class OpeningService {
     for (final family in blackInFile) {
       await setFamilyBlack(family, true);
     }
-    return ImportResult(added: added, skipped: skipped);
+    return ImportResult(
+      added: added,
+      skipped: skipped,
+      truncated: truncated,
+      invalid: invalid,
+    );
   }
 
   /// Eklenmiş varyantları metin olarak verir.
@@ -573,9 +604,9 @@ class OpeningService {
     _notes = <String, String>{};
     await writeString(_notesKey, jsonEncode(_notes));
     _hidden = <String>{};
-    await AppStore.instance.setStringList(_hiddenKey, const []);
+    await writeStringList(_hiddenKey, const []);
     _black = <String>{};
-    await AppStore.instance.setStringList(_blackKey, const []);
+    await writeStringList(_blackKey, const []);
     return count;
   }
 
@@ -603,7 +634,7 @@ class OpeningService {
     final changed = black ? current.add(family) : current.remove(family);
     if (!changed) return;
     _black = current;
-    await AppStore.instance.setStringList(_blackKey, current.toList()..sort());
+    await writeStringList(_blackKey, current.toList()..sort());
   }
 
   // ---------------------------------------------------------------------
@@ -694,7 +725,7 @@ class OpeningService {
 
   Future<void> setHiddenFamilies(Set<String> families) async {
     _hidden = families;
-    await AppStore.instance.setStringList(_hiddenKey, families.toList()..sort());
+    await writeStringList(_hiddenKey, families.toList()..sort());
   }
 
   Future<void> setFamilyHidden(String family, bool hidden) async {

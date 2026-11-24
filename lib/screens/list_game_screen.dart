@@ -22,6 +22,8 @@ class ListGameScreen extends StatefulWidget {
     this.blackSide = false,
     this.player,
     this.playlistId,
+    this.numbers,
+    this.total,
   });
 
   final List<SavedGame> games;
@@ -31,6 +33,13 @@ class ListGameScreen extends StatefulWidget {
   /// düğmeleri çıkıyor (10.13.0): oyunu bitirince işaretlemek için listeye
   /// dönmek gerekmiyor.
   final String? playlistId;
+
+  /// Oyun kimliği → listedeki numara ve listedeki toplam oyun sayısı.
+  /// Verilmişse sıra satırı bunları gösteriyor (bulmaca ekranındaki gibi):
+  /// süzgeç ya da ters sıra açıkken de numara listede görünenle aynı.
+  /// Oklar yine açılan (süzülmüş) sırada geziyor.
+  final Map<String, int>? numbers;
+  final int? total;
 
   /// Liste "Siyah tarafından oku" ile işaretli.
   final bool blackSide;
@@ -124,6 +133,8 @@ class _ListGameScreenState extends State<ListGameScreen> {
           : GameSequence(
               position: _index + 1,
               length: length,
+              number: widget.numbers?[game.id],
+              total: widget.total,
               onPrevious: _index > 0 ? (carry) => _step(-1, carry) : null,
               onNext:
                   _index < length - 1 ? (carry) => _step(1, carry) : null,

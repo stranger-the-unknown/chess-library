@@ -1,6 +1,9 @@
 package io.github.strangertheunknown.chesslibrary
 
+import android.Manifest
+import android.content.Context
 import android.content.Intent
+import android.content.pm.PackageManager
 import android.media.projection.MediaProjectionConfig
 import android.media.projection.MediaProjectionManager
 import android.os.Build
@@ -118,7 +121,47 @@ class ChessActivity : FlutterActivity() {
         }
         pendingPrepare?.success("cancelled")
         pendingPrepare = result
+        if (shouldAskForNotifications()) {
+            // Sonuç onRequestPermissionsResult'a geliyor; cevap ne olursa
+            // olsun kayıt onayına geçiliyor.
+            @Suppress("NewApi")
+            requestPermissions(
+                arrayOf(Manifest.permission.POST_NOTIFICATIONS),
+                REQUEST_NOTIFICATIONS,
+            )
+            return
+        }
         askToCapture()
+    }
+
+    /**
+     * Bildirim izni sorulsun mu? Android 13+ sürümlerinde kayıt bildirimi
+     * ("Durdur") yalnızca bu izinle görünüyor. **Bir kez** soruluyor, ilk
+     * kayıttan önce: reddedilirse bir daha sorulmuyor (telefonun
+     * ayarlarından açılabilir), her kayıtta araya girmiyor.
+     */
+    private fun shouldAskForNotifications(): Boolean {
+        if (Build.VERSION.SDK_INT < 33) return false
+        if (checkSelfPermission(Manifest.permission.POST_NOTIFICATIONS) ==
+            PackageManager.PERMISSION_GRANTED
+        ) {
+            return false
+        }
+        val prefs = getSharedPreferences("chess_library_native", Context.MODE_PRIVATE)
+        if (prefs.getBoolean("notificationsAsked", false)) return false
+        prefs.edit().putBoolean("notificationsAsked", true).apply()
+        return true
+    }
+
+    override fun onRequestPermissionsResult(
+        requestCode: Int,
+        permissions: Array<out String>,
+        grantResults: IntArray,
+    ) {
+        super.onRequestPermissionsResult(requestCode, permissions, grantResults)
+        if (requestCode == REQUEST_NOTIFICATIONS && pendingPrepare != null) {
+            askToCapture()
+        }
     }
 
     /**
@@ -162,6 +205,7 @@ class ChessActivity : FlutterActivity() {
 
     companion object {
         private const val REQUEST_CAPTURE = 4102
+        private const val REQUEST_NOTIFICATIONS = 4103
     }
 
     override fun cleanUpFlutterEngine(flutterEngine: FlutterEngine) {

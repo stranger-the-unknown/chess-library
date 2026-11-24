@@ -306,7 +306,15 @@ class LinuxScreenRecorder {
       }
       if (!_stopping) {
         _process = null;
-        onExit?.call(_finished());
+        // Süreç kendiliğinden kapandı. Pencere kapanınca düzgün biter;
+        // bir hatayla ölürse dosyanın dizini yazılmaz ve video oynamaz.
+        // Eskiden dosya boş değilse "kaydedildi" deniyordu.
+        final saved = _finished();
+        final path = _path;
+        onExit?.call(
+            saved != null && path != null && hasIndex(File(path))
+                ? saved
+                : null);
       }
     }));
     final error = await playing.future
@@ -334,6 +342,47 @@ class LinuxScreenRecorder {
       return null;
     }
     return _finished();
+  }
+
+  /// MP4'ün dizini (`moov` kutusu) yazılmış mı? Yazılmamışsa dosya
+  /// oynatılamaz: kaydedici dosyayı kapatamadan ölmüş.
+  @visibleForTesting
+  static bool hasIndex(File file) {
+    RandomAccessFile? reader;
+    try {
+      reader = file.openSync();
+      final length = reader.lengthSync();
+      var offset = 0;
+      while (offset + 8 <= length) {
+        reader.setPositionSync(offset);
+        final header = reader.readSync(8);
+        if (header.length < 8) return false;
+        if (String.fromCharCodes(header.sublist(4, 8)) == 'moov') return true;
+        var size = (header[0] << 24) |
+            (header[1] << 16) |
+            (header[2] << 8) |
+            header[3];
+        if (size == 1) {
+          // 64 bitlik boyut.
+          final big = reader.readSync(8);
+          if (big.length < 8) return false;
+          size = 0;
+          for (final byte in big) {
+            size = (size << 8) | byte;
+          }
+        }
+        // 0: kutu dosyanın sonuna kadar (kapatılmamış `mdat`).
+        if (size < 8) return false;
+        offset += size;
+      }
+      return false;
+    } catch (_) {
+      return false;
+    } finally {
+      try {
+        reader?.closeSync();
+      } catch (_) {}
+    }
   }
 
   String? _finished() {

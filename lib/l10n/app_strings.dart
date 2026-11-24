@@ -145,7 +145,7 @@ class Strings {
     'backup.replaceHint': 'Bu cihazdaki veriler silinir, yerine yedektekiler gelir. İki cihazı birebir aynı yapmak için.',
     'backup.merge': 'Birleştir',
     'backup.mergeHint':
-        'Yedektekiler eklenir. Aynı oyun listesi ya da bulmaca koleksiyonu iki tarafta da varsa yedekteki bütünüyle geçerli olur: yedekten sonra ona eklenenler kaybolur. Ayarlara dokunulmaz.',
+        'Yedektekiler eklenir. Aynı oyun listesi ya da bulmaca listesi iki tarafta da varsa yedekteki bütünüyle geçerli olur: yedekten sonra ona eklenenler kaybolur. Ayarlara dokunulmaz.',
     'backup.replaceWarning': 'Bu cihazdaki bütün veriler silinecek ve yerine yedektekiler yüklenecek. Sürdürülsün mü?',
     'backup.nothingChanged': 'Veriler olduğu gibi kaldı.',
     'backup.interruptedRestored':
@@ -164,7 +164,7 @@ class Strings {
     // başlığı da 'Chess Library'. Yalnızca alt başlık dile uyar.
     'app.title': 'Chess Library',
     'app.subtitle': 'Oyunlarını oku, bulmaca çöz, motora karşı oyna',
-    'common.cancel': 'İptal',
+    'common.cancel': 'Vazgeç',
     'common.ok': 'Tamam',
     'common.save': 'Kaydet',
     'common.delete': 'Sil',
@@ -181,6 +181,7 @@ class Strings {
     'common.random': 'Rastgele',
     'common.note': 'Not',
     'common.addNote': 'Not ekle',
+    'common.editNote': 'Notu düzenle',
     'common.emptyNotAllowed': 'Boş bırakılamaz.',
     'common.flipBoard': 'Tahtayı çevir',
     'common.copyFen': 'FEN kopyala',
@@ -228,7 +229,7 @@ class Strings {
     'home.playEngineSub': 'İnsan gibi oynayan rakip ya da motor; '
         'internet gerektirmez',
     'home.loadPgn': 'PGN yükle',
-    'home.loadPgnSub': 'Panodan veya elle yapıştırarak oyun aç',
+    'home.loadPgnSub': 'Dosyadan ya da yapıştırarak oyun aç',
     'home.freeBoard': 'Serbest tahta',
     'home.freeBoardSub': 'İki taraflı analiz tahtası',
     'home.setup': 'Pozisyon kur',
@@ -276,9 +277,12 @@ class Strings {
     'game.engine': 'Motor · {level}',
     'game.maia': 'Maia · {elo}',
     'game.you': 'Sen',
-    'game.analysisOn': 'Motor analizi',
+    'game.analysisOn': 'Analizi aç',
     'game.analysisOff': 'Analizi kapat',
     'game.saveToList': 'Listeye kaydet',
+    'game.savedToList': 'Kaydedildi',
+    'game.newGame': 'Yeni oyun',
+    'game.continueVsEngine': 'Oyundan devam',
     'game.copyPgn': 'PGN kopyala',
     'game.pgnCopied': 'PGN panoya kopyalandı.',
     'game.fenCopiedToClipboard': 'FEN panoya kopyalandı.',
@@ -417,6 +421,10 @@ class Strings {
     'lists.noMatch': 'Bu filtreyle eşleşen oyun yok.',
     'lists.saveFailed':
         'Kaydedilemedi: cihazda yer kalmamış olabilir.',
+    'data.storeUnavailable':
+        'Kayıtlı veriler açılamadı. Listeler boş görünebilir ve bu oturumda '
+            'yaptığın değişiklikler kaydedilmeyecek. Uygulamayı kapatıp '
+            'yeniden aç.',
     'data.corruptFound':
         'Bozuk bir kayıt bulundu ve bir kenara alındı; o bölüm boş açıldı.',
     'data.settingsRecovered':
@@ -447,6 +455,8 @@ class Strings {
     'lists.filterRead': 'Okunan',
     'lists.markRead': 'Okundu işaretle',
     'lists.markUnread': 'Okunmadı işaretle',
+    'lists.rangeRead': 'Okundu',
+    'lists.rangeUnread': 'Okunmadı',
     'lists.markAllRead': 'Tümünü okundu işaretle',
     'lists.markAllUnread': 'Tümünü okunmadı işaretle',
     'lists.markAllReadMessage':
@@ -491,6 +501,9 @@ class Strings {
     'puzzles.exportFallback': 'Dosya kaydedilemedi; içerik panoya kopyalandı.',
     'puzzles.oneFenPerLine': 'Her satıra bir FEN',
     'puzzles.imported': '{count} pozisyon eklendi.',
+    'puzzles.importedWithInvalid':
+        '{count} pozisyon eklendi. {invalid} satır okunamadı (ilki {line}. '
+            'satır); sonraki numaralar kaynağa göre kayar.',
     'puzzles.random': 'Rastgele bulmaca',
     'puzzles.addPuzzle': 'Bulmaca ekle',
     'puzzles.pasteFenList': 'FEN listesi yapıştır',
@@ -504,6 +517,8 @@ class Strings {
     'puzzles.emptyFilter': 'Bu filtreyle eşleşen bulmaca yok.',
     'puzzles.markUnsolved': 'Çözülmedi işaretle',
     'puzzles.markSolved': 'Çözüldü işaretle',
+    'puzzles.rangeSolved': 'Çözüldü',
+    'puzzles.rangeUnsolved': 'Çözülmedi',
     'puzzles.solved': 'Çözüldü',
     'puzzles.analysing': 'Motor pozisyonu inceliyor…',
     'puzzles.engineUnavailable':
@@ -586,6 +601,9 @@ class Strings {
     'openings.familyDeleted': '{count} varyant silindi.',
     'openings.importedWithSkips':
         '{count} varyant eklendi, {skipped} tanesi listede zaten vardı.',
+    'openings.importTruncated':
+        '{count} satır geçersiz bir hamlede kesilerek eklendi.',
+    'openings.importInvalid': '{count} satır okunamadı.',
     'openings.deleteAll': 'Tüm açılışları sil',
     'openings.deleteAllMessage':
         '{count} varyantın hepsi, ilerlemen ve notlarınla birlikte '
@@ -810,7 +828,7 @@ class Strings {
     'backup.replaceHint': 'Data on this device is deleted and the backup takes its place. Use this to make two devices identical.',
     'backup.merge': 'Merge',
     'backup.mergeHint':
-        'The backup is added. Where the same game list or puzzle collection exists on both sides, the copy from the backup replaces it as a whole: anything added to it after the backup is lost. Settings are left alone.',
+        'The backup is added. Where the same game list or puzzle list exists on both sides, the copy from the backup replaces it as a whole: anything added to it after the backup is lost. Settings are left alone.',
     'backup.replaceWarning': 'All data on this device will be deleted and replaced with the backup. Continue?',
     'backup.nothingChanged': 'Your data was left unchanged.',
     'backup.interruptedRestored':
@@ -835,7 +853,7 @@ class Strings {
     'common.add': 'Add',
     'common.open': 'Open',
     'common.start': 'Start',
-    'common.giveUp': 'Never mind',
+    'common.giveUp': 'Cancel',
     'common.next': 'Next',
     'common.previous': 'Previous',
     'common.white': 'White',
@@ -843,6 +861,7 @@ class Strings {
     'common.random': 'Random',
     'common.note': 'Note',
     'common.addNote': 'Add note',
+    'common.editNote': 'Edit note',
     'common.emptyNotAllowed': 'This cannot be empty.',
     'common.flipBoard': 'Flip board',
     'common.copyFen': 'Copy FEN',
@@ -887,7 +906,7 @@ class Strings {
     'home.playEngineSub': 'A human-like opponent or the engine; works '
         'fully offline',
     'home.loadPgn': 'Load PGN',
-    'home.loadPgnSub': 'Open a game from the clipboard or by typing it',
+    'home.loadPgnSub': 'Open a game from a file or pasted text',
     'home.freeBoard': 'Free board',
     'home.freeBoardSub': 'Analysis board for both sides',
     'home.setup': 'Set up a position',
@@ -933,9 +952,12 @@ class Strings {
     'game.engine': 'Engine · {level}',
     'game.maia': 'Maia · {elo}',
     'game.you': 'You',
-    'game.analysisOn': 'Engine analysis',
+    'game.analysisOn': 'Turn analysis on',
     'game.analysisOff': 'Turn analysis off',
     'game.saveToList': 'Save to a list',
+    'game.savedToList': 'Saved',
+    'game.newGame': 'New game',
+    'game.continueVsEngine': 'Continue from the game',
     'game.copyPgn': 'Copy PGN',
     'game.pgnCopied': 'PGN copied to the clipboard.',
     'game.fenCopiedToClipboard': 'FEN copied to the clipboard.',
@@ -1070,6 +1092,10 @@ class Strings {
     'lists.noMatch': 'No game matches this filter.',
     'lists.saveFailed':
         'Could not save: the device may be out of space.',
+    'data.storeUnavailable':
+        'Your saved data could not be opened. Lists may look empty, and '
+            'changes made in this session will not be saved. Close the app '
+            'and open it again.',
     'data.corruptFound':
         'A damaged record was found and set aside; that section opened empty.',
     'data.settingsRecovered':
@@ -1100,6 +1126,8 @@ class Strings {
     'lists.filterRead': 'Read',
     'lists.markRead': 'Mark as read',
     'lists.markUnread': 'Mark as unread',
+    'lists.rangeRead': 'Read',
+    'lists.rangeUnread': 'Unread',
     'lists.markAllRead': 'Mark all as read',
     'lists.markAllUnread': 'Mark all as unread',
     'lists.markAllReadMessage': 'Mark all {count} games in the list as read?',
@@ -1140,6 +1168,10 @@ class Strings {
     'puzzles.exportFallback': 'Could not save the file; copied to clipboard.',
     'puzzles.oneFenPerLine': 'One FEN per line',
     'puzzles.imported': '{count} positions added.',
+    'puzzles.importedWithInvalid':
+        '{count} positions added. {invalid} lines could not be read (the '
+            'first is line {line}); later numbers are shifted against the '
+            'source.',
     'puzzles.random': 'Random puzzle',
     'puzzles.addPuzzle': 'Add puzzle',
     'puzzles.pasteFenList': 'Paste a FEN list',
@@ -1153,6 +1185,8 @@ class Strings {
     'puzzles.emptyFilter': 'No puzzle matches this filter.',
     'puzzles.markUnsolved': 'Mark as unsolved',
     'puzzles.markSolved': 'Mark as solved',
+    'puzzles.rangeSolved': 'Solved',
+    'puzzles.rangeUnsolved': 'Unsolved',
     'puzzles.solved': 'Solved',
     'puzzles.analysing': 'The engine is studying the position…',
     'puzzles.engineUnavailable':
@@ -1233,6 +1267,9 @@ class Strings {
     'openings.familyDeleted': '{count} lines deleted.',
     'openings.importedWithSkips':
         '{count} lines added, {skipped} were already in the list.',
+    'openings.importTruncated':
+        '{count} lines were cut at an invalid move and added that way.',
+    'openings.importInvalid': '{count} lines could not be read.',
     'openings.deleteAll': 'Delete all openings',
     'openings.deleteAllMessage':
         'Delete all {count} lines, along with your progress and notes? '

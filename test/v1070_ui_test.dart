@@ -93,8 +93,10 @@ bool _enabled(WidgetTester tester, String tooltip) => tester
         .onPressed !=
     null;
 
-Finder _appBarText(String text) =>
-    find.descendant(of: find.byType(AppBar), matching: find.text(text));
+/// Açık varyantın adı. 10.14.0'dan beri üst çubukta değil, altındaki
+/// satırda yazıyor (üst çubuğa sığmıyordu); bulucunun adı eskiden kaldı.
+Finder _appBarText(String text) => find.descendant(
+    of: find.byType(OpeningStudyScreen), matching: find.text(text));
 
 Future<void> _openFamilyMenu(WidgetTester tester, String family) async {
   final tile = find.ancestor(
@@ -595,7 +597,15 @@ void main() {
       await tester.tap(find.text(t('lists.filterUnread')));
       await tester.pumpAndSettle();
       await open(tester, 'Banu');
-      expect(position(1, 2), findsOneWidget,
+      // 10.14.0: yazı listedeki gerçek numarayı gösteriyor (süzgeç açıkken
+      // "Oyun 1 / 2" değil); oklar yine süzülmüş sırada geziyor.
+      expect(position(2, 3), findsOneWidget);
+      expect(
+          tester
+              .widget<IconButton>(find.widgetWithIcon(
+                  IconButton, Icons.keyboard_arrow_up_rounded))
+              .onPressed,
+          isNull,
           reason: 'okunmuş oyun sırada yok');
       await tester.pageBack();
       await tester.pumpAndSettle();
@@ -605,7 +615,7 @@ void main() {
       await tester.tap(find.byTooltip(t('puzzles.sortNewest')));
       await tester.pumpAndSettle();
       await open(tester, 'Cem');
-      expect(position(1, 3), findsOneWidget);
+      expect(position(3, 3), findsOneWidget);
       await tester.tap(find.byTooltip(t('lists.nextGame')));
       await tester.pumpAndSettle();
       expect(find.text('Banu'), findsOneWidget);

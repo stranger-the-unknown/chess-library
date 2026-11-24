@@ -45,8 +45,12 @@ Future<void> main() async {
   // doğrulanmadan hiçbir şeyi silmiyor.
   if (!kIsWeb && (Platform.isWindows || Platform.isLinux)) {
     try {
-      AppStore.instance =
-          await FileStore.open(await getApplicationSupportDirectory());
+      final opened =
+          await openDesktopStore(await getApplicationSupportDirectory());
+      AppStore.instance = opened.store;
+      // İki denemede de açılamadı: bu oturumda hiçbir şey kaydedilmeyecek
+      // (bkz. MemoryStore); ilk karede kalıcı bir uyarıyla söyleniyor.
+      _storeReadOnly = opened.readOnly;
     } catch (_) {}
   }
   if (PrefsRecovery.quarantined.value != null) {
@@ -79,6 +83,9 @@ Future<void> main() async {
 
 /// Açılışta yarım kalmış bir geri yükleme geri alındı mı?
 bool _restoreRolledBack = false;
+
+/// Masaüstünde kayıtlı veriler açılamadı mı (bkz. [openDesktopStore])?
+bool _storeReadOnly = false;
 
 /// Tercih dosyası bozuk çıktı ama veri kendi dosyalarında sağlam mı?
 bool _dataSurvived = false;
@@ -172,7 +179,9 @@ class _ChessAppState extends State<ChessApp> {
     SettingsService.instance.addListener(_syncIcon);
     _syncIcon();
     // Açılışta veri toparlandıysa ilk karede söyle.
-    if (PrefsRecovery.quarantined.value != null || _restoreRolledBack) {
+    if (PrefsRecovery.quarantined.value != null ||
+        _restoreRolledBack ||
+        _storeReadOnly) {
       WidgetsBinding.instance.addPostFrameCallback((_) => _onDataRecovered());
     }
   }
@@ -196,7 +205,11 @@ class _ChessAppState extends State<ChessApp> {
   void _onDataRecovered() {
     final moved = PrefsRecovery.quarantined.value;
     final String message;
-    if (_restoreRolledBack) {
+    if (_storeReadOnly) {
+      // En önemlisi bu: listeler boş görünüyor ve yapılan hiçbir şey
+      // kalmayacak.
+      message = t('data.storeUnavailable');
+    } else if (_restoreRolledBack) {
       message = t('backup.interruptedRestored');
     } else if (moved != null) {
       message = t(_dataSurvived ? 'data.settingsRecovered' : 'data.prefsRecovered',
@@ -272,7 +285,9 @@ class _ChessAppState extends State<ChessApp> {
           theme: AppTheme.lightFor(look),
           darkTheme: AppTheme.darkFor(look),
           themeMode: mode,
-          home: const HomeShell(),
+          // Son açık sekmede açılıyor (10.14.0); geri tuşu yine önce
+          // Oyna'ya dönüyor.
+          home: HomeShell(initialIndex: SettingsService.instance.lastTab),
       // Masaüstünde bütün yazılar aynı oranda büyüyor, Linux'ta ayrıca
       // bütün arayüz sistemin ölçeği kadar; telefon ve tablet olduğu
       // gibi kalıyor (bkz. DesktopScale).

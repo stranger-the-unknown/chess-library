@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../l10n/app_strings.dart';
 import '../services/backup_service.dart';
+import '../services/settings_service.dart';
 import '../widgets/cursors.dart';
 import '../widgets/responsive.dart';
 import 'home_screen.dart';
@@ -46,7 +47,11 @@ class _HomeShellState extends State<HomeShell> {
     (Icons.tune_outlined, Icons.tune_rounded, 'nav.settings'),
   ];
 
-  void _select(int index) => setState(() => _index = index);
+  void _select(int index) {
+    setState(() => _index = index);
+    // Bir dahaki açılışta buradan (Ayarlar hariç; bkz. ayar).
+    SettingsService.instance.lastTab = index;
+  }
 
   /// Geri tuşuna basıldığında uygulamadan çıkılacak mı?
   ///

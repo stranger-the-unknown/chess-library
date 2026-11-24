@@ -83,7 +83,10 @@ seviyesinde **insan gibi oynayan Maia** ya da **Stockfish** (Uzman, Usta).
 Seçtiğin seviyenin nasıl oynadığı kısaca yazıyor. Eski sürümdeki
 seçimin en yakın yeni seviyeye taşınır. Rengini beyaz, siyah ya da **rastgele** belirleyebilirsin; seçimin zorluk
 gibi hatırlanır. İstersen
-normal diziliş yerine **kendi kurduğun pozisyondan** başlarsın.
+normal diziliş yerine **kendi kurduğun pozisyondan** başlarsın. Oyun
+bitince sonuç kartında **Yeni oyun** ve **Listeye kaydet** düğmeleri çıkar.
+"Listeye kaydet" son kaydettiğin listeyle açılır; kendi oynadığın oyunun
+adı tarihten gelir ("Oyun 2026-11-24 12:30").
 
 **PGN yükle** — Bir dosyadan ya da panodan yapıştırarak. Bir dosyada
 istediğin kadar oyun olabilir: oyunlar listelenir, seçtiklerini **yeni bir
@@ -118,6 +121,13 @@ akıcı kalır. Motora karşı oyunda ok yalnızca senin sıranda çizilir.
 **Gezinme** — Hamle listesindeki herhangi bir hamleye dokunarak o konuma
 gidersin; alttaki düğmelerle bir ileri, bir geri, başa ya da sona gidersin.
 
+**⋮ menüsü** — Listeye kaydet, PGN / FEN kopyala, tahtayı PNG kaydet, FEN
+yapıştır, pozisyonu düzenle ve **Bu konumdan motora karşı oyna** (tahtadaki
+konumdan, sıradaki tarafla). Kayıtlı bir oyunda **Ekran kaydı al** en
+üsttedir; "Yeniden başlat" orada yoktur (başa dönmek için ⏮).
+
+Uygulama son açık bıraktığın sekmede açılır (Ayarlar hariç).
+
 **İşaretleme (fare ile)** — Bir kareye **sağ tıklamak** o kareyi işaretler;
 **sağ tuşu basılı tutup sürüklemek** iki kare arasına ok çizer. Aynı yere
 yeniden sağ tıklamak işareti kaldırır, sol tık hepsini siler. İşaret rengi
@@ -127,7 +137,9 @@ seçili tahtadan türetilir, bu yüzden her tahtada seçilir.
 oynayıp motorun değerlendirmesinin nasıl değiştiğini görebilirsin. Bu
 hamleler oyunun kendisine yazılmaz: hamle listesinde görünmez, PGN'e girmez,
 kaydedilmez ve ekrandan çıkınca kaybolur. Şeritteki düğmelerle son denemeyi
-geri alır ya da oyuna dönersin. Deneme hamlesi motoru kendiliğinden açar;
+geri alır ya da oyuna dönersin. Telefonda şerit, sonuç kartının yerinde
+çıkar (yeri baştan ayrılıdır): tahta ve adlar kaymaz; satır uzayınca en
+son denenen hamleler görünür. Deneme hamlesi motoru kendiliğinden açar;
 istemezsen Ayarlar → Motor → **Deneme hamlesinde motoru aç**'ı kapat.
 İzlemeyi durdurup hamle denedikten sonra devam edersen önce oyunun kendi
 konumuna dönülür, sıradaki hamle ondan sonra gelir.
@@ -149,8 +161,9 @@ Kayıt sürerken ekran dokunuşlara kapalıdır; yanlışlıkla bir dokunuş
 izlemeyi bozmaz. Erken bitirmek için Android'de kayıt bildirimindeki
 **Durdur**'a bas ya da uygulamadan çık; o ana kadarki kısım kaydedilir.
 Android 13 ve sonrasında bu bildirim yalnızca uygulamanın bildirimlerine
-izin verilmişse görünür (telefonun Ayarlar → Uygulamalar → Chess Library →
-Bildirimler); uygulama bu izni kendisi sormaz. İzin kapalıyken erken
+izin verilmişse görünür. Uygulama izni **ilk kayıttan önce bir kez** sorar;
+reddedersen bir daha sormaz, sonradan telefonun Ayarlar → Uygulamalar →
+Chess Library → Bildirimler bölümünden açabilirsin. İzin kapalıyken erken
 bitirmenin yolu uygulamadan çıkmaktır.
 Android'de tüm ekran kaydedilir (telefonun kendi kaydedicisindeki gibi);
 bildirimler görünmesin istersen kayıttan önce Rahatsız Etmeyin'i aç.
@@ -389,7 +402,14 @@ geçirir. Kartın son varyantından sonra sıradaki kartın ilk varyantı
 gelir; listenin sonunda durur. Sıra listede gördüğün sıradır: gizli
 başlıklar yoktur, arama ya da "yalnızca favoriler" açıksa onun içinde
 gezilir. İzle ya da alıştırma kipi ve açık motor yeni varyanta taşınır;
-başlık siyah tarafından çalışılıyorsa tahta ona göre döner.
+başlık siyah tarafından çalışılıyorsa tahta ona göre döner. Varyantın
+sonuna gelince gezinme satırındaki "sona git" düğmesi (alıştırmada
+"Göster") **Sonraki varyant** olur.
+
+Varyantın adı üst çubukta yazmaz (telefonda sığmıyordu); çubuğun
+altındaki satırda başlık küçük, varyantın adı altında tam yazar. Ekran son
+kullandığın kipte açılır: alıştırma yapıyorsan sonraki varyant da
+alıştırmada açılır.
 
 Her varyantta not, favori, "bu konumdan motora karşı oyna" ve "analiz
 tahtasında aç" seçenekleri vardır. Üstteki grafik simgesi **motoru**
@@ -448,7 +468,12 @@ taşıma, silme.
   durur. Sıra listede gördüğün sıradır: arama, süzgeç, aralık ve ters
   sıralama geçerli; oyunu açtığın andaki hâliyle sabittir (okundu
   işaretleyince kaymaz). Liste bitince durur, sonraki listeye geçmez.
-  Tahtanın yönü ve açık motor yeni oyuna taşınır.
+  Tahtanın yönü ve açık motor yeni oyuna taşınır. Yazıdaki numara oyunun
+  **listedeki numarasıdır**: süzgeç ya da ters sıra açıkken de "Oyun 62 /
+  211" yazar. Oyunun son hamlesinde gezinme satırındaki "sona git" düğmesi
+  **Sonraki oyun** olur.
+- **Devam et**: listenin sağ altındaki düğme, görünen sıradaki ilk
+  okunmamış oyunu açar (hepsi okunmuşsa ilk oyunu).
 - Listeden ya da PGN'den açılan oyunun adı üst çubukta yazmaz: telefonda
   hiç sığmıyordu, iki oyuncunun tam adı zaten tahtanın yanında yazıyor.
 - **İzle**: oyun ekranındaki oynat tuşu hamleleri izleme hızıyla oynatır
@@ -485,7 +510,7 @@ açılış) — yanlış dosyayı seçtiysen veri silinmeden fark edersin. Sonra
 iki seçenek sunulur:
 
 - **Birleştir** — Yedektekiler var olanın üstüne eklenir. Aynı oyun
-  listesi ya da bulmaca koleksiyonu iki tarafta da varsa yedekteki
+  listesi ya da bulmaca listesi iki tarafta da varsa yedekteki
   **bütünüyle** geçerli olur: yedekten sonra o listeye eklenen oyunlar
   kaybolur. Cihazın ayarlarına dokunulmaz.
 - **Değiştir** — Cihazdaki veri silinir, yerine yedektekiler konur. İki

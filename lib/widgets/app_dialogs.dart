@@ -3,6 +3,7 @@ import 'dart:math' as math;
 import 'package:flutter/material.dart';
 
 import '../l10n/app_strings.dart';
+import '../services/prefs_write.dart';
 import '../services/settings_service.dart';
 
 /// Uygulama genelinde tekrar eden küçük diyaloglar.
@@ -214,6 +215,9 @@ class AppDialogs {
   }
 
   static void snack(BuildContext context, String message) {
+    // Az önce bir kayıt diske yazılamadıysa ekranda "Kaydedilemedi"
+    // uyarısı var; bu mesaj ("3 işaretlendi") onu kapatmasın.
+    if (takeRecentWriteFailure()) return;
     ScaffoldMessenger.of(context)
       ..hideCurrentSnackBar()
       ..showSnackBar(SnackBar(content: Text(message)));

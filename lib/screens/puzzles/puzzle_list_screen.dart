@@ -318,6 +318,7 @@ class _PuzzleListScreenState extends State<PuzzleListScreen> {
   /// Metni listeye aktarır; uzun sürebileceği için ilerleme gösterir.
   Future<void> _runImport(String text) async {
     final int added;
+    final invalid = <int>[];
     try {
       added = await AppDialogs.runWithProgress<int>(
         context,
@@ -326,6 +327,7 @@ class _PuzzleListScreenState extends State<PuzzleListScreen> {
           widget.collection,
           text,
           onProgress: (done, total) => report(total == 0 ? 0 : done / total),
+          invalidLines: invalid,
         ),
       );
     } catch (_) {
@@ -336,7 +338,18 @@ class _PuzzleListScreenState extends State<PuzzleListScreen> {
     }
     await _load();
     if (mounted) {
-      AppDialogs.snack(context, t('puzzles.imported', {'count': added}));
+      // Atlanan satır varsa söyleniyor: sonraki bulmacaların numarası
+      // kaynaktakinden o kadar geride kalıyor.
+      AppDialogs.snack(
+        context,
+        invalid.isEmpty
+            ? t('puzzles.imported', {'count': added})
+            : t('puzzles.importedWithInvalid', {
+                'count': added,
+                'invalid': invalid.length,
+                'line': invalid.first,
+              }),
+      );
     }
   }
 
@@ -378,8 +391,8 @@ class _PuzzleListScreenState extends State<PuzzleListScreen> {
           'min': numbers.first,
           'max': numbers.last,
         }),
-        markLabel: t('puzzles.markSolved'),
-        unmarkLabel: t('puzzles.markUnsolved'),
+        markLabel: t('puzzles.rangeSolved'),
+        unmarkLabel: t('puzzles.rangeUnsolved'),
       ),
     );
     if (result == null || !mounted) return;
@@ -720,15 +733,54 @@ class _PuzzleListScreenState extends State<PuzzleListScreen> {
               style: TextStyle(color: scheme.onSurfaceVariant),
             ),
             const SizedBox(height: 18),
-            OutlinedButton.icon(
-              onPressed: _addPuzzle,
-              icon: const Icon(Icons.add_rounded),
-              label: Text(t('puzzles.addPuzzle')),
-            ),
+            if (_all.isEmpty)
+              // Boş liste: doldurmanın üç yolu da burada. Eskiden yalnızca
+              // "Bulmaca ekle" vardı; toplu ekleme ⋮ menüsünde saklıydı.
+              Wrap(
+                alignment: WrapAlignment.center,
+                spacing: 8,
+                runSpacing: 8,
+                children: [
+                  OutlinedButton.icon(
+                    onPressed: _addPuzzle,
+                    icon: const Icon(Icons.add_rounded),
+                    label: Text(t('puzzles.addPuzzle')),
+                  ),
+                  OutlinedButton.icon(
+                    onPressed: _importFens,
+                    icon: const Icon(Icons.playlist_add_rounded),
+                    label: Text(t('puzzles.pasteFenList')),
+                  ),
+                  OutlinedButton.icon(
+                    onPressed: _importFromFile,
+                    icon: const Icon(Icons.file_open_outlined),
+                    label: Text(t('puzzles.importFile')),
+                  ),
+                ],
+              )
+            else
+              // Süzgeç boş döndü: istenen "bulmaca ekle" değil, süzgeçten
+              // çıkmak.
+              OutlinedButton.icon(
+                onPressed: _showAll,
+                icon: const Icon(Icons.filter_alt_off_outlined),
+                label: Text(t('common.showAll')),
+              ),
           ],
         ),
       ),
     );
+  }
+
+  /// Arama, durum ve sonuç süzgeçlerini ve numara aralığını kaldırır.
+  void _showAll() {
+    _searchController.clear();
+    setState(() {
+      _query = '';
+      _status = _Status.all;
+      _outcome = null;
+      _range = null;
+    });
   }
 
   Widget _puzzleTile(Puzzle puzzle, ColorScheme scheme) {

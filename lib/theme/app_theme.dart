@@ -56,7 +56,10 @@ class AppTheme {
     onPrimary: Colors.white,
     primaryContainer: Color(0xFFDCEBC6),
     onPrimaryContainer: Color(0xFF1B2A0A),
-    secondary: Color(0xFFA37527),
+    // Açık temada ikinci vurgu yazı olarak da kullanılıyor ("Mat! Bulmaca
+    // tamam.", "özel pozisyon"); eski ton (A37527) kendi açık zemininde
+    // 3,3:1 karşıtlıkla soluk kalıyordu.
+    secondary: Color(0xFF785000),
     onSecondary: Colors.white,
     secondaryContainer: Color(0xFFF7E7C7),
     onSecondaryContainer: Color(0xFF3A2A08),

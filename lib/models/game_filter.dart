@@ -87,8 +87,8 @@ class GameFilter {
         return outcome == _black;
       case ResultFilter.playerWins:
         if (winner.trim().isEmpty) return true;
-        if (outcome == _white) return _nameMatches(game.white, winner);
-        if (outcome == _black) return _nameMatches(game.black, winner);
+        if (outcome == _white) return _nameMatches(game.resolvedWhite, winner);
+        if (outcome == _black) return _nameMatches(game.resolvedBlack, winner);
         return false;
     }
   }
@@ -98,6 +98,10 @@ class GameFilter {
     return game.year == year;
   }
 
+  /// Adlar kartta göründüğü gibi çözülüyor ([SavedGame.resolvedWhite]):
+  /// alan, PGN başlığı ya da "A - B" biçimindeki eski ad. Eskiden yalnızca
+  /// alana bakılıyordu; kartta oyuncusu yazan eski kayıtlar süzgeçte
+  /// bulunamıyordu.
   bool _playersMatch(SavedGame game) {
     final a = white.trim();
     final b = black.trim();
@@ -105,19 +109,19 @@ class GameFilter {
 
     if (ignoreColor) {
       if (b.isEmpty) {
-        return _nameMatches(game.white, a) || _nameMatches(game.black, a);
+        return _nameMatches(game.resolvedWhite, a) || _nameMatches(game.resolvedBlack, a);
       }
       if (a.isEmpty) {
-        return _nameMatches(game.white, b) || _nameMatches(game.black, b);
+        return _nameMatches(game.resolvedWhite, b) || _nameMatches(game.resolvedBlack, b);
       }
       final direct =
-          _nameMatches(game.white, a) && _nameMatches(game.black, b);
+          _nameMatches(game.resolvedWhite, a) && _nameMatches(game.resolvedBlack, b);
       final swapped =
-          _nameMatches(game.white, b) && _nameMatches(game.black, a);
+          _nameMatches(game.resolvedWhite, b) && _nameMatches(game.resolvedBlack, a);
       return direct || swapped;
     }
 
-    return _nameMatches(game.white, white) && _nameMatches(game.black, black);
+    return _nameMatches(game.resolvedWhite, white) && _nameMatches(game.resolvedBlack, black);
   }
 
   GameFilter copyWith({

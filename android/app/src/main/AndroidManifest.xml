@@ -5,8 +5,8 @@
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_MEDIA_PROJECTION" />
     <!-- Kayıt bildirimi ("Durdur") Android 13+ sürümlerinde yalnızca bu
-         izin verilmişse görünüyor. Uygulama izni sormuyor; burada
-         bildirilmezse kullanıcı sistem ayarından da açamıyor (10.13.0). -->
+         izin verilmişse görünüyor. İlk kayıttan önce bir kez soruluyor
+         (ChessActivity.shouldAskForNotifications, 10.14.0). -->
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
     <application
         android:extractNativeLibs="true"

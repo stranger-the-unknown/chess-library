@@ -49,15 +49,23 @@ class GameSequence {
     required this.length,
     this.onPrevious,
     this.onNext,
+    this.number,
+    this.total,
     this.read = false,
     this.favorite = false,
     this.onToggleRead,
     this.onToggleFavorite,
   });
 
-  /// 1'den başlayan sıra ve toplam: "Oyun 3 / 12".
+  /// Açılan sıradaki yer (1'den) ve o sıranın uzunluğu.
   final int position;
   final int length;
+
+  /// Yazıda gösterilecek numara ve toplam: listedeki gerçek numara ve
+  /// listedeki oyun sayısı ("Oyun 62 / 211"). Null ise [position] ve
+  /// [length].
+  final int? number;
+  final int? total;
 
   /// Null ise o yönde oyun yok (listenin başı ya da sonu).
   final void Function(GameCarry carry)? onPrevious;
@@ -1121,12 +1129,13 @@ class _GameScreenState extends State<GameScreen> {
     // review removed
   }
 
-  Future<void> _restart() async {
+  Future<void> _restart({bool skipConfirm = false}) async {
     // Kayıtlı bir oyunu okurken "yeniden başlat" oyunu **silmiyor**:
     // hamleler yeniden kuruluyor ve başa dönülüyor. Eskiden geçmiş
     // boşaltılıyor, incelenen parti geri alınamayacak şekilde gidiyordu.
     final replay = _replayMode;
-    final confirmed = await AppDialogs.confirm(
+    final confirmed = skipConfirm ||
+        await AppDialogs.confirm(
       context,
       title: t('game.restart'),
       message: replay ? t('game.restartReplayMessage') : t('game.restartMessage'),
@@ -1208,9 +1217,17 @@ class _GameScreenState extends State<GameScreen> {
       if (!mounted) return;
     }
 
-    String selectedId = playlists.first.id;
+    // Son kaydedilen liste seçili geliyor (silindiyse ilki).
+    final lastList = SettingsService.instance.lastSaveList;
+    String selectedId = playlists.any((p) => p.id == lastList)
+        ? lastList!
+        : playlists.first.id;
+    // Kendi oynadığın oyunda (serbest tahta, motora karşı, kurulan konum)
+    // ekranın başlığı oyunun adı değil: eskiden hepsi "Serbest tahta" adıyla
+    // kaydediliyordu. Orada ad tarihten geliyor.
+    final loaded = widget.uciMoves != null || widget.pgnContent != null;
     final nameController = TextEditingController(
-      text: widget.title ??
+      text: (loaded ? widget.title : null) ??
           t('game.defaultGameName', {
             'date': DateTime.now().toString().substring(0, 16),
           }),
@@ -1300,6 +1317,7 @@ class _GameScreenState extends State<GameScreen> {
       if (mounted) AppDialogs.snack(context, t('lists.saveFailed'));
       return;
     }
+    SettingsService.instance.lastSaveList = selectedId;
     // `setState` gerekiyor: çıkış onayı bu bayrağa bakıyor ve yazı
     // tek başına yeniden çizim tetiklemiyordu.
     if (mounted) {
@@ -1461,9 +1479,33 @@ class _GameScreenState extends State<GameScreen> {
                 case 'record':
                   _recordScreen();
                   break;
+                case 'play':
+                  _stopAutoPlay();
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (_) => GameScreen(
+                        mode: GameMode.versusEngine,
+                        startFen: _game.fen,
+                        playerColor: _game.sideToMove,
+                        title: t('game.continueVsEngine'),
+                      ),
+                    ),
+                  );
+                  break;
               }
             },
             itemBuilder: (context) => [
+              // Kayıtlı oyunda en çok kullanılan iş en üstte (eskiden
+              // dokuz maddenin sonuncusuydu).
+              if (_canRecord && _replayMode)
+                PopupMenuItem(
+                  value: 'record',
+                  child: ListTile(
+                    leading: const Icon(Icons.videocam_outlined),
+                    title: Text(t('record.menu')),
+                  ),
+                ),
               PopupMenuItem(
                 value: 'save',
                 child: ListTile(
@@ -1514,15 +1556,30 @@ class _GameScreenState extends State<GameScreen> {
                     title: Text(t('game.resign')),
                   ),
                 ),
-              PopupMenuItem(
-                value: 'restart',
-                child: ListTile(
-                  leading: const Icon(Icons.restart_alt_rounded),
-                  title: Text(t('game.restart')),
+              // Bulmaca ve açılış ekranlarında vardı, burada yoktu.
+              if (widget.mode != GameMode.versusEngine &&
+                  !_game.isCheckmate &&
+                  !_game.isStalemate)
+                PopupMenuItem(
+                  value: 'play',
+                  child: ListTile(
+                    leading: const Icon(Icons.smart_toy_outlined),
+                    title: Text(t('common.playFromHere')),
+                  ),
                 ),
-              ),
+              // Kayıtlı oyunda "yeniden başlat" yalnızca başa sarıp
+              // denemeleri kaldırıyordu (⏮ ve deneme kartındaki ✕ ile
+              // aynı iş), üstelik onay sorarak; orada yok.
+              if (!_replayMode)
+                PopupMenuItem(
+                  value: 'restart',
+                  child: ListTile(
+                    leading: const Icon(Icons.restart_alt_rounded),
+                    title: Text(t('game.restart')),
+                  ),
+                ),
               // Oyunu baştan sona izletip kaydı kendisi alıyor.
-              if (_canRecord)
+              if (_canRecord && !_replayMode)
                 PopupMenuItem(
                   value: 'record',
                   child: ListTile(
@@ -1799,14 +1856,14 @@ class _GameScreenState extends State<GameScreen> {
               ],
             ),
           ),
-          if (_explore.isNotEmpty) _exploreCard(scheme),
           // Motor şeridi için sabit yükseklik: aç/kapa tahtayı kaydırmaz.
           SizedBox(
             height: _engineStripHeightFor(context, null),
             child: _analysisOn ? _engineLine(scheme) : null,
           ),
-          // Deneme sırasında tahtadaki konum oyunun sonucunu yansıtmaz.
-          if (_resultText != null && _explore.isEmpty) _resultSlot(scheme),
+          // Sonuç kartı ve deneme kartı aynı yerde (bkz. [_noticeSlot]).
+          if (_resultText != null || _replayMode || _explore.isNotEmpty)
+            _noticeSlot(scheme),
           _controls(scheme),
         ],
       ),
@@ -1967,8 +2024,8 @@ class _GameScreenState extends State<GameScreen> {
               single
                   ? ''
                   : t('lists.gamePosition', {
-                      'n': sequence.position,
-                      'total': sequence.length,
+                      'n': sequence.number ?? sequence.position,
+                      'total': sequence.total ?? sequence.length,
                     }),
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
@@ -2066,14 +2123,70 @@ class _GameScreenState extends State<GameScreen> {
         vertical: vertical,
       );
 
+  /// Dar yerleşimde sonuç kartıyla deneme kartının ortak yeri.
+  ///
+  /// Yer hep sonuç kartının boyunda ve kayıtlı oyunda baştan ayrılı:
+  /// eskiden deneme kartı (≈64 px) taş bırakılırken beliriyor, sonuç kartı
+  /// (≈50 px) aynı anda kalkıyordu; adlar ve tahta 7–64 px kayıyor ya da
+  /// kısa telefonda tahta küçülüyordu. Motor şeridi ve sonuç kartının yeri
+  /// zaten ayrılıydı; kayan tek şey buydu.
+  Widget _noticeSlot(ColorScheme scheme) {
+    final exploring = _explore.isNotEmpty;
+    return Stack(
+      children: [
+        Visibility(
+          // Deneme sırasında tahtadaki konum oyunun sonucunu yansıtmaz.
+          visible: !exploring && _resultText != null && !_resultHidden,
+          maintainSize: true,
+          maintainAnimation: true,
+          maintainState: true,
+          child: _resultBanner(scheme),
+        ),
+        if (exploring)
+          Positioned.fill(child: _exploreCard(scheme, compact: true)),
+      ],
+    );
+  }
+
   /// Denenen hamleleri ve bunların kaydedilmediğini gösteren şerit.
-  Widget _exploreCard(ColorScheme scheme) {
+  ///
+  /// [compact]: dar yerleşimde sonuç kartının yerine oturuyor
+  /// ([_noticeSlot]); boyu oradan geliyor, düğmeler küçük.
+  Widget _exploreCard(ColorScheme scheme, {bool compact = false}) {
     final sanMoves = _explore.map((e) => e.san).join(' ');
+    final moves = Text(
+      sanMoves,
+      maxLines: 1,
+      softWrap: false,
+      style: TextStyle(
+        fontSize: 13.5,
+        fontWeight: FontWeight.w700,
+        color: scheme.onSecondaryContainer,
+      ),
+    );
+    final hint = Text(
+      t('game.exploreHint'),
+      maxLines: 1,
+      overflow: TextOverflow.ellipsis,
+      style: TextStyle(
+        fontSize: 11,
+        color: scheme.onSecondaryContainer.withValues(alpha: 0.8),
+      ),
+    );
+    final buttonStyle = compact
+        ? IconButton.styleFrom(
+            minimumSize: const Size(36, 32),
+            padding: EdgeInsets.zero,
+            tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+          )
+        : null;
 
     return Container(
       width: double.infinity,
-      margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 2),
-      padding: const EdgeInsets.fromLTRB(12, 6, 4, 6),
+      margin: EdgeInsets.symmetric(horizontal: 12, vertical: compact ? 4 : 2),
+      padding: compact
+          ? const EdgeInsets.fromLTRB(12, 0, 4, 0)
+          : const EdgeInsets.fromLTRB(12, 6, 4, 6),
       decoration: BoxDecoration(
         color: scheme.secondaryContainer,
         borderRadius: BorderRadius.circular(12),
@@ -2087,36 +2200,41 @@ class _GameScreenState extends State<GameScreen> {
           ),
           const SizedBox(width: 8),
           Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  sanMoves,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: TextStyle(
-                    fontSize: 13.5,
-                    fontWeight: FontWeight.w700,
-                    color: scheme.onSecondaryContainer,
-                  ),
-                ),
-                Text(
-                  t('game.exploreHint'),
-                  style: TextStyle(
-                    fontSize: 11,
-                    color: scheme.onSecondaryContainer.withValues(alpha: 0.8),
-                  ),
-                ),
-              ],
+            child: LayoutBuilder(
+              builder: (context, constraints) {
+                // Açıklama satırı yalnızca sığıyorsa (büyük yazı boyunda
+                // kart taşmasın); hamleler her zaman.
+                final scaler = MediaQuery.textScalerOf(context);
+                final fits = !constraints.hasBoundedHeight ||
+                    constraints.maxHeight >=
+                        (scaler.scale(13.5) + scaler.scale(11)) * 1.3;
+                return Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    // Satır uzayınca en yeni hamleler görünsün: eskiden üç
+                    // noktayla kesilen, son oynananlardı.
+                    SingleChildScrollView(
+                      scrollDirection: Axis.horizontal,
+                      reverse: true,
+                      child: moves,
+                    ),
+                    if (fits) hint,
+                  ],
+                );
+              },
             ),
           ),
           IconButton(
+            style: buttonStyle,
             tooltip: t('game.undoExplore'),
             icon: const Icon(Icons.undo_rounded, size: 20),
             color: scheme.onSecondaryContainer,
             onPressed: _undoExplore,
           ),
           IconButton(
+            style: buttonStyle,
             tooltip: t('game.backToGame'),
             icon: const Icon(Icons.close_rounded, size: 20),
             color: scheme.onSecondaryContainer,
@@ -2254,7 +2372,8 @@ class _GameScreenState extends State<GameScreen> {
       );
 
   Widget _resultBanner(ColorScheme scheme) {
-    final result = _resultText!;
+    // Sonuç yokken yalnızca yer tutuyor ([_noticeSlot], görünmez).
+    final result = _resultText ?? '*';
     final label = switch (result) {
       '1-0' => t('game.whiteWon'),
       '0-1' => t('game.blackWon'),
@@ -2276,16 +2395,51 @@ class _GameScreenState extends State<GameScreen> {
         border: Border.all(color: color.withValues(alpha: 0.5)),
         borderRadius: BorderRadius.circular(12),
       ),
-      child: Text(
-        _resigned
-            ? '$label · ${t('game.resigned')}  ($result)'
-            : '$label  ($result)',
-        textAlign: TextAlign.center,
-        style: TextStyle(
-          color: color,
-          fontWeight: FontWeight.w700,
-          fontSize: 14,
-        ),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Text(
+            _resigned
+                ? '$label · ${t('game.resigned')}  ($result)'
+                : '$label  ($result)',
+            textAlign: TextAlign.center,
+            style: TextStyle(
+              color: color,
+              fontWeight: FontWeight.w700,
+              fontSize: 14,
+            ),
+          ),
+          // Motora karşı oyun bitince sıradaki iki iş burada: eskiden
+          // ikisi de ⋮ menüsündeydi (yeni oyun: "Yeniden başlat" + onay).
+          if (widget.mode == GameMode.versusEngine && _resultText != null)
+            Padding(
+              padding: const EdgeInsets.only(top: 4),
+              child: Wrap(
+                alignment: WrapAlignment.center,
+                spacing: 8,
+                children: [
+                  TextButton.icon(
+                    // Kaydedilmiş oyunda sorulacak bir şey yok.
+                    onPressed: () => _restart(skipConfirm: _savedToList),
+                    icon: const Icon(Icons.restart_alt_rounded, size: 18),
+                    label: Text(t('game.newGame')),
+                  ),
+                  TextButton.icon(
+                    onPressed: _savedToList ? null : _saveGame,
+                    icon: Icon(
+                      _savedToList
+                          ? Icons.check_rounded
+                          : Icons.bookmark_add_outlined,
+                      size: 18,
+                    ),
+                    label: Text(t(_savedToList
+                        ? 'game.savedToList'
+                        : 'game.saveToList')),
+                  ),
+                ],
+              ),
+            ),
+        ],
       ),
     );
   }
@@ -2357,13 +2511,27 @@ class _GameScreenState extends State<GameScreen> {
                       : null,
                   t('game.forward'),
                 ),
-                _navButton(
-                  Icons.last_page_rounded,
-                  _cursor < _history.length - 1
-                      ? () => _userGoTo(_history.length - 1)
-                      : null,
-                  t('game.toEnd'),
-                ),
+                // Oyunun sonunda sönük duran "sona git" yerine sıradaki
+                // oyun: eskiden tek yol üstteki küçük oktu. Kayıt sürerken
+                // değişmiyor (videonun son saniyelerinde düğme oynamasın).
+                if (atEnd &&
+                    !_recordingLocked &&
+                    widget.sequence?.onNext != null)
+                  IconButton.filledTonal(
+                    key: const ValueKey('nextGameAtEnd'),
+                    icon: const Icon(Icons.keyboard_arrow_down_rounded),
+                    iconSize: 26,
+                    tooltip: t('lists.nextGame'),
+                    onPressed: () => _stepGame(widget.sequence!.onNext),
+                  )
+                else
+                  _navButton(
+                    Icons.last_page_rounded,
+                    _cursor < _history.length - 1
+                        ? () => _userGoTo(_history.length - 1)
+                        : null,
+                    t('game.toEnd'),
+                  ),
                 // İzleme hızı; yalnızca izlenebilen oyunda.
                 if (widget.mode != GameMode.versusEngine)
                   WatchSpeedButton(

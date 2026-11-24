@@ -148,15 +148,18 @@ void main() {
     await tester.pumpAndSettle();
     expect(find.text('Nf3'), findsOneWidget);
 
+    // 10.14.0: kayıtlı oyunda "Yeniden başlat" artık menüde yok (yalnızca
+    // başa sarıyordu; ⏮ aynı işi onaysız yapıyor). Hamleleri silebilecek
+    // bir düğme kalmadı.
     await _openMenu(tester);
-    await tester.tap(find.text(t('game.restart')).last);
+    expect(find.text(t('game.restart')), findsNothing);
+    expect(find.text(t('game.copyPgn')), findsOneWidget,
+        reason: 'menü gerçekten açılmış olmalı');
+    await tester.tapAt(const Offset(5, 5));
     await tester.pumpAndSettle();
 
-    // Onay penceresindeki düğme "Sil" değil "Yeniden başlat".
-    expect(find.text(t('common.delete')), findsNothing);
-    await tester.tap(find.text(t('game.restart')).last);
+    await tester.tap(find.byTooltip(t('game.toStart')));
     await tester.pumpAndSettle();
-
     expect(find.text('Nf3'), findsOneWidget,
         reason: 'kayıtlı oyunun hamleleri durmalı');
   });

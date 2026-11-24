@@ -283,14 +283,22 @@ class _OpeningListScreenState extends State<OpeningListScreen> {
     if (!mounted) return;
     // Atlananları söylemezsek, listede zaten bulunan bir dosyayı yeniden
     // alan kullanıcı "0 varyant eklendi" görüp bozuk sanıyor.
+    // Kısalan ve okunamayan satırlar da söyleniyor: yoksa parantezli yan
+    // varyant içeren bir satır sessizce üç hamle olarak ekleniyordu.
     AppDialogs.snack(
       context,
-      result.skipped == 0
-          ? t('openings.imported', {'count': result.added})
-          : t('openings.importedWithSkips', {
-              'count': result.added,
-              'skipped': result.skipped,
-            }),
+      [
+        result.skipped == 0
+            ? t('openings.imported', {'count': result.added})
+            : t('openings.importedWithSkips', {
+                'count': result.added,
+                'skipped': result.skipped,
+              }),
+        if (result.truncated > 0)
+          t('openings.importTruncated', {'count': result.truncated}),
+        if (result.invalid > 0)
+          t('openings.importInvalid', {'count': result.invalid}),
+      ].join(' '),
     );
   }
 

@@ -185,13 +185,20 @@ class PgnParser {
     return clean;
   }
 
-  /// Süslü parantezli yorumları, iç içe olsalar da kaldırır.
+  /// Süslü parantezli yorumları kaldırır.
   ///
-  /// Çevrimiçi PGN'lerde saat ve değerlendirme `{[%clk 0:10:00]}`
-  /// biçiminde gelir; düz regex iç içe parantezde artan `}` bırakıyordu
-  /// ve hamleler okunamıyordu.
+  /// Önce iç içe sayarak: dengeli iç içe yorumlar (`{a {b} c}`) tek yorum
+  /// sayılıyor; çevrimiçi PGN'lerde saat ve değerlendirme
+  /// `{[%clk 0:10:00]}` biçiminde geliyor ve düz regex artan `}`
+  /// bırakıyordu.
+  ///
+  /// Ayraçlar dengeli çıkmazsa PGN'in kendi kuralı deneniyor: yorumlar iç
+  /// içe olmaz, yorum ilk `}` ile biter, içindeki `{` sıradan bir harftir.
+  /// Eskiden içinde tek bir `{` geçen yorum (`{ a { b } e5 ...`) oyunun
+  /// geri kalanını yutuyordu. O da kapanmıyorsa yorum gerçekten açık
+  /// kalmış.
   String _stripBraces(String input) {
-    final buffer = StringBuffer();
+    final nested = StringBuffer();
     int depth = 0;
     for (final rune in input.runes) {
       final char = String.fromCharCode(rune);
@@ -200,11 +207,26 @@ class PgnParser {
       } else if (char == '}') {
         if (depth > 0) depth--;
       } else if (depth == 0) {
-        buffer.write(char);
+        nested.write(char);
       }
     }
-    if (depth > 0) unclosedAnnotation = true;
-    return buffer.toString();
+    if (depth == 0) return nested.toString();
+
+    final flat = StringBuffer();
+    var inComment = false;
+    for (final rune in input.runes) {
+      final char = String.fromCharCode(rune);
+      if (inComment) {
+        if (char == '}') inComment = false;
+      } else if (char == '{') {
+        inComment = true;
+      } else if (char != '}') {
+        flat.write(char);
+      }
+    }
+    if (!inComment) return flat.toString();
+    unclosedAnnotation = true;
+    return nested.toString();
   }
 
   /// İç içe olsa dahi parantezli varyasyonları kaldırır.
@@ -409,16 +431,23 @@ class PgnParser {
   ///
   /// Yeni bir oyun, hamleler görüldükten sonra gelen ilk başlık satırıyla
   /// ("[Event ...]") başlar. Başlıksız tek oyunlar da doğru çalışır.
+  ///
+  /// Başlıksız oyunlar art arda da gelebilir (yalnızca boş satırla
+  /// ayrılmış): sonuçla ("1-0", "*") biten hamle satırından sonraki boş
+  /// satır oyunu bitirir. Eskiden hepsi tek oyun sayılıyor, ikinci oyunun
+  /// yasal görünen hamleleri birincinin sonuna ekleniyordu.
   static List<String> splitGames(String text) {
     final games = <String>[];
     var buffer = StringBuffer();
     bool seenMoves = false;
+    bool endedWithResult = false;
 
     void flush() {
       final content = buffer.toString().trim();
       if (content.isNotEmpty) games.add(content);
       buffer = StringBuffer();
       seenMoves = false;
+      endedWithResult = false;
     }
 
     for (final line in const LineSplitter().convert(text)) {
@@ -426,12 +455,20 @@ class PgnParser {
       if (trimmed.startsWith('%')) continue;
       final isTag = trimmed.startsWith('[') && trimmed.endsWith(']');
       if (isTag && seenMoves) flush();
-      if (!isTag && trimmed.isNotEmpty) seenMoves = true;
+      if (trimmed.isEmpty && seenMoves && endedWithResult) flush();
+      if (!isTag && trimmed.isNotEmpty) {
+        seenMoves = true;
+        endedWithResult = _endsWithResult.hasMatch(trimmed);
+      }
       buffer.writeln(line);
     }
     flush();
     return games;
   }
+
+  /// Satırın sonunda oyun sonucu.
+  static final RegExp _endsWithResult =
+      RegExp(r'(^|\s)(1-0|0-1|1/2-1/2|\*)$');
 
   /// Dosyadaki tüm oyunları çözümler. Okunamayan oyunlar atlanır.
   ///

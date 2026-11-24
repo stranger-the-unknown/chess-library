@@ -73,8 +73,11 @@ class _OpeningStudyScreenState extends State<OpeningStudyScreen> {
   late int _index =
       widget.sequence?.indexWhere((o) => o.id == widget.opening.id) ?? -1;
 
-  /// Yeni varyanta taşınanlar.
-  StudyMode _mode = StudyMode.watch;
+  /// Yeni varyanta taşınanlar. Kip son kullanılandan başlıyor (10.14.0):
+  /// eskiden her varyant "İzle"de açılıyordu.
+  StudyMode _mode = SettingsService.instance.openingPractice
+      ? StudyMode.practice
+      : StudyMode.watch;
   bool _analysisOn = false;
 
   bool get _hasSequence =>
@@ -221,10 +224,17 @@ class _StudyViewState extends State<_StudyView> {
   /// ana varyant ve (ayar açıksa) en iyi hamle oku.
   void _toggleAnalysis() => _setAnalysis(!_analysisOn);
 
+  /// Son ölçümün skoru (beyazın gözünden); yeni konumun sonucu gelene
+  /// kadar şeritte o duruyor. Eskiden şerit her hamlede gri "Motor
+  /// düşünüyor…" yazısına dönüp titriyordu; oyun ekranı skoru zaten
+  /// tutuyordu (eski skor yeni konum için de kaba bir tahmin).
+  String? _lastEvaluation;
+
   void _setAnalysis(bool on) {
     setState(() {
       _analysisOn = on;
       _analysis = null;
+      _lastEvaluation = null;
     });
     if (on) {
       _runAnalysis();
@@ -262,21 +272,25 @@ class _StudyViewState extends State<_StudyView> {
           );
     if (!mounted || token != _analysisToken || !_analysisOn) return;
     if (result.cancelled) return;
-    setState(() => _analysis = result);
+    setState(() {
+      _analysis = result;
+      _lastEvaluation = _evaluationOf(result);
+    });
+  }
+
+  /// Skor, beyazın gözünden ("+0.35", "Beyaz 3 hamlede mat").
+  String _evaluationOf(SearchResult analysis) {
+    final side = _game.sideToMove;
+    final mate = analysis.mateIn;
+    if (mate != null) return GameScreen.mateText(mate, side);
+    final cp = analysis.scoreCp * (side == engine.Color.white ? 1 : -1);
+    final body = (cp.abs() / 100).toStringAsFixed(2);
+    return cp > 0 ? '+$body' : (cp < 0 ? '-$body' : '0.00');
   }
 
   /// Motor satırının yazısı: skor (beyazın gözünden) ve ana varyant.
   String _describeAnalysis(SearchResult analysis) {
-    final side = _game.sideToMove;
-    final mate = analysis.mateIn;
-    final String evaluation;
-    if (mate != null) {
-      evaluation = GameScreen.mateText(mate, side);
-    } else {
-      final cp = analysis.scoreCp * (side == engine.Color.white ? 1 : -1);
-      final body = (cp.abs() / 100).toStringAsFixed(2);
-      evaluation = cp > 0 ? '+$body' : (cp < 0 ? '-$body' : '0.00');
-    }
+    final evaluation = _evaluationOf(analysis);
     final position = _game.copy();
     final san = <String>[];
     for (final uci in analysis.pvUci.take(6)) {
@@ -307,11 +321,17 @@ class _StudyViewState extends State<_StudyView> {
           Expanded(
             child: analysis == null
                 ? Text(
-                    t('openings.engineThinking'),
-                    style: TextStyle(
-                      fontSize: 13,
-                      color: scheme.onSurfaceVariant,
-                    ),
+                    // İlk ölçümden önce "düşünüyor"; sonra, yenisi gelene
+                    // kadar son skor.
+                    _lastEvaluation == null
+                        ? t('openings.engineThinking')
+                        : '$_lastEvaluation  ·  …',
+                    style: _lastEvaluation == null
+                        ? TextStyle(
+                            fontSize: 13,
+                            color: scheme.onSurfaceVariant,
+                          )
+                        : const TextStyle(fontSize: 14, height: 1.25),
                   )
                 : Text(
                     _describeAnalysis(analysis),
@@ -696,8 +716,11 @@ class _StudyViewState extends State<_StudyView> {
       // Kayıt sürerken üst çubuk yok (oyun ekranındaki gibi; bkz.
       // GameScreen): düğmeleri videoda işe yaramıyor. Varyantın adı o sırada
       // tahtanın üstündeki satırda, ailenin yanında yazıyor ([_header]).
+      // Varyantın adı üst çubukta yazmıyor (10.14.0): dört düğmenin
+      // yanında 80–130 piksel kalıyor, hemen her ad kesiliyordu ("Najdorf
+      // Varyantı" 144 piksel). Ad, altındaki satırda tam yazıyor
+      // ([_header]); oyun ekranındaki kuralın aynısı.
       appBar: _recordingLocked ? null : AppBar(
-        title: Text(opening.variation),
         actions: [
           IconButton(
             tooltip: _favorite
@@ -710,6 +733,21 @@ class _StudyViewState extends State<_StudyView> {
             onPressed: () async {
               final value = await _service.toggleFavorite(opening.id);
               if (mounted) setState(() => _favorite = value);
+            },
+          ),
+          // Sıra oyun ekranındakiyle aynı: [çevir][motor][⋮]. Eskiden ⋮'nin
+          // yanındaki düğme oyunda motor, burada çevirmeydi.
+          IconButton(
+            tooltip: t('common.flipBoard'),
+            icon: const Icon(Icons.swap_vert_rounded),
+            onPressed: () {
+              setState(() => _flipped = !_flipped);
+              // Alıştırmada çevirmek yalnızca bakışı değil, **hangi
+              // tarafı çalıştığını** da değiştiriyor. Hat ortasındayken
+              // sıra karşı tarafa geçtiği için tahta kilitleniyor ve tek
+              // çıkış tekrar çevirmek ya da baştan başlamak oluyordu.
+              // Taraf değişince alıştırma yeniden kuruluyor.
+              if (_mode == StudyMode.practice) _setMode(StudyMode.practice);
             },
           ),
           IconButton(
@@ -725,19 +763,6 @@ class _StudyViewState extends State<_StudyView> {
             ),
             // İzlerken kilitli (bkz. [_toggleAutoPlay]).
             onPressed: _autoPlaying ? null : _toggleAnalysis,
-          ),
-          IconButton(
-            tooltip: t('common.flipBoard'),
-            icon: const Icon(Icons.swap_vert_rounded),
-            onPressed: () {
-              setState(() => _flipped = !_flipped);
-              // Alıştırmada çevirmek yalnızca bakışı değil, **hangi
-              // tarafı çalıştığını** da değiştiriyor. Hat ortasındayken
-              // sıra karşı tarafa geçtiği için tahta kilitleniyor ve tek
-              // çıkış tekrar çevirmek ya da baştan başlamak oluyordu.
-              // Taraf değişince alıştırma yeniden kuruluyor.
-              if (_mode == StudyMode.practice) _setMode(StudyMode.practice);
-            },
           ),
           PopupMenuButton<String>(
             onSelected: (value) async {
@@ -798,7 +823,14 @@ class _StudyViewState extends State<_StudyView> {
             },
             itemBuilder: (context) => [
               PopupMenuItem(value: 'png', child: Text(t('board.savePng'))),
-              PopupMenuItem(value: 'note', child: Text(t('common.addNote'))),
+              // Not varken "Not ekle" yazıyordu; yaptığı iş düzenlemek.
+              PopupMenuItem(
+                value: 'note',
+                child: Text(t(
+                    opening.note != null && opening.note!.isNotEmpty
+                        ? 'common.editNote'
+                        : 'common.addNote')),
+              ),
               if (opening.note != null && opening.note!.isNotEmpty)
                 PopupMenuItem(
                   value: 'deleteNote',
@@ -1035,12 +1067,13 @@ class _StudyViewState extends State<_StudyView> {
     // yaramıyor (kullanıcının isteği; üst çubuk gibi). Satır kalıyor.
     final sequence = widget.showSequence && !_recordingLocked;
     return Padding(
-      // Oklar varken satır onların boyunda; dikey pay daralıyor ki tahta
-      // küçülmesin.
-      padding: sequence
-          ? const EdgeInsets.fromLTRB(16, 1, 6, 1)
-          : const EdgeInsets.fromLTRB(16, 4, 16, 6),
-      child: Row(
+      // Satır okların boyunda (34), oklar olsa da olmasa da: iki satırlık
+      // ad (başlık + varyant) o boya sığıyor, geniş pencerede tahta
+      // küçülmüyor ([_wideChromeHeight]).
+      padding: EdgeInsets.fromLTRB(16, 1, sequence ? 6 : 16, 1),
+      child: ConstrainedBox(
+        constraints: const BoxConstraints(minHeight: 34),
+        child: Row(
         children: [
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
@@ -1059,18 +1092,49 @@ class _StudyViewState extends State<_StudyView> {
           ),
           const SizedBox(width: 8),
           Expanded(
-            child: Text(
-              // Kayıt sürerken üst çubuk yok; varyantın adı yalnızca orada
-              // yazıyordu, videoda kaybolmasın diye burada da yazıyor.
-              _recordingLocked ? widget.opening.title : widget.opening.family,
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-              style: TextStyle(
-                fontSize: 12.5,
-                fontWeight: FontWeight.w600,
-                color: scheme.onSurfaceVariant,
-              ),
-            ),
+            child: _recordingLocked
+                // Kayıtta tek satır ("İtalyan · Giuoco Piano"): videoda
+                // satırın boyu değişmesin.
+                ? Text(
+                    widget.opening.title,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: TextStyle(
+                      fontSize: 12.5,
+                      fontWeight: FontWeight.w600,
+                      color: scheme.onSurfaceVariant,
+                    ),
+                  )
+                : Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Text(
+                        widget.opening.family,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: TextStyle(
+                          fontSize: 11.5,
+                          height: 1.2,
+                          fontWeight: FontWeight.w600,
+                          color: scheme.onSurfaceVariant,
+                        ),
+                      ),
+                      // Varyantın adı burada tam yazıyor; çok uzunsa iki
+                      // satır.
+                      Text(
+                        widget.opening.variation,
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                        style: TextStyle(
+                          fontSize: 14.5,
+                          height: 1.15,
+                          fontWeight: FontWeight.w700,
+                          color: scheme.onSurface,
+                        ),
+                      ),
+                    ],
+                  ),
           ),
           if (_learned)
             Icon(Icons.check_circle_rounded, size: 16, color: scheme.success),
@@ -1090,6 +1154,7 @@ class _StudyViewState extends State<_StudyView> {
             ),
           ],
         ],
+        ),
       ),
     );
   }
@@ -1222,7 +1287,12 @@ class _StudyViewState extends State<_StudyView> {
                 ),
               ],
               selected: {_mode},
-              onSelectionChanged: (selection) => _setMode(selection.first),
+              onSelectionChanged: (selection) {
+                // Seçim hatırlanıyor: sonraki varyant da bu kipte açılır.
+                SettingsService.instance.openingPractice =
+                    selection.first == StudyMode.practice;
+                _setMode(selection.first);
+              },
             ),
           ),
           const SizedBox(height: 4),
@@ -1231,10 +1301,12 @@ class _StudyViewState extends State<_StudyView> {
               mainAxisAlignment: MainAxisAlignment.spaceEvenly,
               children: [
                 IconButton(
+                  tooltip: t('game.toStart'),
                   icon: const Icon(Icons.first_page_rounded),
                   onPressed: _cursor >= 0 ? () => _userGoTo(-1) : null,
                 ),
                 IconButton(
+                  tooltip: t('common.previous'),
                   icon: const Icon(Icons.chevron_left_rounded),
                   iconSize: 28,
                   onPressed:
@@ -1258,16 +1330,28 @@ class _StudyViewState extends State<_StudyView> {
                       : _toggleAutoPlay,
                 ),
                 IconButton(
+                  tooltip: t('game.forward'),
                   icon: const Icon(Icons.chevron_right_rounded),
                   iconSize: 28,
                   onPressed: atEnd ? null : () => _userGoTo(_cursor + 1),
                 ),
-                IconButton(
-                  icon: const Icon(Icons.last_page_rounded),
-                  onPressed: atEnd
-                      ? null
-                      : () => _userGoTo(widget.opening.uciMoves.length - 1),
-                ),
+                // Sonda sönük duran "sona git" yerine sıradaki varyant
+                // (oyun ekranındaki gibi); kayıt sürerken değişmiyor.
+                if (atEnd && !_recordingLocked && widget.onNext != null)
+                  IconButton.filledTonal(
+                    key: const ValueKey('nextVariationAtEnd'),
+                    tooltip: t('openings.nextVariation'),
+                    icon: const Icon(Icons.keyboard_arrow_down_rounded),
+                    onPressed: () => _stepVariation(widget.onNext!),
+                  )
+                else
+                  IconButton(
+                    tooltip: t('game.toEnd'),
+                    icon: const Icon(Icons.last_page_rounded),
+                    onPressed: atEnd
+                        ? null
+                        : () => _userGoTo(widget.opening.uciMoves.length - 1),
+                  ),
                 WatchSpeedButton(
                   value: SettingsService.instance.openingWatchSpeed,
                   onSelected: _setWatchSpeed,
@@ -1283,11 +1367,22 @@ class _StudyViewState extends State<_StudyView> {
                   icon: const Icon(Icons.refresh_rounded, size: 19),
                   label: Text(t('common.restart')),
                 ),
-                TextButton.icon(
-                  onPressed: atEnd ? null : _showNextMove,
-                  icon: const Icon(Icons.skip_next_rounded, size: 19),
-                  label: Text(t('openings.show')),
-                ),
+                // Varyant bitince "Göster" sönüyordu; sıradaki varyant
+                // varsa onun yerine o çıkıyor.
+                if (atEnd && widget.onNext != null)
+                  TextButton.icon(
+                    key: const ValueKey('nextVariationAtEnd'),
+                    onPressed: () => _stepVariation(widget.onNext!),
+                    icon:
+                        const Icon(Icons.keyboard_arrow_down_rounded, size: 19),
+                    label: Text(t('openings.nextVariation')),
+                  )
+                else
+                  TextButton.icon(
+                    onPressed: atEnd ? null : _showNextMove,
+                    icon: const Icon(Icons.skip_next_rounded, size: 19),
+                    label: Text(t('openings.show')),
+                  ),
               ],
             ),
       ],

@@ -60,6 +60,25 @@ class PuzzleSolveScreen extends StatefulWidget {
     this.totalInCollection = 0,
   });
 
+  /// Motorun yargıladığı mat bulmacasında hamle yeterince hızlı mı?
+  ///
+  /// [baselineMate]: hamleden önce motorun bulduğu mat (hamle sayısı);
+  /// en iyi hamleden sonra geriye `baselineMate - 1` kalır. [userMate]:
+  /// oynanan hamleden sonra kalan.
+  ///
+  /// Kısa matlarda (3 hamleye kadar) en hızlı mat isteniyor: motor bu
+  /// uzaklıkları kesin görüyor. Daha uzun matlarda bir hamle pay var; sığ
+  /// aramada iki ölçüm aynı matı bir hamle farkla bildirebiliyor.
+  ///
+  /// Eskiden her uzunlukta iki hamle pay vardı (`<= baselineMate + 1`):
+  /// tahtada 1 hamlede mat varken mat etmeyen, matı iki hamle geciktiren
+  /// hamle "Doğru" sayılıp bulmaca çözüldü diye işaretleniyordu.
+  @visibleForTesting
+  static bool mateFastEnough(int baselineMate, int userMate) {
+    final slack = baselineMate <= 3 ? 0 : 1;
+    return userMate <= baselineMate - 1 + slack;
+  }
+
   /// Testlerde motorun yerine geçer.
   @visibleForTesting
   static Future<SearchResult> Function(
@@ -346,7 +365,12 @@ class _PuzzleSolveScreenState extends State<PuzzleSolveScreen> {
     // jeton değişmişse bu hamlenin sonucu artık başka bir tahtaya
     // yazılmamalı (yanlış "çözüldü" ve bozuk tahta oluyordu).
     final token = _loadToken;
-    if (!_puzzle.hasSolution && _baseline == null) return;
+    // Motor bu bulmaca için hiç ölçüt veremediyse (motor yok) hamle
+    // yargılanamaz; ekranda zaten yazıyor. Ölçüt yalnızca arada boş
+    // döndüyse (rakibin cevabından sonraki ölçüm) hamle yok sayılmıyor:
+    // [_isCorrect] bu konumu yeniden soruyor, yine olmazsa söylüyor.
+    // Eskiden tahta mesajsız tepkisiz kalıyordu.
+    if (!_puzzle.hasSolution && _startBaseline == null) return;
 
     setState(() {
       _busy = true;
@@ -504,7 +528,7 @@ class _PuzzleSolveScreenState extends State<PuzzleSolveScreen> {
     if (baseline.mateIn != null && baseline.mateIn! > 0) {
       return userMate != null &&
           userMate > 0 &&
-          userMate <= baseline.mateIn! + 1;
+          PuzzleSolveScreen.mateFastEnough(baseline.mateIn!, userMate);
     }
     if (!_keepsTheWin(baseline.scoreCp, userScore)) return false;
     return userScore >= baseline.scoreCp - _toleranceCp;
@@ -936,7 +960,13 @@ class _PuzzleSolveScreenState extends State<PuzzleSolveScreen> {
                 value: 'edit',
                 child: Text(t('common.editPosition')),
               ),
-              PopupMenuItem(value: 'note', child: Text(t('common.addNote'))),
+              PopupMenuItem(
+                value: 'note',
+                child: Text(t(
+                    _puzzle.note != null && _puzzle.note!.isNotEmpty
+                        ? 'common.editNote'
+                        : 'common.addNote')),
+              ),
               if (_puzzle.note != null && _puzzle.note!.isNotEmpty)
                 PopupMenuItem(
                   value: 'deleteNote',

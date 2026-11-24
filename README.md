@@ -86,7 +86,10 @@ one of nine ratings from 800 to 2400, or **Stockfish** (Expert, Master).
 Each level says briefly how it plays. The level you had chosen in an
 earlier version moves to the closest new one. Your colour can be white,
 black or **random**; your choice is remembered, like the level. You can also start from a **position you set up
-yourself** instead of the standard arrangement.
+yourself** instead of the standard arrangement. When the game ends, the
+result card offers **New game** and **Save to a list**. "Save to a list"
+opens with the list you saved to last; a game you played yourself is named
+after the date ("Game 2026-11-24 12:30").
 
 **Load PGN** — From a file, or by pasting from the clipboard. A file may
 hold any number of games: they are listed, and you save the ones you pick
@@ -124,6 +127,14 @@ the arrow is drawn only on your turn.
 **Navigation** — Tap any move in the move strip to go to that position;
 the buttons below step back and forward, or jump to the start or the end.
 
+**The ⋮ menu** — Save to a list, copy PGN / FEN, save the board as PNG,
+paste FEN, edit the position, and **Play the engine from here** (from the
+position on the board, with the side to move). In a saved game **Record
+the screen** is at the top; "Restart" is not there (use ⏮ to go back to
+the start).
+
+The app opens on the tab you left it on (except Settings).
+
 **Marks and arrows (mouse)** — **Right-click** a square to mark it;
 **hold the right button and drag** to draw an arrow between two squares.
 Right-clicking the same place again removes the mark, a left click clears
@@ -135,7 +146,10 @@ the board to see how the engine's evaluation changes. These moves are not
 written into the game: they do not appear in the move list, they are not
 exported to PGN, they are not saved, and they disappear when you leave
 the screen. The buttons on the strip undo the last trial move or take you
-back to the game. A trial move turns the engine on by itself; if you do
+back to the game. On a phone the strip appears in the place of the result
+card (which is reserved from the start), so the board and the names do not
+move; when the line gets long, the latest trial moves stay visible. A
+trial move turns the engine on by itself; if you do
 not want that, switch off Settings → Engine → **Turn the engine on for
 trial moves**. If you pause playback, try moves and then press play again,
 the game's own position comes back first and the next move follows.
@@ -160,8 +174,9 @@ While recording, the screen ignores touches, so an accidental tap does not
 disturb playback. To finish early on Android, press **Stop** in the
 recording notification or leave the app; what was recorded so far is
 saved. On Android 13 and later that notification is only shown if
-notifications are allowed for the app (the phone's Settings → Apps → Chess
-Library → Notifications); the app does not ask for this permission itself.
+notifications are allowed for the app. The app asks **once, before the
+first recording**; if you decline it does not ask again, and you can turn
+it on later in the phone's Settings → Apps → Chess Library → Notifications.
 With it off, leaving the app is the way to finish early. On Android the whole screen is recorded (as with the phone's own
 recorder); turn on Do Not Disturb first if notifications should not show.
 While recording, the app is full screen: the phone's status bar (clock,
@@ -406,7 +421,14 @@ last line of a card comes the first line of the next card; at the end of
 the list they stop. The order is the one you see in the list: hidden
 titles are left out, and with a search or "favorites only" on you move
 within it. Watch or practice mode and a running engine carry over to the
-new line; if its title is studied from Black’s side, the board turns.
+new line; if its title is studied from Black’s side, the board turns. At
+the end of a line the "go to end" button in the navigation row ("Show" in
+practice) becomes **Next line**.
+
+The name of the line is not in the top bar (it did not fit on a phone);
+the row under the bar shows the title in small type and the full name of
+the line below it. The screen opens in the mode you used last: if you are
+practising, the next line opens in practice too.
 
 Every line also offers a note, a favorite mark, "play the engine from
 here" and "open in the analysis board". The chart icon at the top turns
@@ -470,7 +492,12 @@ delete them.
   filter, range and reversed order apply — and it is fixed when you open
   the game (marking a game read does not shift it). It stops at the end
   of the list and does not move on to the next list. The board’s
-  orientation and a running engine carry over to the new game.
+  orientation and a running engine carry over to the new game. The number
+  shown is the game's **number in the list**: with a filter or reversed
+  order it still reads "Game 62 of 211". On the last move of a game the
+  "go to end" button in the navigation row becomes **Next game**.
+- **Continue**: the button at the bottom right of a list opens the first
+  unread game in the order shown (the first game if all are read).
 - A game opened from a list or a PGN does not repeat its name in the top
   bar: on a phone it never fitted, and both players' full names are
   already beside the board.
@@ -511,7 +538,7 @@ openings — so you notice a wrong file before any data is deleted. Then
 you are offered two modes:
 
 - **Merge** — The backup is added on top of what is here. Where the same
-  game list or puzzle collection exists on both sides, the backup's copy
+  game list or puzzle list exists on both sides, the backup's copy
   replaces it **as a whole**: games added to that list after the backup
   are lost. The settings on this device are left alone.
 - **Replace** — The data on this device is deleted and the backup takes
@@ -581,7 +608,7 @@ to keep them: take a backup before you uninstall.
 - **Confirmation prompts** — when turned off, the app no longer asks
   before leaving a game with unsaved moves, closing the window, resigning
   or restarting a game. Anything that deletes saved data (a list, a
-  puzzle collection, progress, all data) always asks.
+  puzzle list, progress, all data) always asks.
 - **Move sounds** and **vibration** — vibration exists only on the phone;
   turning sounds off turns vibration off too, and it cannot be turned on
   again until sounds are back on.

@@ -349,11 +349,16 @@ class PuzzleService {
   /// Binlerce satırlık dosyalarda arayüzün donmaması için her
   /// [_importChunk] satırda bir olay döngüsüne yol verilir ve [onProgress]
   /// çağrılır. Geçerli olan pozisyon sayısını döner.
+  ///
+  /// [invalidLines] verilirse FEN'i geçersiz olduğu için atlanan satırların
+  /// numaraları (1'den) ona eklenir. Atlanan her satır sonraki bulmacaların
+  /// numarasını kaynağa göre bir kaydırıyor; ekran bunu söylemeli.
   Future<int> importFens(
     PuzzleCollection collection,
     String content, {
     List<String>? tags,
     void Function(int done, int total)? onProgress,
+    List<int>? invalidLines,
   }) async {
     final lines = const LineSplitter().convert(content);
     final total = lines.length;
@@ -401,6 +406,8 @@ class PuzzleService {
             );
           }
           added++;
+        } else {
+          invalidLines?.add(i + 1);
         }
       }
 

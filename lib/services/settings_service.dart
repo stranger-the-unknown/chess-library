@@ -120,6 +120,12 @@ class SettingsService extends ChangeNotifier {
   /// geliyordu.
   int _engineColor = 0;
 
+  // Hatırlanan seçimler (10.14.0): ayar ekranında yoklar, kullanıcı ne
+  // seçtiyse bir dahaki sefere o geliyor.
+  bool _openingPractice = false;
+  String? _lastSaveList;
+  int _lastTab = 0;
+
   /// Açılışlarda ve oyunlarda "İzle"nin hızı; ikisi ayrı ayar.
   WatchSpeed _openingWatchSpeed = WatchSpeed.normal;
   WatchSpeed _gameWatchSpeed = WatchSpeed.normal;
@@ -181,7 +187,7 @@ class SettingsService extends ChangeNotifier {
   static const String _soundDefaultsKey = 'soundDefaultsRestored';
 
   Future<void> _resetSoundDefaults(SharedPreferences prefs) async {
-    if (prefs.getBool(_soundDefaultsKey) == true) return;
+    if (_bool(prefs, _soundDefaultsKey) == true) return;
     await prefs.setBool('soundEnabled', true);
     await prefs.setBool('vibrationEnabled', true);
     await prefs.setBool(_soundDefaultsKey, true);
@@ -198,10 +204,10 @@ class SettingsService extends ChangeNotifier {
     _prefs = prefs;
     await _resetSoundDefaults(prefs);
     _themeMode = ThemeMode.values[
-        (prefs.getInt('themeMode') ?? ThemeMode.system.index)
+        (_int(prefs, 'themeMode') ?? ThemeMode.system.index)
             .clamp(0, ThemeMode.values.length - 1)];
     _language = AppLanguage.values[
-        (prefs.getInt('language') ?? AppLanguage.system.index)
+        (_int(prefs, 'language') ?? AppLanguage.system.index)
             .clamp(0, AppLanguage.values.length - 1)];
     Strings.language = _language;
     // Bilinmeyen ad (ya da başka türde bir değer) varsayılana düşer.
@@ -209,23 +215,23 @@ class SettingsService extends ChangeNotifier {
     _appLook = AppLook.byId(storedLook is String ? storedLook : null);
     // Kayitli ad artik listede yoksa (eski surumden guncelleme) varsayilana
     // donulur; aksi halde bulunamayan bir varlik yuklenmeye calisilir.
-    final storedPieceSet = prefs.getString('pieceSet');
+    final storedPieceSet = _string(prefs, 'pieceSet');
     _pieceSet = storedPieceSet != null &&
             BoardAssets.pieceSets.contains(storedPieceSet)
         ? storedPieceSet
         : _defaultPieceSet;
-    final storedBoard = prefs.getString('boardTheme');
+    final storedBoard = _string(prefs, 'boardTheme');
     _boardTheme = storedBoard != null &&
             BoardAssets.boards.contains(storedBoard)
         ? storedBoard
         : _defaultBoardTheme;
-    _showCoordinates = prefs.getBool('showCoordinates') ?? true;
-    _boardSize = (prefs.getInt('boardSize') ?? 1).clamp(0, 2);
-    _showEngineArrows = prefs.getBool('showEngineArrows') ?? true;
+    _showCoordinates = _bool(prefs, 'showCoordinates') ?? true;
+    _boardSize = (_int(prefs, 'boardSize') ?? 1).clamp(0, 2);
+    _showEngineArrows = _bool(prefs, 'showEngineArrows') ?? true;
     // Harita her yüklemede sıfırlanıyor: anahtar yoksa (sıfırlama ya da
     // yedekten dönme sonrası) bellekteki eski renkler kalıyordu.
     _boardAccentColors.clear();
-    final accentJson = prefs.getString('boardAccentColors');
+    final accentJson = _string(prefs, 'boardAccentColors');
     if (accentJson != null) {
       try {
         final map = jsonDecode(accentJson) as Map<String, dynamic>;
@@ -236,29 +242,54 @@ class SettingsService extends ChangeNotifier {
           });
       } catch (_) {}
     }
-    _showLegalMoves = prefs.getBool('showLegalMoves') ?? true;
-    _highlightLastMove = prefs.getBool('highlightLastMove') ?? true;
-    _animateMoves = prefs.getBool('animateMoves') ?? true;
-    _soundEnabled = prefs.getBool('soundEnabled') ?? true;
-    _vibrationEnabled = prefs.getBool('vibrationEnabled') ?? true;
+    _showLegalMoves = _bool(prefs, 'showLegalMoves') ?? true;
+    _highlightLastMove = _bool(prefs, 'highlightLastMove') ?? true;
+    _animateMoves = _bool(prefs, 'animateMoves') ?? true;
+    _soundEnabled = _bool(prefs, 'soundEnabled') ?? true;
+    _vibrationEnabled = _bool(prefs, 'vibrationEnabled') ?? true;
     // 10.4.0'da seviye listesi değişti (Maia geldi); numara yeni anahtarda.
     // Eski anahtar varsa eski seviye yeni listedeki karşılığına çevriliyor.
-    final level = prefs.getInt('opponentLevel');
-    final legacy = prefs.getInt('engineLevel');
+    final level = _int(prefs, 'opponentLevel');
+    final legacy = _int(prefs, 'engineLevel');
     _engineLevel = (level ??
             (legacy != null
                 ? EngineLevel.fromLegacyIndex(legacy)
                 : EngineLevel.defaultIndex))
         .clamp(0, EngineLevel.all.length - 1);
-    _showDailyCount = prefs.getBool('showDailyCount') ?? true;
-    _askConfirmations = prefs.getBool('askConfirmations') ?? true;
-    _resumeEngineAfterWatch = prefs.getBool('resumeEngineAfterWatch') ?? true;
-    _exploreStartsEngine = prefs.getBool('exploreStartsEngine') ?? true;
-    _engineColor = (prefs.getInt('engineColor') ?? 0).clamp(0, 2);
-    _resultAtEnd = prefs.getBool('resultAtEnd') ?? true;
-    _openingWatchSpeed = _watchSpeed(prefs.getInt('openingWatchSpeed'));
-    _gameWatchSpeed = _watchSpeed(prefs.getInt('gameWatchSpeed'));
+    _showDailyCount = _bool(prefs, 'showDailyCount') ?? true;
+    _askConfirmations = _bool(prefs, 'askConfirmations') ?? true;
+    _resumeEngineAfterWatch = _bool(prefs, 'resumeEngineAfterWatch') ?? true;
+    _exploreStartsEngine = _bool(prefs, 'exploreStartsEngine') ?? true;
+    _engineColor = (_int(prefs, 'engineColor') ?? 0).clamp(0, 2);
+    _resultAtEnd = _bool(prefs, 'resultAtEnd') ?? true;
+    _openingPractice = _bool(prefs, 'openingPractice') ?? false;
+    _lastSaveList = _string(prefs, 'lastSaveList');
+    _lastTab = (_int(prefs, 'lastTab') ?? 0).clamp(0, 3);
+    _openingWatchSpeed = _watchSpeed(_int(prefs, 'openingWatchSpeed'));
+    _gameWatchSpeed = _watchSpeed(_int(prefs, 'gameWatchSpeed'));
     notifyListeners();
+  }
+
+  /// Ayarı türüne bakarak okur; başka türde bir değer (elle düzenlenmiş
+  /// yedek, örn. `"themeMode": "2"`) yok sayılır ve ayar varsayılana
+  /// düşer.
+  ///
+  /// `prefs.getInt` gibi türlü okumalar yanlış türde hata fırlatıyor;
+  /// [load] açılışta `runApp`'ten önce çağrıldığı için öyle bir yedek geri
+  /// yüklendikten sonra uygulama bir daha hiç açılmıyordu.
+  static int? _int(SharedPreferences prefs, String key) {
+    final value = prefs.get(key);
+    return value is int ? value : null;
+  }
+
+  static bool? _bool(SharedPreferences prefs, String key) {
+    final value = prefs.get(key);
+    return value is bool ? value : null;
+  }
+
+  static String? _string(SharedPreferences prefs, String key) {
+    final value = prefs.get(key);
+    return value is String ? value : null;
   }
 
   /// Ayarı diske yazar; başarısız olursa bir kez daha dener ve
@@ -302,7 +333,7 @@ class SettingsService extends ChangeNotifier {
 
     var ok = await attempt();
     if (!ok) ok = await attempt();
-    if (!ok) diskWriteFailures.value++;
+    if (!ok) reportWriteFailure();
   }
 
   static void unawaited(Future<void> future) {
@@ -445,6 +476,33 @@ class SettingsService extends ChangeNotifier {
     _resultAtEnd = value;
     _set('resultAtEnd', value);
     notifyListeners();
+  }
+
+  /// Açılış çalışma ekranı son kullanılan kipte açılıyor: `true`
+  /// "Alıştırma", `false` "İzle". Eskiden her varyant "İzle"de açılıyor,
+  /// alıştırma yapan her seferinde yeniden seçiyordu.
+  bool get openingPractice => _openingPractice;
+  set openingPractice(bool value) {
+    if (_openingPractice == value) return;
+    _openingPractice = value;
+    _set('openingPractice', value);
+  }
+
+  /// "Listeye kaydet" penceresinde son seçilen liste (kimliği); eskiden
+  /// hep ilk liste seçili geliyordu.
+  String? get lastSaveList => _lastSaveList;
+  set lastSaveList(String? value) {
+    if (value == null || _lastSaveList == value) return;
+    _lastSaveList = value;
+    _set('lastSaveList', value);
+  }
+
+  /// Uygulama son açık sekmede açılıyor (Ayarlar hariç: 0–3).
+  int get lastTab => _lastTab;
+  set lastTab(int value) {
+    if (value < 0 || value > 3 || _lastTab == value) return;
+    _lastTab = value;
+    _set('lastTab', value);
   }
 
   set engineColor(int value) {
